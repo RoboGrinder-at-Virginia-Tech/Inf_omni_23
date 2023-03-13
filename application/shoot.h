@@ -66,7 +66,7 @@
 #define FULL_COUNT                  18
 //拨弹速度
 #define TRIGGER_SPEED               10.0f
-#define CONTINUE_TRIGGER_SPEED      12.0f//9.0f
+#define CONTINUE_TRIGGER_SPEED      10.0f //12.0f//9.0f //SZL3-13 change from 12 to 10
 #define READY_TRIGGER_SPEED         5.0f
 
 #define KEY_OFF_JUGUE_TIME          500
@@ -89,15 +89,17 @@ Infantry; 拨盘有9个洞, 2pi/9 = 0.698131701f; 为了保证不过冲 set 0.67f
 
 Hero; 拨盘3个洞, 2pi/3 = 2.094395102f; 为了保证不过冲 set = 2.05f
 
+Omni drive 机器人 炮塔; 拨盘有8个洞, 2pi/8 = 0.78539816339744830961566084581988f
+
 测试用旋转角度180度, 2pi/2 = pi = 3.1415926f; 
 1.5PI = 4.712388980f
 2.0PI = 6.283185307f
 */
-#define PI_TEN                      0.60f//0.67f
+#define PI_TEN                      0.70f
 //2.05f//3.1415926f//0.67f//0.698131701f//3.1415926f//2.094395102f//0.69f//initial 0.314 radian,0.69 is approximately 40 degree
 
 /*仿照云台控制逻辑 新增一个宏定义 电机和转盘安装方向*/
-#define TRIG_MOTOR_TURN 0
+#define TRIG_MOTOR_TURN 1
 
 /*
 SZL
