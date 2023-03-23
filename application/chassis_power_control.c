@@ -533,21 +533,25 @@ static void map_superCap_charge_pwr_to_debuff_total_current_limit(uint16_t charg
 		{
 			*total_i_lim = 13000.0f;//10000.0f; //8333.33f;//200w
 		}
+		else if(charge_pwr>30 && charge_pwr<=40)
+		{
+			*total_i_lim = 12000.0f; //13000.0f;//12000.0f;//240w
+		}
 		else if(charge_pwr>40 && charge_pwr<=50)
 		{
-			*total_i_lim = 14500.0f;//13000.0f;//240w
+			*total_i_lim = 13000.0f; //14500.0f;//13000.0f;//240w
 		}
 		else if(charge_pwr>50 && charge_pwr<=60)
 		{
-			*total_i_lim = 16000.0f;//14500.0f;//240w
+			*total_i_lim = 15000.0f; //16000.0f;//14500.0f;//240w
 		}
 		else if(charge_pwr>60 && charge_pwr<=80)
 		{
-			*total_i_lim = 20000.0f;//384w
+			*total_i_lim = 17500.0f; //20000.0f;//384w
 		}
 		else if(charge_pwr>80 && charge_pwr<=100)
 		{
-			*total_i_lim = 22000.0f;
+			*total_i_lim = 20000.0f; //22000.0f;
 		}
 		else
 	  {//一个典型值 = 10000

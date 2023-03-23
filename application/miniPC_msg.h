@@ -167,7 +167,7 @@ typedef struct
 	//pointer to original source of information
 	const chassis_move_t* chassis_move_ptr;
 	const gimbal_control_t* gimbal_control_ptr;
-	const fp32* quat_ptr; //const fp32 *get_INS_quat(void)
+	const fp32* quat_ptr; //const fp32 *get_INS_gimbal_quat(void)
 	const shoot_control_t* shoot_control_ptr;
 	
 	fp32 s_vx_m; // m/s
@@ -238,7 +238,18 @@ typedef struct
 }pc_info_t;
 /*---------------------------------------------------- Processed Data - End Above ----------------------------------------------------*/
 
-extern void init_miniPC_comm_struct_data(void);
-extern void pc_comm_data_solve(uint8_t *frame);
+void init_miniPC_comm_struct_data(void);
+void pc_comm_data_solve(uint8_t *frame);
 void embed_send_data_to_pc_loop(void);
+
+////declear getter method
+//fp32 get_yawMove_aid(void);
+//fp32 pitchMove_aid();
+//fp32 yawMove_absolute();
+//fp32 pitchMove_absolute();
+//uint8_t enemy_detected();
+//uint8_t shootCommand();
+//uint8_t cv_gimbal_sts();
+//fp32 aim_pos_dis();
+
 #endif

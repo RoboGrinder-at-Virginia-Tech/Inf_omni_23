@@ -114,7 +114,7 @@ typedef struct
 
 typedef struct
 {
-	//环形缓冲区模块
+	//ring buffer 环形缓冲区模块
 	fifo_s_t tx_fifo; //embed send ring buffer
 	
 	uint8_t status;	//msg send sts

@@ -83,8 +83,13 @@ Single barrel infantry 2023 chassis version 1 2-10-2023
 宽=轮距: 360mm = 0.360m
 0.356m/2 + 0.360m/2 = .178+.180 = 0.358 
 
+3-22:
+Omni Drive: 轮到中心250mm = 0.25m, 45度夹角
+长=轴距: 0.25m * sqrt(2) = 0.353553391
+宽=轮距: 0.25m * sqrt(2) = 0.353553391
+0.353553391/2 + 0.353553391/2 = 0.353553391
 */
-#define MOTOR_DISTANCE_TO_CENTER 0.358f //0.3525f
+#define MOTOR_DISTANCE_TO_CENTER 0.353553391f //0.358f //0.3525f
 
 //chassis task control time  2ms
 //底盘任务控制间隔 2ms
@@ -115,8 +120,11 @@ Single barrel infantry 2023 chassis version 1 2-10-2023
 /*
 SZL 5-21-2022 重新算
 2pi/60 * 1/19 * (0.084m Hex轮子半径) = 4.629715490e-4f
+
+3-22: Omni wheel recalculation: 轮子直径d = 152mm, r = 152/2 = 76mm = 0.076m
+2pi/60 * 1/19 * (0.076m Hex轮子半径) = 4.188790205e-4
 */
-#define CHASSIS_MOTOR_RPM_TO_VECTOR_SEN 4.629715490e-4f
+#define CHASSIS_MOTOR_RPM_TO_VECTOR_SEN 4.188790205e-4
 
 //single chassis motor max speed
 //单个底盘电机最大速度

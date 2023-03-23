@@ -823,11 +823,6 @@
               <FileType>1</FileType>
               <FilePath>..\components\support\mem_mang4.c</FilePath>
             </File>
-            <File>
-              <FileName>RGreadme.txt</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\..\Inf_22\RGreadme.txt</FilePath>
-            </File>
           </Files>
         </Group>
         <Group>

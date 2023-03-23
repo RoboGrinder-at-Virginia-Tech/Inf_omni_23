@@ -158,19 +158,19 @@ void superCap_control_loop()
 		else if(current_superCap == sCap23_ID)
 		{//sCap23易林超级电容控制板
 			//计算max_charge_pwr_from_ref
-			sCap23_info.max_charge_pwr_from_ref = get_chassis_power_limit() - 2.5f;
+			sCap23_info.max_charge_pwr_from_ref = get_chassis_power_limit() - 0.0f; //2.5f
 			
 			if(sCap23_info.max_charge_pwr_from_ref > MAX_REASONABLE_CHARGE_PWR)//101.0f)
 			{
 				sCap23_info.max_charge_pwr_from_ref = 40;
 			}
 			
-			//Only for Debug
-			sCap23_info.max_charge_pwr_from_ref = 41; //66;
+//			//Only for Debug
+//			sCap23_info.max_charge_pwr_from_ref = 41; //66;
 			//--------------------------------------------
 			
 			//计算fail_safe_charge_pwr_ref 修改成用ifelse标定等级标定fail safe, 这个的目的是 比赛中可能有临时的底盘充电增益, fail safe表示当前的一个安全数值
-			sCap23_info.fail_safe_charge_pwr_ref = 40; // 60; // = sCap23_info.max_charge_pwr_from_ref;
+			sCap23_info.fail_safe_charge_pwr_ref = sCap23_info.max_charge_pwr_from_ref; //40; // 60; // = sCap23_info.max_charge_pwr_from_ref;
 		
 			sCap23_info.charge_pwr_command = sCap23_info.max_charge_pwr_from_ref;
 			sCap23_info.fail_safe_charge_pwr_command = sCap23_info.fail_safe_charge_pwr_ref;
@@ -276,19 +276,23 @@ uint16_t get_superCap_charge_pwr()
 /*下面两个函数; 0->normal/online; 1->error/offline*/
 bool_t current_superCap_is_offline()
 {
-	if(current_superCap == SuperCap_ID)
+	if(current_superCap == sCap23_ID) //SuperCap_ID
 	{
-		return toe_is_error(SUPERCAP_TOE);
+		return toe_is_error(SCAP_23_TOR); //SUPERCAP_TOE
+	}
+	else if(current_superCap == wulie_Cap_CAN_ID) //wulie_Cap_CAN_ID
+	{
+		return toe_is_error(WULIE_CAP_TOE);
 	}
 	else
 	{
-		return toe_is_error(WULIE_CAP_TOE);
+		return toe_is_error(SUPERCAP_TOE); //sCap23_ID
 	}
 }
 
 bool_t all_superCap_is_offline()
 {
-	return toe_is_error(SUPERCAP_TOE) && toe_is_error(WULIE_CAP_TOE);
+	return toe_is_error(SUPERCAP_TOE) && toe_is_error(WULIE_CAP_TOE) && toe_is_error(SCAP_23_TOR);
 }
 
 /*

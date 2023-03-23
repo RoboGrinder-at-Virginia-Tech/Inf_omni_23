@@ -80,6 +80,8 @@ void init_miniPC_comm_struct_data(void)
 	
 	memset(&embed_send_protocol, 0, sizeof(embed_send_protocol_t));
 	
+	memset(&pc_info, 0, sizeof(pc_info_t));
+	
 	//init information pckg
 	embed_msg_to_pc.chassis_move_ptr = get_chassis_pointer();
 	embed_msg_to_pc.gimbal_control_ptr = get_gimbal_pointer();
@@ -89,7 +91,63 @@ void init_miniPC_comm_struct_data(void)
 	embed_send_protocol.p_header = &pc_send_header;
 	embed_send_protocol.chassis_info_embed_send_TimeStamp = xTaskGetTickCount();
 	embed_send_protocol.gimbal_info_embed_send_TimeStamp = xTaskGetTickCount();
+	
+	//init important control related values
+	pc_info.autoAimFlag = 0;
+	
 }
+
+/* ---------- getter method 获取最终解包到 pc_info 中的数据 ---------- */
+//// see the struct for the detailed information
+//// fp32 yawMove_aid;
+//fp32 get_yawMove_aid()
+//{
+//	return pc_info.yawMove_aid;
+//}
+
+////fp32 pitchMove_aid;
+//fp32 pitchMove_aid()
+//{
+//	return pc_info.pitchMove_aid;
+//}
+
+////fp32 yawMove_absolute;
+//fp32 yawMove_absolute()
+//{
+//	return pc_info.yawMove_absolute;
+//}
+
+////fp32 pitchMove_absolute;
+//fp32 pitchMove_absolute()
+//{
+//	return pc_info.pitchMove_absolute;
+//}
+
+////uint8_t enemy_detected;
+//uint8_t enemy_detected()
+//{
+//	return pc_info.enemy_detected;
+//}
+
+////uint8_t shootCommand;
+//uint8_t shootCommand()
+//{
+//	return pc_info.shootCommand;
+//}
+
+////uint8_t cv_gimbal_sts;
+//uint8_t cv_gimbal_sts()
+//{
+//	return pc_info.cv_gimbal_sts;
+//}
+
+////fp32 aim_pos_dis;
+//fp32 aim_pos_dis()
+//{
+//	return pc_info.aim_pos_dis;
+//}
+
+/* ---------- getter method end ---------- */
 
 void cmd_process_pc_cmd_chassis_control(void)
 {
@@ -393,7 +451,15 @@ void embed_send_data_to_pc_loop()
 		进入这个if的频率决定了生产频率, 到时间后才进入这个if, 没到时间不进入这个if
 		没到时间需确认消费者在消费状态
 		*/
-	//}
+	}//
+	else //testing
+	{
+		vTaskDelay(1); //频率 58.37 ~ 58.4
+		{
+			uint8_t i = 0;
+			i++;
+		}
+	}
 	
 	
 	//enable uart tx DMA which is the DMA poll
@@ -418,7 +484,7 @@ void embed_send_data_to_pc_loop()
 		uart1_poll_dma_tx();
 		embed_send_protocol.relative_send_fail_cnts = 0;
 	}
-}//----------------
+//}//----------------
 }
 
 /* -------------------------------- USART SEND DATA FILL END-------------------------------- */

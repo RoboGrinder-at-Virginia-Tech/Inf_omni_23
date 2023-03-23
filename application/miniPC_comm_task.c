@@ -96,7 +96,7 @@ void pc_communication_task(void const *pvParameters)
 		//osDelay(4);
 		//osDelay(100);
 		//vTaskDelay(100);
-		vTaskDelay(4);
+		vTaskDelay(4); //4
 		
 		//record high water mark
 #if INCLUDE_uxTaskGetStackHighWaterMark
@@ -346,7 +346,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
  */
 uint8_t uart1_poll_dma_tx()
 {
-	uint16_t size = 0;
+	int size = 0;
 	
 	if (embed_send.status == 0x01)
   {
@@ -358,7 +358,7 @@ uint8_t uart1_poll_dma_tx()
 	size = fifo_s_gets(&embed_send.tx_fifo, (char *)embed_send.tx_dma_buf, embed_send.tx_dma_buf_size);
 	embed_send.debug_fifo_size = size; //update debug buff size cnt
 	
-	if (size != 0)
+	if (size != 0 && size > 0)
 	{	
     embed_send.debug_UartTxCount += size; //update tx count
 		
@@ -407,15 +407,15 @@ uint8_t get_uart1_embed_send_status()
 //	
 //}
 
-/**
- * @brief 串口设备初始化 The serial port device is init
- * NOT USED, init process in task
- * @param  
- * @retval 
- */
-void uart1_app_tx_init()
-{
-	return;
-}
+///**
+// * @brief 串口设备初始化 The serial port device is init
+// * NOT USED, init process in task
+// * @param  
+// * @retval 
+// */
+//void uart1_app_tx_init()
+//{
+//	return;
+//}
 
 /* -------------------------------- USART SEND END-------------------------------- */

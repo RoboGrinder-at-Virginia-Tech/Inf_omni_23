@@ -26,7 +26,7 @@
 #include "chassis_task.h"
 #include "main.h"
 
-#define USE_SpeedAdaptiveChassisPowerControl 0
+#define USE_SpeedAdaptiveChassisPowerControl 1
 //#define HERO_CHASSIS_POWER_CONTROL
 #define INFANTRY_CHASSIS_POWER_CONTROL
 
@@ -37,7 +37,7 @@
 #define INITIAL_STATE_CHASSIS_POWER_LIM 40.0f
 #endif
 
-#define MAX_REASONABLE_CHARGE_PWR 160
+#define MAX_REASONABLE_CHARGE_PWR 130
 
 /*
 原始参数:
@@ -113,7 +113,7 @@ buffer_debuff_total_current_limit 代表了这种情况下允许的 最大 功率(极限)
 
 /*When superCap_ENERGY_BUFF_OUTPUT_CUTOFF_POINT is reached, output will be disabled; and the buff eng need to be recharged to MINIMUM_ENERGY_BUFF to re-enable the output*/
 #define superCap_ENERGY_BUFF_OUTPUT_CUTOFF_POINT 650.0f//700.0f //650.0f
-#define superCap_VOL_OUTPUT_CUTOFF_POINT 3.5f //13.50f //14.72f
+#define superCap_VOL_OUTPUT_CUTOFF_POINT 13.50f //3.5f //13.50f //14.72f
 
 //裁判系统功率 缓冲能量信息 间隔; 实时功率热量数据：0x0202。发送频率：50Hz; 即0.02s
 #define superCap_CHASSIS_SUPERCAP_COMM_TIME 0.02f; //由于使用此数值的算法不是特别合理, 目前暂时就用0.02f
