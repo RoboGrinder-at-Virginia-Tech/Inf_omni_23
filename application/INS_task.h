@@ -12,6 +12,7 @@
   *  Version    Date            Author          Modification
   *  V1.0.0     Dec-26-2018     RM              1. done
   *  V2.0.0     Nov-11-2019     RM              1. support bmi088, but don't support mpu6500
+	*  V3.0.0     April-15-2023   Zelin           Documentation related to new IMU algo
   *
   @verbatim
   ==============================================================================
