@@ -332,11 +332,11 @@ void gimbal_task(void const *pvParameters)
     shoot_init();
     //wait for all motor online
     //判断电机是否都上线
-    while (toe_is_error(YAW_GIMBAL_MOTOR_TOE) || toe_is_error(PITCH_GIMBAL_MOTOR_TOE))
+    while (toe_is_error(YAW_GIMBAL_MOTOR_TOE) || toe_is_error(PITCH_GIMBAL_MOTOR_L_TOE)) // 至少左侧pitch电机上线
     {
         vTaskDelay(GIMBAL_CONTROL_TIME);
         gimbal_feedback_update(&gimbal_control);             //云台数据反馈
-				break;
+				break; // ------- ? 这啥意思
     }
 
     while (1)
@@ -359,7 +359,8 @@ void gimbal_task(void const *pvParameters)
         pitch_can_set_current = gimbal_control.gimbal_pitch_motor.given_current;
 #endif
 
-        if (!(toe_is_error(YAW_GIMBAL_MOTOR_TOE) && toe_is_error(PITCH_GIMBAL_MOTOR_TOE) && toe_is_error(TRIGGER_MOTOR_TOE)))
+        if (!(toe_is_error(YAW_GIMBAL_MOTOR_TOE) && toe_is_error(PITCH_GIMBAL_MOTOR_L_TOE) && toe_is_error(PITCH_GIMBAL_MOTOR_R_TOE) 
+					&& toe_is_error(TRIGGER_MOTOR_L_TOE) && toe_is_error(TRIGGER_MOTOR_R_TOE)))
         {
             if (toe_is_error(DBUS_TOE))
             {

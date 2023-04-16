@@ -207,9 +207,14 @@ typedef enum
 
 typedef struct
 {
-	  uint8_t trigger_motor_17mm_is_online;//0x01=online; 0x00=offline
+		//L - left trigger motor; R - right trigger motor
+	  uint8_t trigger_motor17mm_L_is_online;//0x01=online; 0x00=offline
+		uint8_t trigger_motor17mm_R_is_online;
 	
-    shoot_mode_e shoot_mode;
+    shoot_mode_e shoot_mode_L; // left gun shoot mode
+		shoot_mode_e shoot_mode_R; // right gun shoot mode
+	
+	
 		//SZL 6-10-2022新增
 		uint8_t last_key_Q_sts; //0未按下, 1按下
 		uint8_t key_Q_cnt;
@@ -222,22 +227,45 @@ typedef struct
 		uint8_t key_V_cnt;
 		uint16_t press_key_V_time; 
 	
-		user_fire_ctrl_e user_fire_ctrl;
+		user_fire_ctrl_e user_fire_ctrl; // 左右枪共用
     const RC_ctrl_t *shoot_rc;
-    const motor_measure_t *shoot_motor_measure;
-    ramp_function_source_t fric1_ramp;
-    uint16_t fric_pwm1;
-    ramp_function_source_t fric2_ramp;
-    uint16_t fric_pwm2;
-    pid_type_def trigger_motor_pid;//内环PID
-		pid_type_def trigger_motor_angle_pid;//外环PID--只是写在这里 没用
-    fp32 trigger_speed_set;
-    fp32 speed;
-    fp32 speed_set;
-    fp32 angle;
-    fp32 set_angle;
-    int16_t given_current;
-    int8_t ecd_count; //未使用
+		
+    const motor_measure_t *shoot_motor_L_measure; // left trigger
+		const motor_measure_t *shoot_motor_R_measure; // right trigger
+		
+		// left barrel; fric1 对应 从上往下看 看向电机定子 看向测速R标的左侧电机 --------------
+    ramp_function_source_t L_barrel_fric1_ramp;
+    uint16_t L_barrel_fric_pwm1;
+    ramp_function_source_t L_barrel_fric2_ramp;
+    uint16_t L_barrel_fric_pwm2;
+		
+		// right barrel; fric1 对应 从上往下看 看向电机定子 看向测速R标的左侧电机 --------------
+    ramp_function_source_t R_barrel_fric1_ramp;
+    uint16_t R_barrel_fric_pwm1;
+    ramp_function_source_t R_barrel_fric2_ramp;
+    uint16_t R_barrel_fric_pwm2;
+		
+		// 17mm left barrel 各种控制 逻辑相关 --------------
+    pid_type_def L_barrel_trigger_motor_pid;//内环PID
+		pid_type_def L_barrel_trigger_motor_angle_pid;//外环PID--只是写在这里 没用
+    fp32 L_barrel_trigger_speed_set;
+    fp32 L_barrel_speed;
+    fp32 L_barrel_speed_set;
+    fp32 L_barrel_angle;
+    fp32 L_barrel_set_angle;
+    int16_t L_barrel_given_current;
+    int8_t L_barrel_ecd_count; //未使用
+		
+		// 17mm right barrel 各种控制 逻辑相关 --------------
+		pid_type_def R_barrel_trigger_motor_pid;//内环PID
+		pid_type_def R_barrel_trigger_motor_angle_pid;//外环PID--只是写在这里 没用
+    fp32 R_barrel_trigger_speed_set;
+    fp32 R_barrel_speed;
+    fp32 R_barrel_speed_set;
+    fp32 R_barrel_angle;
+    fp32 R_barrel_set_angle;
+    int16_t R_barrel_given_current;
+    int8_t R_barrel_ecd_count; //未使用
 
     bool_t press_l;
     bool_t press_r;
@@ -247,33 +275,55 @@ typedef struct
     uint16_t press_r_time;
     uint16_t rc_s_time;
 
-    uint16_t block_time;
-    uint16_t reverse_time;
-    bool_t move_flag;
+		// 17mm left barrel control related values --------------
+    uint16_t L_barrel_block_time;
+    uint16_t L_barrel_reverse_time;
+    bool_t L_barrel_move_flag;
 
-    bool_t key; //微动开关 PR 屏蔽掉了
-    uint8_t key_time;
+    bool_t L_barrel_key; //微动开关 PR 屏蔽掉了
+    uint8_t L_barrel_key_time;
 
-    uint16_t heat_limit;
-    uint16_t heat;
+    uint16_t L_barrel_heat_limit;
+    uint16_t L_barrel_heat;
+		
+		// 17mm right barrel control related values --------------
+		uint16_t R_barrel_block_time;
+    uint16_t R_barrel_reverse_time;
+    bool_t R_barrel_move_flag;
+
+    bool_t R_barrel_key; //微动开关 PR 屏蔽掉了
+    uint8_t R_barrel_key_time;
+
+    uint16_t R_barrel_heat_limit;
+    uint16_t R_barrel_heat;
 		
 		/*12-28-2021 SZL add for 
 		infantry pid shooter friction wheel LEFT and RIGHT
 		Everything above keep the same as the old PWM shooter
 		*/
-		const motor_measure_t *left_friction_motor_measure;
-		const motor_measure_t *right_friction_motor_measure;
-		pid_type_def left_fric_motor_pid;
-		pid_type_def right_fric_motor_pid;
+//		const motor_measure_t *left_friction_motor_measure; //NOT USED for MD
+//		const motor_measure_t *right_friction_motor_measure; //NOT USED for MD
+//		pid_type_def left_fric_motor_pid; //NOT USED for MD
+//		pid_type_def right_fric_motor_pid; //NOT USED for MD
 		
 		//LEFT and RIGHT
-		M3508_fric_motor_t left_fricMotor;
-		M3508_fric_motor_t right_fricMotor;
+//		M3508_fric_motor_t left_fricMotor; //NOT USED for MD
+//		M3508_fric_motor_t right_fricMotor; //NOT USED for MD
 		
-		fp32 currentLeft_speed_set;
-		fp32 currentRight_speed_set;
+//		fp32 currentLeft_speed_set; //NOT USED for MD
+//		fp32 currentRight_speed_set; //NOT USED for MD
+
+		// Left barrel speed related value for each fric
+		// fric1 对应 从上往下看 看向电机定子 看向测速R标的左侧电机 --------------
+		fp32 L_barrel_fric1_speed_set; // 对应老的 currentLeft_speed_set
+		fp32 L_barrel_fric2_speed_set;
 		
-		fp32 currentLIM_shoot_speed_17mm;
+		// Right barrel speed related value for each fric
+		// fric1 对应 从上往下看 看向电机定子 看向测速R标的左侧电机 --------------
+		fp32 R_barrel_fric1_speed_set;
+		fp32 R_barrel_fric2_speed_set;
+		
+		fp32 currentLIM_shoot_speed_17mm; // 左右炮塔各自速度上限 应一样
 		//当前 摩擦轮PID速度环 输入; 当前规则允许 速度上限 - offset 后 = 这个数
 		//所以 上面这个数 + offset = 预计速度
 		

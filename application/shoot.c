@@ -76,10 +76,8 @@ static void shoot_bullet_control_17mm(void);
 shoot_control_t shoot_control;          //射击数据
 
 
-int16_t temp_rpm_left;
-int16_t temp_rpm_right;
-
-fp32 temp_speed_setALL = 11.5;//目前 ICRA Only
+int16_t temp_rpm_left; // debug Jscope
+int16_t temp_rpm_right; // debug Jscope
 
 /**
   * @brief          射击初始化，初始化PID，遥控器指针，电机指针
@@ -88,37 +86,77 @@ fp32 temp_speed_setALL = 11.5;//目前 ICRA Only
   */
 void shoot_init(void)
 {
-
-    static const fp32 Trigger_speed_pid[3] = {TRIGGER_ANGLE_PID_KP, TRIGGER_ANGLE_PID_KI, TRIGGER_ANGLE_PID_KD};
-    shoot_control.shoot_mode = SHOOT_STOP;
+		// left barrel trig pid init
+    static const fp32 L_barrel_Trigger_speed_pid[3] = {TRIGGER_ANGLE_PID_KP, TRIGGER_ANGLE_PID_KI, TRIGGER_ANGLE_PID_KD};
+		
+		//right barrel trig pid init
+		static const fp32 R_barrel_Trigger_speed_pid[3] = {TRIGGER_ANGLE_PID_KP, TRIGGER_ANGLE_PID_KI, TRIGGER_ANGLE_PID_KD};
+		
+    // shoot_control.shoot_mode = SHOOT_STOP;
+		shoot_control.shoot_mode_L = SHOOT_STOP;
+		shoot_control.shoot_mode_R = SHOOT_STOP;
+		
+		
     //遥控器指针
     shoot_control.shoot_rc = get_remote_control_point();
     //电机指针
-    shoot_control.shoot_motor_measure = get_trigger_motor_measure_point();
+//    shoot_control.shoot_motor_measure = get_trigger_motor_measure_point();
+		shoot_control.shoot_motor_L_measure = get_pitch_gimbal_motor_L_measure_point();
+		shoot_control.shoot_motor_R_measure = get_pitch_gimbal_motor_R_measure_point();
+		
     //初始化PID
-    PID_init(&shoot_control.trigger_motor_pid, PID_POSITION, Trigger_speed_pid, TRIGGER_READY_PID_MAX_OUT, TRIGGER_READY_PID_MAX_IOUT);
+//    PID_init(&shoot_control.trigger_motor_pid, PID_POSITION, Trigger_speed_pid, TRIGGER_READY_PID_MAX_OUT, TRIGGER_READY_PID_MAX_IOUT);
+		PID_init(&shoot_control.L_barrel_trigger_motor_pid, PID_POSITION, L_barrel_Trigger_speed_pid, TRIGGER_READY_PID_MAX_OUT, TRIGGER_READY_PID_MAX_IOUT);
+		PID_init(&shoot_control.R_barrel_trigger_motor_pid, PID_POSITION, R_barrel_Trigger_speed_pid, TRIGGER_READY_PID_MAX_OUT, TRIGGER_READY_PID_MAX_IOUT);
+		
     //更新数据
     shoot_feedback_update();
-    ramp_init(&shoot_control.fric1_ramp, SHOOT_CONTROL_TIME * 0.001f, FRIC_DOWN, FRIC_OFF);
-    ramp_init(&shoot_control.fric2_ramp, SHOOT_CONTROL_TIME * 0.001f, FRIC_DOWN, FRIC_OFF);
-    shoot_control.fric_pwm1 = FRIC_OFF;
-    shoot_control.fric_pwm2 = FRIC_OFF;
-    shoot_control.ecd_count = 0;
-    shoot_control.angle = shoot_control.shoot_motor_measure->ecd * MOTOR_ECD_TO_ANGLE;
-    shoot_control.given_current = 0;
-    shoot_control.move_flag = 0;
-    shoot_control.set_angle = shoot_control.angle;
-    shoot_control.speed = 0.0f;
-    shoot_control.speed_set = 0.0f;
-    shoot_control.key_time = 0;
+		// left barrel ramp
+    ramp_init(&shoot_control.L_barrel_fric1_ramp, SHOOT_CONTROL_TIME * 0.001f, FRIC_DOWN, FRIC_OFF);
+    ramp_init(&shoot_control.L_barrel_fric2_ramp, SHOOT_CONTROL_TIME * 0.001f, FRIC_DOWN, FRIC_OFF);
+		// right barrel ramp
+		ramp_init(&shoot_control.R_barrel_fric1_ramp, SHOOT_CONTROL_TIME * 0.001f, FRIC_DOWN, FRIC_OFF);
+    ramp_init(&shoot_control.R_barrel_fric2_ramp, SHOOT_CONTROL_TIME * 0.001f, FRIC_DOWN, FRIC_OFF);
+		
+		// left barrel - control
+		shoot_control.L_barrel_fric_pwm1 = FRIC_OFF;
+		shoot_control.L_barrel_fric_pwm2 = FRIC_OFF;
+		shoot_control.L_barrel_ecd_count = 0;
+    shoot_control.L_barrel_angle = shoot_control.shoot_motor_L_measure->ecd * MOTOR_ECD_TO_ANGLE;
+    shoot_control.L_barrel_given_current = 0;
+    shoot_control.L_barrel_move_flag = 0;
+    shoot_control.L_barrel_set_angle = shoot_control.L_barrel_angle;
+    shoot_control.L_barrel_speed = 0.0f;
+    shoot_control.L_barrel_speed_set = 0.0f;
+    shoot_control.L_barrel_key_time = 0;
+		
+		// right barrel - control
+		shoot_control.R_barrel_fric_pwm1 = FRIC_OFF;
+		shoot_control.R_barrel_fric_pwm2 = FRIC_OFF;
+		shoot_control.R_barrel_ecd_count = 0;
+    shoot_control.R_barrel_angle = shoot_control.shoot_motor_R_measure->ecd * MOTOR_ECD_TO_ANGLE;
+    shoot_control.R_barrel_given_current = 0;
+    shoot_control.R_barrel_move_flag = 0;
+    shoot_control.R_barrel_set_angle = shoot_control.R_barrel_angle;
+    shoot_control.R_barrel_speed = 0.0f;
+    shoot_control.R_barrel_speed_set = 0.0f;
+    shoot_control.R_barrel_key_time = 0;
+		
 		
 		/*12-28-2021 SZL add for 
 		infantry pid shooter friction wheel LEFT and RIGHT
 		Everything above keep the same as the old PWM shooter
 		*/
-		//初始化基本射击参数
-		shoot_control.currentLeft_speed_set = 0;
-		shoot_control.currentRight_speed_set = 0;
+//		//初始化基本射击参数 - not used for MD
+//		shoot_control.currentLeft_speed_set = 0;
+//		shoot_control.currentRight_speed_set = 0;
+		// left barrel speed
+		shoot_control.L_barrel_fric1_speed_set = 0;
+		shoot_control.L_barrel_fric2_speed_set = 0;
+		// right barrel speed
+		shoot_control.R_barrel_fric1_speed_set = 0;
+		shoot_control.R_barrel_fric2_speed_set = 0;
+		
 		shoot_control.currentLIM_shoot_speed_17mm = 0;
 		
 		
@@ -127,14 +165,14 @@ void shoot_init(void)
 		//RIGHT friction PID const init
 		static const fp32 Right_friction_speed_pid[3] = {M3508_RIGHT_FRICTION_PID_KP, M3508_RIGHT_FRICTION_PID_KI, M3508_RIGHT_FRICTION_PID_KD};
 
-		//电机指针 M3508屁股 左右摩擦轮
-		shoot_control.left_friction_motor_measure = get_left_friction_motor_measure_point();
-		shoot_control.right_friction_motor_measure = get_right_friction_motor_measure_point();
+//		//电机指针 M3508屁股 左右摩擦轮 - not used for MD
+//		shoot_control.left_friction_motor_measure = get_left_friction_motor_measure_point();
+//		shoot_control.right_friction_motor_measure = get_right_friction_motor_measure_point();
 		
-		//初始化PID
-		PID_init(&shoot_control.left_fric_motor_pid, PID_POSITION, Left_friction_speed_pid, M3508_LEFT_FRICTION_PID_MAX_OUT, M3508_LEFT_FRICTION_PID_MAX_IOUT);
-		PID_init(&shoot_control.right_fric_motor_pid, PID_POSITION, Right_friction_speed_pid, M3508_RIGHT_FRICTION_PID_MAX_OUT, M3508_RIGHT_FRICTION_PID_MAX_IOUT);
-	
+//		//初始化PID - not used for MD
+//		PID_init(&shoot_control.left_fric_motor_pid, PID_POSITION, Left_friction_speed_pid, M3508_LEFT_FRICTION_PID_MAX_OUT, M3508_LEFT_FRICTION_PID_MAX_IOUT);
+//		PID_init(&shoot_control.right_fric_motor_pid, PID_POSITION, Right_friction_speed_pid, M3508_RIGHT_FRICTION_PID_MAX_OUT, M3508_RIGHT_FRICTION_PID_MAX_IOUT);
+
 }
 
 /**
@@ -142,11 +180,7 @@ void shoot_init(void)
   * @param[in]      void
   * @retval         返回can控制值
   */
-
-//===============================================
-//uint8_t robot_Level = 0;
-
-int16_t shoot_control_loop(void)
+int16_t shoot_control_loop(void) // ----------------------------------------------4-15------
 {
 
     shoot_set_mode();        //设置状态机

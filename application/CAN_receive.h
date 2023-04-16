@@ -33,16 +33,28 @@ typedef enum
 {
 	//CAN1
     CAN_CHASSIS_ALL_ID = 0x200,
+	  CAN1_START_ID = 0x201, // this is for program reference
     CAN_3508_M1_ID = 0x201,
     CAN_3508_M2_ID = 0x202,
     CAN_3508_M3_ID = 0x203,
     CAN_3508_M4_ID = 0x204,
+	
+	  CAN_YAW_MOTOR_ID = 0x205, // note that yaw is on can 1
+	
 	//CAN2
-		CAN_SHOOTL_ID = 0x201,
-		CAN_SHOOTR_ID = 0x202,
-    CAN_YAW_MOTOR_ID = 0x205,
-    CAN_PIT_MOTOR_ID = 0x206,
-    CAN_TRIGGER_MOTOR_17mm_ID = 0x207,
+		CAN2_START_ID = 0x201, // this is for program reference
+		//CAN_SHOOTL_ID = 0x201, // no use
+		//CAN_SHOOTR_ID = 0x202, // no use
+	
+		CAN_TRIGGER_MOTOR_17mm_L_ID = 0x203, // left trig motor
+		CAN_TRIGGER_MOTOR_17mm_R_ID = 0x204, // right trig motor
+	
+    
+	
+    CAN_PIT_MOTOR_L_ID = 0x206, //old CAN_PIT_MOTOR_ID used as feedback
+		CAN_PIT_MOTOR_R_ID = 0x207,
+	
+    //CAN_TRIGGER_MOTOR_17mm_ID = 0x207, // dev changed
     CAN_GIMBAL_ALL_ID = 0x1FF,
 
 } can_msg_id_e;
@@ -152,7 +164,9 @@ extern const motor_measure_t *get_yaw_gimbal_motor_measure_point(void);
   * @param[in]      none
   * @retval         电机数据指针
   */
-extern const motor_measure_t *get_pitch_gimbal_motor_measure_point(void);
+extern const motor_measure_t *get_pitch_gimbal_motor_L_measure_point(void);
+
+extern const motor_measure_t *get_pitch_gimbal_motor_R_measure_point(void);
 
 /**
   * @brief          return the trigger 2006 motor data point
@@ -164,7 +178,9 @@ extern const motor_measure_t *get_pitch_gimbal_motor_measure_point(void);
   * @param[in]      none
   * @retval         电机数据指针
   */
-extern const motor_measure_t *get_trigger_motor_measure_point(void);
+extern const motor_measure_t *get_trigger_motor_L_measure_point(void);
+
+extern const motor_measure_t *get_trigger_motor_R_measure_point(void);
 
 /**
   * @brief          return the chassis 3508 motor data point

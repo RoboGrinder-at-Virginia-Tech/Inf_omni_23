@@ -331,10 +331,16 @@ const motor_measure_t *get_yaw_gimbal_motor_measure_point(void)
   * @param[in]      none
   * @retval         电机数据指针
   */
-const motor_measure_t *get_pitch_gimbal_motor_measure_point(void)
+const motor_measure_t *get_pitch_gimbal_motor_L_measure_point(void)
 {
-    //return &motor_chassis[5];//SZL修改 1-6-2021 由于电机在CAN 2 上 目前解包到motor_CAN2Bus数组中
-		return &motor_CAN2Bus[5];
+    //SZL修改 4-15-2021 由于电机在CAN 2 上 目前解包到motor_CAN2Bus数组中
+		return &motor_CAN2Bus[5]; // CAN_PIT_MOTOR_L_ID - CAN2_START_ID = [0x206-0x201=5]
+}
+
+const motor_measure_t *get_pitch_gimbal_motor_R_measure_point(void)
+{
+    //SZL修改 4-15-2021 由于电机在CAN 2 上 目前解包到motor_CAN2Bus数组中
+		return &motor_CAN2Bus[6]; // CAN_PIT_MOTOR_R_ID - CAN2_START_ID = [0x207-0x201=6]
 }
 
 
@@ -348,10 +354,15 @@ const motor_measure_t *get_pitch_gimbal_motor_measure_point(void)
   * @param[in]      none
   * @retval         电机数据指针
   */
-const motor_measure_t *get_trigger_motor_measure_point(void)
+const motor_measure_t *get_trigger_motor_L_measure_point(void)
 {
-    return &motor_chassis[6];//SZL修改 1-6-2021 由于电机在CAN 2 上 目前解包到motor_CAN2Bus数组中
-		//return &motor_CAN2Bus[6];
+    //SZL修改 4-15-2021 由于电机在CAN 2 上 目前解包到motor_CAN2Bus数组中
+		return &motor_CAN2Bus[2]; // CAN_TRIGGER_MOTOR_17mm_L_ID - CAN2_START_ID = [0x203-0x201=2]
+}
+
+const motor_measure_t *get_trigger_motor_R_measure_point(void)
+{
+	  return &motor_CAN2Bus[3]; // CAN_TRIGGER_MOTOR_17mm_R_ID - CAN2_START_ID = [0x204-0x201=3]
 }
 
 
@@ -445,12 +456,12 @@ void userCallback_CAN1_FIFO0_IT(CAN_HandleTypeDef *hcan)
 						  detect_hook(YAW_GIMBAL_MOTOR_TOE);
 							break;
 					}
-					case CAN_TRIGGER_MOTOR_17mm_ID:
-					{
-							get_motor_measure_new(&motor_chassis[i_can1], rx_data);
-						  detect_hook(TRIGGER_MOTOR_TOE);//这里先使用, 为了OLED的显示: TRIGGER_MOTOR_TOE <=> TRIGGER_MOTOR_17mm_TOE
-							break;
-					}
+//					case CAN_TRIGGER_MOTOR_17mm_ID:
+//					{
+//							get_motor_measure_new(&motor_chassis[i_can1], rx_data);
+//						  detect_hook(TRIGGER_MOTOR_TOE);//这里先使用, 为了OLED的显示: TRIGGER_MOTOR_TOE <=> TRIGGER_MOTOR_17mm_TOE
+//							break;
+//					}
 					case SuperCap_ID:
 					{
 							current_superCap = SuperCap_ID;
@@ -554,25 +565,43 @@ void userCallback_CAN2_FIFO1_IT(CAN_HandleTypeDef *hcan)
 			HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO1, &rx_header, rx_data);
 			
 			static uint8_t i_can2 = 0;
-			i_can2 = rx_header.StdId - CAN_SHOOTL_ID;
+			i_can2 = rx_header.StdId - CAN2_START_ID; //CAN_SHOOTL_ID;
 			switch (rx_header.StdId)
 			{
-					case CAN_SHOOTL_ID:
+//					case CAN_SHOOTL_ID:
+//					{
+//							get_motor_measure_new(&motor_CAN2Bus[i_can2], rx_data);
+//						  detect_hook(SHOOT_FRIC_L_TOE);
+//							break;
+//					}
+//					case CAN_SHOOTR_ID:
+//					{
+//							get_motor_measure_new(&motor_CAN2Bus[i_can2], rx_data);
+//						  detect_hook(SHOOT_FRIC_R_TOE);
+//							break;
+//					}
+				  case CAN_TRIGGER_MOTOR_17mm_L_ID:
 					{
 							get_motor_measure_new(&motor_CAN2Bus[i_can2], rx_data);
-						  detect_hook(SHOOT_FRIC_L_TOE);
+						  detect_hook(TRIGGER_MOTOR17mm_L_TOE);
 							break;
 					}
-					case CAN_SHOOTR_ID:
+					case CAN_TRIGGER_MOTOR_17mm_R_ID:
 					{
 							get_motor_measure_new(&motor_CAN2Bus[i_can2], rx_data);
-						  detect_hook(SHOOT_FRIC_R_TOE);
+						  detect_hook(TRIGGER_MOTOR17mm_R_TOE);
 							break;
 					}
-					case CAN_PIT_MOTOR_ID:
+					case CAN_PIT_MOTOR_L_ID: //CAN_PIT_MOTOR_ID
 					{
 							get_motor_measure_new(&motor_CAN2Bus[i_can2], rx_data);
-						  detect_hook(PITCH_GIMBAL_MOTOR_TOE);
+						  detect_hook(PITCH_GIMBAL_MOTOR_L_TOE);
+							break;
+					}
+					case CAN_PIT_MOTOR_R_ID: //CAN_PIT_MOTOR_ID
+					{
+							get_motor_measure_new(&motor_CAN2Bus[i_can2], rx_data);
+						  detect_hook(PITCH_GIMBAL_MOTOR_R_TOE);
 							break;
 					}
 					default:
