@@ -180,7 +180,7 @@ void shoot_init(void)
   * @param[in]      void
   * @retval         返回can控制值
   */
-int16_t shoot_control_loop(void) // ----------------------------------------------4-15------
+int16_t shoot_control_loop(void) // ----------------------------------------------4-16------
 {
 
     shoot_set_mode();        //设置状态机
@@ -217,7 +217,7 @@ int16_t shoot_control_loop(void) // --------------------------------------------
 			shoot_control.referee_current_shooter_17mm_speed_limit = get_shooter_id1_17mm_speed_limit();
 	 }
 	 
-	 /*记得添加 数据超出最大合理数值时的操作*/
+	 /*TODO 数据超出最大合理数值时的操作*/
 	 if(shoot_control.referee_current_shooter_17mm_speed_limit > 18)
 	 {
 		 shoot_control.referee_current_shooter_17mm_speed_limit = 18;
@@ -232,6 +232,8 @@ int16_t shoot_control_loop(void) // --------------------------------------------
 		 /*1) 发给ZYZ那 15.5 测出来14.5
 		   2) 发给ZYZ那 14.0 测出来 14.0
 		 */
+		 
+		 // 更新MD摩擦轮的PWM上限 // ------------------------------------------------------------------------------------------------------------------------------------------------------4-16-------------------------------------
 	 }
 	 else if(shoot_control.referee_current_shooter_17mm_speed_limit == 18)
 	 {//6-15之前的自瞄一直是按这个测试的

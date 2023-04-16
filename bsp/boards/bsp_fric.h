@@ -1,6 +1,10 @@
 #ifndef BSP_FRIC_H
 #define BSP_FRIC_H
 #include "struct_typedef.h"
+
+/* 2023 MD 炮塔 速度标定
+
+*/
 //1320 speed level 2 single shoot - fric_down
 //1400 speed level 2 continuous shoot- fric_up
 //1206 speed level 1 single 18m/s

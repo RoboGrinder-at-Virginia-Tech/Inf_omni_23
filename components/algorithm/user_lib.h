@@ -8,6 +8,7 @@ typedef __packed struct
     fp32 out;          //输出数据
     fp32 min_value;    //限幅最小值
     fp32 max_value;    //限幅最大值
+		fp32 max_value_constant; // 限幅最大值的常量, 限幅最大值可能会动态的变动, 取决于应用场景
     fp32 frame_period; //时间间隔
 } ramp_function_source_t;
 
