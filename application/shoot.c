@@ -108,7 +108,7 @@ void shoot_init(void)
 //    PID_init(&shoot_control.trigger_motor_pid, PID_POSITION, Trigger_speed_pid, TRIGGER_READY_PID_MAX_OUT, TRIGGER_READY_PID_MAX_IOUT);
 		PID_init(&shoot_control.L_barrel_trigger_motor_pid, PID_POSITION, L_barrel_Trigger_speed_pid, TRIGGER_READY_PID_MAX_OUT, TRIGGER_READY_PID_MAX_IOUT);
 		PID_init(&shoot_control.R_barrel_trigger_motor_pid, PID_POSITION, R_barrel_Trigger_speed_pid, TRIGGER_READY_PID_MAX_OUT, TRIGGER_READY_PID_MAX_IOUT);
-		
+
     //更新数据
     shoot_feedback_update();
 		// left barrel ramp
@@ -180,7 +180,7 @@ void shoot_init(void)
   * @param[in]      void
   * @retval         返回can控制值
   */
-int16_t shoot_control_loop(void) // ----------------------------------------------4-16------
+int16_t shoot_control_loop(void)
 {
 
     shoot_set_mode();        //设置状态机
@@ -208,49 +208,170 @@ int16_t shoot_control_loop(void) // --------------------------------------------
 //		//以上为老版本的------------------------------------	 
 
 //------------------修改等级判断 Texas A&M 比赛使用
-	 if(toe_is_error(REFEREE_TOE))
-   {
-      shoot_control.referee_current_shooter_17mm_speed_limit = INITIAL_PROJECTILE_SPEED_LIMIT_17mm; 
-   }
-	 else
-	 {
-			shoot_control.referee_current_shooter_17mm_speed_limit = get_shooter_id1_17mm_speed_limit();
-	 }
+	  if(toe_is_error(REFEREE_TOE))
+    {
+       shoot_control.referee_current_shooter_17mm_speed_limit = INITIAL_PROJECTILE_SPEED_LIMIT_17mm; 
+    }
+	  else
+ 	  {
+ 			 shoot_control.referee_current_shooter_17mm_speed_limit = get_shooter_id1_17mm_speed_limit();
+	  }
 	 
-	 /*TODO 数据超出最大合理数值时的操作*/
-	 if(shoot_control.referee_current_shooter_17mm_speed_limit > 18)
-	 {
-		 shoot_control.referee_current_shooter_17mm_speed_limit = 18;
-	 }
-	 
-	 //17mm 的两档
-	 //shoot_control.referee_current_shooter_17mm_speed_limit = 18;//强制使其=18 用于调试-----------------------------------------------------------------------------------------------
-	 if(shoot_control.referee_current_shooter_17mm_speed_limit == 15)
-	 {
-		 shoot_control.currentLIM_shoot_speed_17mm = (fp32)(15 - 3.0);//待定----------------------------
-		 shoot_control.predict_shoot_speed = shoot_control.currentLIM_shoot_speed_17mm + 2;//待定
-		 /*1) 发给ZYZ那 15.5 测出来14.5
-		   2) 发给ZYZ那 14.0 测出来 14.0
-		 */
-		 
-		 // 更新MD摩擦轮的PWM上限 // ------------------------------------------------------------------------------------------------------------------------------------------------------4-16-------------------------------------
-	 }
-	 else if(shoot_control.referee_current_shooter_17mm_speed_limit == 18)
-	 {//6-15之前的自瞄一直是按这个测试的
-		 // 18- 4.5 为 RMUL 实际 16.7-17.1 - .3 m/s 单速标定 SZL
-		 shoot_control.currentLIM_shoot_speed_17mm = (fp32)(18 - 4.5);
-		 shoot_control.predict_shoot_speed = shoot_control.currentLIM_shoot_speed_17mm + 3;
-		 /*
-		 1) 发给ZYZ那 16.5 测出来 16.5
-		 */
-	 }
-	 else
-	 {//默认射速15
-		 shoot_control.currentLIM_shoot_speed_17mm = (fp32)(15 - 3.0);//待定-----------------------------
-		 shoot_control.predict_shoot_speed = shoot_control.currentLIM_shoot_speed_17mm + 2;//待定
-	 }
-	 
-	 
+	  /*TODO 数据超出最大合理数值时的操作*/
+	  if(shoot_control.referee_current_shooter_17mm_speed_limit > 18)
+	  {
+		  shoot_control.referee_current_shooter_17mm_speed_limit = 18;
+	  }
+		
+	  //17mm 的两档
+	  //shoot_control.referee_current_shooter_17mm_speed_limit = 18;//强制使其=18 用于调试-----------------------------------------------------------------------------------------------
+	  if(shoot_control.referee_current_shooter_17mm_speed_limit == 15)
+	  {
+		  shoot_control.currentLIM_shoot_speed_17mm = (fp32)(15 - 3.0);//待定----------------------------
+		  shoot_control.predict_shoot_speed = shoot_control.currentLIM_shoot_speed_17mm + 2;//待定
+		  /*1) 发给ZYZ那 15.5 测出来14.5
+		    2) 发给ZYZ那 14.0 测出来 14.0
+		  */
+		  // snail 摩擦轮 预期速度 只作为目标数值参考, TODO: 卡尔曼滤波
+		  shoot_control.L_barrel_fric1_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
+		  shoot_control.L_barrel_fric2_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
+		  shoot_control.R_barrel_fric1_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
+		  shoot_control.R_barrel_fric2_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
+		  
+		  // 更新MD snail 摩擦轮的PWM上限
+		  shoot_control.L_barrel_fric1_ramp.max_value_constant = NEW_FRIC_15ms; //NEW_FRIC_15ms_higher
+		  shoot_control.L_barrel_fric2_ramp.max_value_constant = NEW_FRIC_15ms;
+		  shoot_control.R_barrel_fric1_ramp.max_value_constant = NEW_FRIC_15ms;
+		  shoot_control.R_barrel_fric2_ramp.max_value_constant = NEW_FRIC_15ms;
+	  }
+	  else if(shoot_control.referee_current_shooter_17mm_speed_limit == 18)
+	  { //6-15之前的自瞄一直是按这个测试的
+		  // 18- 4.5 为 RMUL 实际 16.7-17.1 - .3 m/s 单速标定 SZL
+		  shoot_control.currentLIM_shoot_speed_17mm = (fp32)(18 - 4.5);
+		  shoot_control.predict_shoot_speed = shoot_control.currentLIM_shoot_speed_17mm + 3;
+		  /*
+		  1) 发给ZYZ那 16.5 测出来 16.5
+		  */
+		  // snail 摩擦轮 预期速度 只作为目标数值参考, TODO: 卡尔曼滤波
+		  shoot_control.L_barrel_fric1_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
+		  shoot_control.L_barrel_fric2_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
+		  shoot_control.R_barrel_fric1_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
+		  shoot_control.R_barrel_fric2_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
+		  
+		  // 更新MD snail 摩擦轮的PWM上限
+		  shoot_control.L_barrel_fric1_ramp.max_value_constant = NEW_FRIC_18ms; //NEW_FRIC_15ms_higher
+		  shoot_control.L_barrel_fric2_ramp.max_value_constant = NEW_FRIC_18ms;
+		  shoot_control.R_barrel_fric1_ramp.max_value_constant = NEW_FRIC_18ms;
+		  shoot_control.R_barrel_fric2_ramp.max_value_constant = NEW_FRIC_18ms;
+	  }
+	  else
+	  {//默认射速15
+		  shoot_control.currentLIM_shoot_speed_17mm = (fp32)(15 - 3.0);//待定-----------------------------
+		  shoot_control.predict_shoot_speed = shoot_control.currentLIM_shoot_speed_17mm + 2;//待定
+		  
+		  // snail 摩擦轮 预期速度 只作为目标数值参考, TODO: 卡尔曼滤波
+		  shoot_control.L_barrel_fric1_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
+		  shoot_control.L_barrel_fric2_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
+		  shoot_control.R_barrel_fric1_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
+		  shoot_control.R_barrel_fric2_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
+		  
+		  // 更新MD snail 摩擦轮的PWM上限
+		  shoot_control.L_barrel_fric1_ramp.max_value_constant = NEW_FRIC_15ms; //NEW_FRIC_15ms_higher
+		  shoot_control.L_barrel_fric2_ramp.max_value_constant = NEW_FRIC_15ms;
+		  shoot_control.R_barrel_fric1_ramp.max_value_constant = NEW_FRIC_15ms;
+		  shoot_control.R_barrel_fric2_ramp.max_value_constant = NEW_FRIC_15ms;
+	  }
+		
+		// 先处理 left barrel的 FSM
+    if (shoot_control.shoot_mode_L == SHOOT_STOP)
+    {
+        //设置拨弹轮的速度
+        shoot_control.L_barrel_speed_set = 0; // .speed_set = 0;
+    }
+    else if (shoot_control.shoot_mode_L == SHOOT_READY_FRIC)
+    {
+        //设置拨弹轮的速度
+        shoot_control.L_barrel_speed_set = 0; // .speed_set = 0;
+    }
+    else if(shoot_control.shoot_mode_L ==SHOOT_READY_BULLET)
+    {
+        shoot_control.L_barrel_trigger_speed_set = 0.0f; //.trigger_speed_set
+        shoot_control.L_barrel_speed_set = 0.0f; //.speed_set
+        //这个if 并不是 基本没啥用
+        shoot_control.L_barrel_trigger_motor_pid.max_out = TRIGGER_READY_PID_MAX_OUT; //.trigger_motor_pid
+        shoot_control.L_barrel_trigger_motor_pid.max_iout = TRIGGER_READY_PID_MAX_IOUT; //.trigger_motor_pid
+    }
+    else if (shoot_control.shoot_mode_L == SHOOT_READY)
+    {
+				//shoot_control.trigger_speed_set = 0.0f;//------------
+        //设置拨弹轮的速度
+         shoot_control.L_barrel_speed_set = 0.0f; // .speed_set
+    }
+    else if (shoot_control.shoot_mode_L == SHOOT_BULLET)
+    {
+        shoot_control.L_barrel_trigger_motor_pid.max_out = TRIGGER_BULLET_PID_MAX_OUT;
+        shoot_control.L_barrel_trigger_motor_pid.max_iout = TRIGGER_BULLET_PID_MAX_IOUT;
+        shoot_bullet_control_17mm();
+    }
+    else if (shoot_control.shoot_mode_L == SHOOT_CONTINUE_BULLET)
+    {
+        //设置拨弹轮的拨动速度,并开启堵转反转处理
+        shoot_control.L_barrel_trigger_speed_set = CONTINUE_TRIGGER_SPEED;
+        trigger_motor_turn_back_17mm();
+    }
+    else if(shoot_control.shoot_mode_L == SHOOT_DONE)
+    {
+        shoot_control.L_barrel_speed_set = 0.0f;
+    }
+
+    if(shoot_control.shoot_mode_L == SHOOT_STOP)
+    {
+        shoot_laser_off();
+        shoot_control.L_barrel_given_current = 0; // .given_current
+        //摩擦轮需要一个个斜波开启，不能同时直接开启，否则可能电机不转
+//        ramp_calc(&shoot_control.fric1_ramp, -SHOOT_FRIC_PWM_ADD_VALUE);
+//        ramp_calc(&shoot_control.fric2_ramp, -SHOOT_FRIC_PWM_ADD_VALUE);
+			
+				shoot_control.L_barrel_fric_pwm1 = FRIC_OFF; //.fric_pwm1
+				shoot_control.L_barrel_fric_pwm2 = FRIC_OFF; //.fric_pwm2
+				//关闭不需要斜坡关闭
+			
+			
+//			//SZL添加, 也可以使用斜波开启 低通滤波 //NOT USED for MD
+//			shoot_control.currentLeft_speed_set = M3508_FRIC_STOP;
+//			shoot_control.currentRight_speed_set = M3508_FRIC_STOP;
+    }
+    else
+    {
+        shoot_laser_on(); //激光开启 // ------------------4-17----------
+			
+				
+				//6-17未来可能增加串级PID----
+				
+        //计算拨弹轮电机PID
+        PID_calc(&shoot_control.trigger_motor_pid, shoot_control.speed, shoot_control.speed_set);
+        
+#if TRIG_MOTOR_TURN
+				shoot_control.given_current = -(int16_t)(shoot_control.trigger_motor_pid.out);
+#else
+				shoot_control.given_current = (int16_t)(shoot_control.trigger_motor_pid.out);
+#endif
+        if(shoot_control.shoot_mode < SHOOT_READY_BULLET)
+        {
+            shoot_control.given_current = 0;
+        }
+        //摩擦轮需要一个个斜波开启，不能同时直接开启，否则可能电机不转
+        ramp_calc(&shoot_control.fric1_ramp, SHOOT_FRIC_PWM_ADD_VALUE);
+        ramp_calc(&shoot_control.fric2_ramp, SHOOT_FRIC_PWM_ADD_VALUE);
+				
+				//SZL添加, 也可以使用斜波开启 低通滤波 //NOT USED for MD
+				shoot_control.currentLeft_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
+				shoot_control.currentRight_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
+
+    }
+		
+		// 处理 right barrel 的FSM
+		// 先处理 left barrel的 FSM
     if (shoot_control.shoot_mode == SHOOT_STOP)
     {
         //设置拨弹轮的速度
@@ -305,7 +426,7 @@ int16_t shoot_control_loop(void) // --------------------------------------------
 				//关闭不需要斜坡关闭
 			
 			
-			//SZL添加, 也可以使用斜波开启 低通滤波
+			//SZL添加, 也可以使用斜波开启 低通滤波 //NOT USED for MD
 			shoot_control.currentLeft_speed_set = M3508_FRIC_STOP;
 			shoot_control.currentRight_speed_set = M3508_FRIC_STOP;
     }
@@ -332,11 +453,12 @@ int16_t shoot_control_loop(void) // --------------------------------------------
         ramp_calc(&shoot_control.fric1_ramp, SHOOT_FRIC_PWM_ADD_VALUE);
         ramp_calc(&shoot_control.fric2_ramp, SHOOT_FRIC_PWM_ADD_VALUE);
 				
-				//SZL添加, 也可以使用斜波开启 低通滤波
+				//SZL添加, 也可以使用斜波开启 低通滤波 //NOT USED for MD
 				shoot_control.currentLeft_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 				shoot_control.currentRight_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 
     }
+		// left right barrel FSM 处理完成
 
     shoot_control.fric_pwm1 = (uint16_t)(shoot_control.fric1_ramp.out);// + 19);
     shoot_control.fric_pwm2 = (uint16_t)(shoot_control.fric2_ramp.out);
@@ -348,7 +470,7 @@ int16_t shoot_control_loop(void) // --------------------------------------------
 		
 		//vTaskDelay(5);
 		
-		//M3508_fric_wheel_spin_control(-tempLeft_speed_set, tempRight_speed_set);
+		//M3508_fric_wheel_spin_control(-tempLeft_speed_set, tempRight_speed_set); //NOT USED for MD
 		M3508_fric_wheel_spin_control(-shoot_control.currentLeft_speed_set, shoot_control.currentRight_speed_set);
 		
     return shoot_control.given_current;

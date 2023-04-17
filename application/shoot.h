@@ -248,7 +248,7 @@ typedef struct
 		// 17mm left barrel 各种控制 逻辑相关 --------------
     pid_type_def L_barrel_trigger_motor_pid;//内环PID
 		pid_type_def L_barrel_trigger_motor_angle_pid;//外环PID--只是写在这里 没用
-    fp32 L_barrel_trigger_speed_set;
+    fp32 L_barrel_trigger_speed_set; // 需要用trigger_speed_set 来 update speed_set(PID 用)
     fp32 L_barrel_speed;
     fp32 L_barrel_speed_set;
     fp32 L_barrel_angle;
