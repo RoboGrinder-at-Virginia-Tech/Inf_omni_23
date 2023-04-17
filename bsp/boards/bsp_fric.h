@@ -11,11 +11,11 @@ referee_current_shooter_17mm_speed_limit = 15m/s;
 
 /* ------ Below are old notes from 2021 and 2022 ------ */
 
-/* Below are for Heros:
+/* Below are for 2021 Heros:
 15m/s 
 右边 (发射方向) PWM1 fric1_on fric1_ramp 是值需要高一点的那个 NEW_FRIC_15ms_higher
-shoot_control.fric1_ramp.max_value = NEW_FRIC_15ms_higher;
-shoot_control.fric2_ramp.max_value = NEW_FRIC_15ms;
+shoot_control.fric1_ramp.max_value(_const) = NEW_FRIC_15ms_higher;
+shoot_control.fric2_ramp.max_value(_const) = NEW_FRIC_15ms;
 		 
 左边 是数值正常的NEW_FRIC_15ms
 
@@ -41,7 +41,7 @@ NEW_FRIC_15ms_higher 1150
 NEW_FRIC_15ms 1070
 */
 
-//SZL 6-16-2022 新定义的 for Heros
+//SZL 6-16-2022 新定义的 for 2022-Heros
 #define NEW_FRIC_15ms_higher 1135//1150//1170         speed is around 14m/s at 1140 and 1085 
 #define NEW_FRIC_15ms 1080//1095 //1070
 #define NEW_FRIC_18ms 1206
@@ -54,7 +54,7 @@ NEW_FRIC_15ms 1070
 
 #define FRIC_UP 1097
 #define FRIC_DOWN 1097		
-#define FRIC_OFF 1000
+#define FRIC_OFF 1000 // 4-15-2023 仍然使用的 停转PWM
 
 #define FRIC_LV1 1097
 #define FRIC_LV2 1114
@@ -72,9 +72,13 @@ NEW_FRIC_15ms 1070
 #define M3508_FRIC_STOP 0
 
 
-extern void fric_off(void);
-extern void fric1_on(uint16_t cmd);
-extern void fric2_on(uint16_t cmd);
+extern void L_barrel_fric_off(void);
+extern void L_barrel_fric1_on(uint16_t cmd);
+extern void L_barrel_fric2_on(uint16_t cmd);
+
+extern void R_barrel_fric_off(void);
+extern void R_barrel_fric1_on(uint16_t cmd);
+extern void R_barrel_fric2_on(uint16_t cmd);
 
 extern void M3508_fric_wheel_spin_control(fp32 left_fric_speed, fp32 right_fric_speed);
 #endif

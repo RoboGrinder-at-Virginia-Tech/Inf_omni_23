@@ -32,13 +32,19 @@
 #include "pid.h"
 #include "referee_usart_task.h"
 
-#define shoot_fric1_on(pwm) fric1_on((pwm)) //摩擦轮1pwm宏定义
-#define shoot_fric2_on(pwm) fric2_on((pwm)) //摩擦轮2pwm宏定义
-#define shoot_fric_off()    fric_off()      //关闭两个摩擦轮
+// shootL: left barrel
+#define shootL_fric1_on(pwm) L_barrel_fric1_on((pwm)) //left barrel 摩擦轮1pwm宏定义
+#define shootL_fric2_on(pwm) L_barrel_fric2_on((pwm)) //left barrel 摩擦轮2pwm宏定义
+#define shootL_fric_off()    L_barrel_fric_off()      //关闭两个摩擦轮
+
+// shootR: right barrel
+#define shootR_fric1_on(pwm) R_barrel_fric1_on((pwm)) //left barrel 摩擦轮1pwm宏定义
+#define shootR_fric2_on(pwm) R_barrel_fric2_on((pwm)) //left barrel 摩擦轮2pwm宏定义
+#define shootR_fric_off()    R_barrel_fric_off()      //关闭两个摩擦轮
 
 #define shoot_laser_on()    laser_on()      //激光开启宏定义
 #define shoot_laser_off()   laser_off()     //激光关闭宏定义
-//微动开关IO
+//微动开关IO 只是定义了
 #define BUTTEN_TRIG_PIN HAL_GPIO_ReadPin(BUTTON_TRIG_GPIO_Port, BUTTON_TRIG_Pin)
 
 
@@ -70,6 +76,11 @@ static void trigger_motor_turn_back_17mm(void);
   * @retval         void
   */
 static void shoot_bullet_control_17mm(void);
+
+/*
+尝试卡尔曼滤波
+*/
+static void snail_fric_wheel_kalman_adjustment(ramp_function_source_t *fric1, ramp_function_source_t *fric2);
 
 
 
@@ -190,7 +201,7 @@ int16_t shoot_control_loop(void)
 //	  robot_Level = get_robot_level();
 
 //	 	 if(robot_Level == 0){
-//	  shoot_control.fric1_ramp.max_value = FRIC_LV1;
+//	  shoot_control.fric1_ramp.max_value = FRIC_LV1; //(_const)
 //    shoot_control.fric2_ramp.max_value = FRIC_LV1;
 //	 }else if(robot_Level == 1){
 //	  shoot_control.fric1_ramp.max_value = FRIC_LV1;
@@ -343,92 +354,94 @@ int16_t shoot_control_loop(void)
     }
     else
     {
-        shoot_laser_on(); //激光开启 // ------------------4-17----------
+        shoot_laser_on(); //激光开启
 			
 				
 				//6-17未来可能增加串级PID----
 				
         //计算拨弹轮电机PID
-        PID_calc(&shoot_control.trigger_motor_pid, shoot_control.speed, shoot_control.speed_set);
+        PID_calc(&shoot_control.L_barrel_trigger_motor_pid, shoot_control.L_barrel_speed, shoot_control.L_barrel_speed_set);
         
 #if TRIG_MOTOR_TURN
-				shoot_control.given_current = -(int16_t)(shoot_control.trigger_motor_pid.out);
+				shoot_control.L_barrel_given_current = -(int16_t)(shoot_control.L_barrel_trigger_motor_pid.out);
 #else
-				shoot_control.given_current = (int16_t)(shoot_control.trigger_motor_pid.out);
+				shoot_control.L_barrel_given_current = (int16_t)(shoot_control.L_barrel_trigger_motor_pid.out);
 #endif
-        if(shoot_control.shoot_mode < SHOOT_READY_BULLET)
+        if(shoot_control.shoot_mode_L < SHOOT_READY_BULLET)
         {
-            shoot_control.given_current = 0;
+            shoot_control.L_barrel_given_current = 0;
         }
-        //摩擦轮需要一个个斜波开启，不能同时直接开启，否则可能电机不转
-        ramp_calc(&shoot_control.fric1_ramp, SHOOT_FRIC_PWM_ADD_VALUE);
-        ramp_calc(&shoot_control.fric2_ramp, SHOOT_FRIC_PWM_ADD_VALUE);
+				// TODO: 卡尔曼滤波 结合裁判系统返回子弹速度 调整摩擦轮速度 // ------------------4-17----------
+				snail_fric_wheel_kalman_adjustment(&shoot_control.L_barrel_fric1_ramp, &shoot_control.L_barrel_fric2_ramp);
 				
-				//SZL添加, 也可以使用斜波开启 低通滤波 //NOT USED for MD
-				shoot_control.currentLeft_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
-				shoot_control.currentRight_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
+        //摩擦轮需要一个个斜波开启，不能同时直接开启，否则可能电机不转
+        ramp_calc(&shoot_control.L_barrel_fric1_ramp, SHOOT_FRIC_PWM_ADD_VALUE); //.fric1_ramp
+        ramp_calc(&shoot_control.L_barrel_fric2_ramp, SHOOT_FRIC_PWM_ADD_VALUE); //.fric2_ramp
+				
+//				//SZL添加, 也可以使用斜波开启 低通滤波 //NOT USED for MD
+//				shoot_control.currentLeft_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
+//				shoot_control.currentRight_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 
     }
 		
 		// 处理 right barrel 的FSM
-		// 先处理 left barrel的 FSM
-    if (shoot_control.shoot_mode == SHOOT_STOP)
+    if (shoot_control.shoot_mode_R == SHOOT_STOP) // shoot_mode_R
     {
         //设置拨弹轮的速度
-        shoot_control.speed_set = 0;
+        shoot_control.R_barrel_speed_set = 0; //.speed_set
     }
-    else if (shoot_control.shoot_mode == SHOOT_READY_FRIC)
+    else if (shoot_control.shoot_mode_R == SHOOT_READY_FRIC)
     {
         //设置拨弹轮的速度
-        shoot_control.speed_set = 0;
+        shoot_control.R_barrel_speed_set = 0; //.speed_set
     }
-    else if(shoot_control.shoot_mode ==SHOOT_READY_BULLET)
+    else if(shoot_control.shoot_mode_R ==SHOOT_READY_BULLET)
     {
-        shoot_control.trigger_speed_set = 0.0f;
-        shoot_control.speed_set = 0.0f;
+        shoot_control.R_barrel_trigger_speed_set = 0.0f; //.trigger_speed_set
+        shoot_control.R_barrel_speed_set = 0.0f; //.speed_set
         //这个if 并不是 基本没啥用
-        shoot_control.trigger_motor_pid.max_out = TRIGGER_READY_PID_MAX_OUT;
-        shoot_control.trigger_motor_pid.max_iout = TRIGGER_READY_PID_MAX_IOUT;
+        shoot_control.R_barrel_trigger_motor_pid.max_out = TRIGGER_READY_PID_MAX_OUT;
+        shoot_control.R_barrel_trigger_motor_pid.max_iout = TRIGGER_READY_PID_MAX_IOUT;
     }
-    else if (shoot_control.shoot_mode == SHOOT_READY)
+    else if (shoot_control.shoot_mode_R == SHOOT_READY)
     {
 				//shoot_control.trigger_speed_set = 0.0f;//------------
         //设置拨弹轮的速度
-         shoot_control.speed_set = 0.0f;
+         shoot_control.R_barrel_speed_set = 0.0f; //.speed_set
     }
-    else if (shoot_control.shoot_mode == SHOOT_BULLET)
+    else if (shoot_control.shoot_mode_R == SHOOT_BULLET)
     {
-        shoot_control.trigger_motor_pid.max_out = TRIGGER_BULLET_PID_MAX_OUT;//-----------------------------------------
-        shoot_control.trigger_motor_pid.max_iout = TRIGGER_BULLET_PID_MAX_IOUT;
+        shoot_control.R_barrel_trigger_motor_pid.max_out = TRIGGER_BULLET_PID_MAX_OUT;//-----------------------------------------
+        shoot_control.R_barrel_trigger_motor_pid.max_iout = TRIGGER_BULLET_PID_MAX_IOUT;
         shoot_bullet_control_17mm();
     }
-    else if (shoot_control.shoot_mode == SHOOT_CONTINUE_BULLET)
+    else if (shoot_control.shoot_mode_R == SHOOT_CONTINUE_BULLET)
     {
         //设置拨弹轮的拨动速度,并开启堵转反转处理
-        shoot_control.trigger_speed_set = CONTINUE_TRIGGER_SPEED;
+        shoot_control.R_barrel_trigger_speed_set = CONTINUE_TRIGGER_SPEED; //.trigger_speed_set
         trigger_motor_turn_back_17mm();
     }
-    else if(shoot_control.shoot_mode == SHOOT_DONE)
+    else if(shoot_control.shoot_mode_R == SHOOT_DONE)
     {
-        shoot_control.speed_set = 0.0f;
+        shoot_control.R_barrel_speed_set = 0.0f;
     }
 
-    if(shoot_control.shoot_mode == SHOOT_STOP)
+    if(shoot_control.shoot_mode_R == SHOOT_STOP)
     {
         shoot_laser_off();
-        shoot_control.given_current = 0;
+        shoot_control.R_barrel_given_current = 0;
         //摩擦轮需要一个个斜波开启，不能同时直接开启，否则可能电机不转
 //        ramp_calc(&shoot_control.fric1_ramp, -SHOOT_FRIC_PWM_ADD_VALUE);
 //        ramp_calc(&shoot_control.fric2_ramp, -SHOOT_FRIC_PWM_ADD_VALUE);
 			
-				shoot_control.fric_pwm1 = FRIC_OFF;
-				shoot_control.fric_pwm2 = FRIC_OFF;
+				shoot_control.R_barrel_fric_pwm1 = FRIC_OFF; //.fric_pwm1
+				shoot_control.R_barrel_fric_pwm2 = FRIC_OFF; //.fric_pwm2
 				//关闭不需要斜坡关闭
 			
 			
-			//SZL添加, 也可以使用斜波开启 低通滤波 //NOT USED for MD
-			shoot_control.currentLeft_speed_set = M3508_FRIC_STOP;
-			shoot_control.currentRight_speed_set = M3508_FRIC_STOP;
+//			//SZL添加, 也可以使用斜波开启 低通滤波 //NOT USED for MD
+//			shoot_control.currentLeft_speed_set = M3508_FRIC_STOP;
+//			shoot_control.currentRight_speed_set = M3508_FRIC_STOP;
     }
     else
     {
@@ -438,42 +451,43 @@ int16_t shoot_control_loop(void)
 				//6-17未来可能增加串级PID----
 				
         //计算拨弹轮电机PID
-        PID_calc(&shoot_control.trigger_motor_pid, shoot_control.speed, shoot_control.speed_set);
+        PID_calc(&shoot_control.R_barrel_trigger_motor_pid, shoot_control.R_barrel_speed, shoot_control.R_barrel_speed_set);
         
 #if TRIG_MOTOR_TURN
-				shoot_control.given_current = -(int16_t)(shoot_control.trigger_motor_pid.out);
+				shoot_control.R_barrel_given_current = -(int16_t)(shoot_control.R_barrel_trigger_motor_pid.out);
 #else
-				shoot_control.given_current = (int16_t)(shoot_control.trigger_motor_pid.out);
+				shoot_control.R_barrel_given_current = (int16_t)(shoot_control.R_barrel_trigger_motor_pid.out);
 #endif
-        if(shoot_control.shoot_mode < SHOOT_READY_BULLET)
+        if(shoot_control.shoot_mode_R < SHOOT_READY_BULLET)
         {
-            shoot_control.given_current = 0;
+            shoot_control.R_barrel_given_current = 0;
         }
         //摩擦轮需要一个个斜波开启，不能同时直接开启，否则可能电机不转
-        ramp_calc(&shoot_control.fric1_ramp, SHOOT_FRIC_PWM_ADD_VALUE);
-        ramp_calc(&shoot_control.fric2_ramp, SHOOT_FRIC_PWM_ADD_VALUE);
+        ramp_calc(&shoot_control.R_barrel_fric1_ramp, SHOOT_FRIC_PWM_ADD_VALUE);
+        ramp_calc(&shoot_control.R_barrel_fric2_ramp, SHOOT_FRIC_PWM_ADD_VALUE);
 				
-				//SZL添加, 也可以使用斜波开启 低通滤波 //NOT USED for MD
-				shoot_control.currentLeft_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
-				shoot_control.currentRight_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
+//				//SZL添加, 也可以使用斜波开启 低通滤波 //NOT USED for MD
+//				shoot_control.currentLeft_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
+//				shoot_control.currentRight_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 
     }
-		// left right barrel FSM 处理完成
-
-    shoot_control.fric_pwm1 = (uint16_t)(shoot_control.fric1_ramp.out);// + 19);
-    shoot_control.fric_pwm2 = (uint16_t)(shoot_control.fric2_ramp.out);
+		// left and right barrel FSM 处理完成; 以下开始 实际输出
+		
+    shoot_control.L_barrel_fric_pwm1 = (uint16_t)(shoot_control.L_barrel_fric1_ramp.out);// + 19); //.fric_pwm1 .fric1_ramp
+    shoot_control.L_barrel_fric_pwm2 = (uint16_t)(shoot_control.L_barrel_fric2_ramp.out);   //.fric_pwm2 .fric2_ramp
+		
+		shoot_control.R_barrel_fric_pwm1 = (uint16_t)(shoot_control.R_barrel_fric1_ramp.out);
+    shoot_control.R_barrel_fric_pwm2 = (uint16_t)(shoot_control.R_barrel_fric2_ramp.out);
 		
 		
-		
+		// ------------------4-17----------
     shoot_fric1_on(shoot_control.fric_pwm1);
     shoot_fric2_on(shoot_control.fric_pwm2);
 		
-		//vTaskDelay(5);
+//		//NOT USED for MD
+//		M3508_fric_wheel_spin_control(-shoot_control.currentLeft_speed_set, shoot_control.currentRight_speed_set);
 		
-		//M3508_fric_wheel_spin_control(-tempLeft_speed_set, tempRight_speed_set); //NOT USED for MD
-		M3508_fric_wheel_spin_control(-shoot_control.currentLeft_speed_set, shoot_control.currentRight_speed_set);
-		
-    return shoot_control.given_current;
+    return 0; // shoot_control.given_current; values stored in global variable not return anymore
 }
 
 
@@ -929,6 +943,34 @@ static void shoot_bullet_control_17mm(void)
 			  shoot_control.shoot_mode = SHOOT_DONE; //pr test
     }
    
+}
+
+/*
+4-16-2023 目前未使用 卡尔曼滤波 这个函数是直接赋值
+*/
+static void snail_fric_wheel_kalman_adjustment(ramp_function_source_t *fric1, ramp_function_source_t *fric2)
+{
+	if(fric1 == NULL || fric2 == NULL)
+	{
+		return;
+	}
+	
+	// 处理左枪管
+	if(fric1 == &shoot_control.L_barrel_fric1_ramp && fric2 == &shoot_control.L_barrel_fric2_ramp)
+	{
+		fric1->max_value = fric1->max_value_constant;
+		fric2->max_value = fric2->max_value_constant;
+	}
+	else if(fric1 == &shoot_control.R_barrel_fric1_ramp && fric2 == &shoot_control.R_barrel_fric2_ramp)
+	{ //处理右枪管
+		fric1->max_value = fric1->max_value_constant;
+		fric2->max_value = fric2->max_value_constant;
+	}
+	else
+	{
+		return;
+	}
+	
 }
 
 const shoot_control_t* get_robot_shoot_control()
