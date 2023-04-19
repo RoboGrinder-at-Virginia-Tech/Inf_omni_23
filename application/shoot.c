@@ -483,7 +483,6 @@ int16_t shoot_control_loop(void)
     shoot_control.R_barrel_fric_pwm2 = (uint16_t)(shoot_control.R_barrel_fric2_ramp.out);
 		
 		
-		// ------------------4-17----------
 		// set the calculated final pwm to TIM, actually control the motor
 		L_barrel_fric1_on(shoot_control.L_barrel_fric_pwm1);
 		L_barrel_fric2_on(shoot_control.L_barrel_fric_pwm2);
@@ -620,7 +619,7 @@ static void shoot_set_mode(void)
     }
 		
 		// right barrel related FSM, 后处理
-		if(shoot_control.shoot_mode_R == SHOOT_READY_FRIC && shoot_control. .fric1_ramp.out == shoot_control.fric1_ramp.max_value && shoot_control.fric2_ramp.out == shoot_control.fric2_ramp.max_value)
+		if(shoot_control.shoot_mode_R == SHOOT_READY_FRIC && shoot_control.R_barrel_fric1_ramp.out == shoot_control.R_barrel_fric1_ramp.max_value && shoot_control.R_barrel_fric2_ramp.out == shoot_control.R_barrel_fric2_ramp.max_value)
     {
         shoot_control.shoot_mode_R = SHOOT_READY_BULLET; //当摩擦轮完成预热 //A
     }
@@ -630,28 +629,28 @@ static void shoot_set_mode(void)
     }
     else if(0) //shoot_control.shoot_mode == SHOOT_READY && shoot_control.key == SWITCH_TRIGGER_OFF)
     {
-        shoot_control.shoot_mode = SHOOT_READY_BULLET;//从不会进入这个else if
+        shoot_control.shoot_mode_R = SHOOT_READY_BULLET;//从不会进入这个else if
     }
-    else if(shoot_control.shoot_mode == SHOOT_READY)
+    else if(shoot_control.shoot_mode_R == SHOOT_READY)
     {
-			if(shoot_control.trigger_motor_17mm_is_online)//发射机构断电时, shoot_mode状态机不会被置为发射相关状态
+			if(shoot_control.trigger_motor17mm_R_is_online)//发射机构断电时, shoot_mode状态机不会被置为发射相关状态
 			{
         //下拨一次或者鼠标按下一次，进入射击状态
         if ((switch_is_down(shoot_control.shoot_rc->rc.s[SHOOT_RC_MODE_CHANNEL]) && !switch_is_down(last_s)) || (shoot_control.press_l && shoot_control.last_press_l == 0))
         {
-            shoot_control.shoot_mode = SHOOT_BULLET;
+            shoot_control.shoot_mode_R = SHOOT_BULLET;
         }
 			}
     }
-    else if(shoot_control.shoot_mode == SHOOT_DONE)
+    else if(shoot_control.shoot_mode_R == SHOOT_DONE)
     {
-        shoot_control.key_time++;
+        shoot_control.R_barrel_key_time++; //.key_time++; //key_time
 				//微动开关 抖动时间到了之后, 再弄成SHOOT_READY_BULLET
 				//现在是 缓冲时间
-        if(shoot_control.key_time > SHOOT_DONE_KEY_OFF_TIME)
+        if(shoot_control.R_barrel_key_time > SHOOT_DONE_KEY_OFF_TIME)
         {
-            shoot_control.key_time = 0;
-            shoot_control.shoot_mode = SHOOT_READY_BULLET;
+            shoot_control.R_barrel_key_time = 0;
+            shoot_control.shoot_mode_R = SHOOT_READY_BULLET;
         }
     }
 		
@@ -664,7 +663,7 @@ static void shoot_set_mode(void)
 			 }
 		}
 	*/
-		
+		// 4-17
 		/*更改自瞄开启逻辑  X按键计数*/
 		if(shoot_control.shoot_rc->key.v & KEY_PRESSED_OFFSET_X)
 		{
