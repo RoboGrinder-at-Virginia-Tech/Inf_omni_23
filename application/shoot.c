@@ -243,7 +243,7 @@ int16_t shoot_control_loop(void)
 		  /*1) 发给ZYZ那 15.5 测出来14.5
 		    2) 发给ZYZ那 14.0 测出来 14.0
 		  */
-		  // snail 摩擦轮 预期速度 只作为目标数值参考, TODO: 卡尔曼滤波
+		  // snail 摩擦轮 预期速度 只作为目标数值参考
 		  shoot_control.L_barrel_fric1_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 		  shoot_control.L_barrel_fric2_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 		  shoot_control.R_barrel_fric1_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
@@ -263,7 +263,7 @@ int16_t shoot_control_loop(void)
 		  /*
 		  1) 发给ZYZ那 16.5 测出来 16.5
 		  */
-		  // snail 摩擦轮 预期速度 只作为目标数值参考, TODO: 卡尔曼滤波
+		  // snail 摩擦轮 预期速度 只作为目标数值参考
 		  shoot_control.L_barrel_fric1_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 		  shoot_control.L_barrel_fric2_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 		  shoot_control.R_barrel_fric1_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
@@ -280,7 +280,7 @@ int16_t shoot_control_loop(void)
 		  shoot_control.currentLIM_shoot_speed_17mm = (fp32)(15 - 3.0);//待定-----------------------------
 		  shoot_control.predict_shoot_speed = shoot_control.currentLIM_shoot_speed_17mm + 2;//待定
 		  
-		  // snail 摩擦轮 预期速度 只作为目标数值参考, TODO: 卡尔曼滤波
+		  // snail 摩擦轮 预期速度 只作为目标数值参考
 		  shoot_control.L_barrel_fric1_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 		  shoot_control.L_barrel_fric2_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 		  shoot_control.R_barrel_fric1_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
@@ -371,7 +371,7 @@ int16_t shoot_control_loop(void)
         {
             shoot_control.L_barrel_given_current = 0;
         }
-				// TODO: 卡尔曼滤波 结合裁判系统返回子弹速度 调整摩擦轮速度 // ------------------4-17----------
+				// TODO: 卡尔曼滤波 结合裁判系统返回子弹速度 调整摩擦轮速度 也就是调整ramp.max_value
 				snail_fric_wheel_kalman_adjustment(&shoot_control.L_barrel_fric1_ramp, &shoot_control.L_barrel_fric2_ramp);
 				
         //摩擦轮需要一个个斜波开启，不能同时直接开启，否则可能电机不转
@@ -462,6 +462,9 @@ int16_t shoot_control_loop(void)
         {
             shoot_control.R_barrel_given_current = 0;
         }
+				// TODO: 卡尔曼滤波 结合裁判系统返回子弹速度 调整摩擦轮速度 也就是调整ramp.max_value
+				snail_fric_wheel_kalman_adjustment(&shoot_control.R_barrel_fric1_ramp, &shoot_control.R_barrel_fric2_ramp);
+				
         //摩擦轮需要一个个斜波开启，不能同时直接开启，否则可能电机不转
         ramp_calc(&shoot_control.R_barrel_fric1_ramp, SHOOT_FRIC_PWM_ADD_VALUE);
         ramp_calc(&shoot_control.R_barrel_fric2_ramp, SHOOT_FRIC_PWM_ADD_VALUE);
@@ -481,13 +484,16 @@ int16_t shoot_control_loop(void)
 		
 		
 		// ------------------4-17----------
-    shoot_fric1_on(shoot_control.fric_pwm1);
-    shoot_fric2_on(shoot_control.fric_pwm2);
+		// set the calculated final pwm to TIM, actually control the motor
+		L_barrel_fric1_on(shoot_control.L_barrel_fric_pwm1);
+		L_barrel_fric2_on(shoot_control.L_barrel_fric_pwm2);
+		R_barrel_fric1_on(shoot_control.R_barrel_fric_pwm1);
+		R_barrel_fric2_on(shoot_control.R_barrel_fric_pwm2);
 		
 //		//NOT USED for MD
 //		M3508_fric_wheel_spin_control(-shoot_control.currentLeft_speed_set, shoot_control.currentRight_speed_set);
 		
-    return 0; // shoot_control.given_current; values stored in global variable not return anymore
+    return shoot_control.L_barrel_given_current; // 0 shoot_control.given_current; values stored in global variable not return anymore
 }
 
 
@@ -508,33 +514,38 @@ static void shoot_set_mode(void)
     static int8_t last_s = RC_SW_UP;
 
     //上拨判断， 一次开启，再次关闭
-    if ((switch_is_up(shoot_control.shoot_rc->rc.s[SHOOT_RC_MODE_CHANNEL]) && !switch_is_up(last_s) && shoot_control.shoot_mode == SHOOT_STOP))
+    if ((switch_is_up(shoot_control.shoot_rc->rc.s[SHOOT_RC_MODE_CHANNEL]) && !switch_is_up(last_s) && shoot_control.shoot_mode_L == SHOOT_STOP))
     {
-        shoot_control.shoot_mode = SHOOT_READY_FRIC;//上拨一次开启摩擦轮
+        shoot_control.shoot_mode_L = SHOOT_READY_FRIC;//上拨一次开启摩擦轮
+			  shoot_control.shoot_mode_R = SHOOT_READY_FRIC;
+			  
 			  shoot_control.user_fire_ctrl = user_SHOOT_SEMI;//开启摩擦轮 默认auto
 			  shoot_control.key_Q_cnt = 2;
     }
-    else if ((switch_is_up(shoot_control.shoot_rc->rc.s[SHOOT_RC_MODE_CHANNEL]) && !switch_is_up(last_s) && shoot_control.shoot_mode != SHOOT_STOP))
+    else if ((switch_is_up(shoot_control.shoot_rc->rc.s[SHOOT_RC_MODE_CHANNEL]) && !switch_is_up(last_s) && shoot_control.shoot_mode_L != SHOOT_STOP))
     {
-        shoot_control.shoot_mode = SHOOT_STOP;//上拨一次再关闭摩擦轮
+        shoot_control.shoot_mode_L = SHOOT_STOP;//上拨一次再关闭摩擦轮
+			  shoot_control.shoot_mode_R = SHOOT_STOP;
 			  shoot_control.key_Q_cnt = 0;
     }
 				
     //处于中档， 可以使用键盘开启摩擦轮
-    if (switch_is_mid(shoot_control.shoot_rc->rc.s[SHOOT_RC_MODE_CHANNEL]) && (shoot_control.shoot_rc->key.v & SHOOT_ON_KEYBOARD) && shoot_control.shoot_mode == SHOOT_STOP)
+    if (switch_is_mid(shoot_control.shoot_rc->rc.s[SHOOT_RC_MODE_CHANNEL]) && (shoot_control.shoot_rc->key.v & SHOOT_ON_KEYBOARD) && shoot_control.shoot_mode_L == SHOOT_STOP)
     {
-        shoot_control.shoot_mode = SHOOT_READY_FRIC; 
+        shoot_control.shoot_mode_L = SHOOT_READY_FRIC; 
+				shoot_control.shoot_mode_R = SHOOT_READY_FRIC; 
 				shoot_control.user_fire_ctrl = user_SHOOT_AUTO;//开启摩擦轮 默认auto
     }
     //处于中档， 可以使用键盘关闭摩擦轮
-    else if (switch_is_mid(shoot_control.shoot_rc->rc.s[SHOOT_RC_MODE_CHANNEL]) && (shoot_control.shoot_rc->key.v & SHOOT_OFF_KEYBOARD) && shoot_control.shoot_mode != SHOOT_STOP)
+    else if (switch_is_mid(shoot_control.shoot_rc->rc.s[SHOOT_RC_MODE_CHANNEL]) && (shoot_control.shoot_rc->key.v & SHOOT_OFF_KEYBOARD) && shoot_control.shoot_mode_L != SHOOT_STOP)
     {
-        shoot_control.shoot_mode = SHOOT_STOP;
+        shoot_control.shoot_mode_L = SHOOT_STOP;
+				shoot_control.shoot_mode_R = SHOOT_STOP;
 			  shoot_control.key_Q_cnt = 0;
     }
 
 		//处于中档时的 按键Q 按下检测 即 用户火控状态 模式判断
-		if(switch_is_mid(shoot_control.shoot_rc->rc.s[SHOOT_RC_MODE_CHANNEL]) && (shoot_control.shoot_rc->key.v & SHOOT_ON_KEYBOARD) && (shoot_control.shoot_mode > SHOOT_STOP))
+		if(switch_is_mid(shoot_control.shoot_rc->rc.s[SHOOT_RC_MODE_CHANNEL]) && (shoot_control.shoot_rc->key.v & SHOOT_ON_KEYBOARD) && (shoot_control.shoot_mode_L > SHOOT_STOP))
 		{
 				//shoot_control.key_Q_cnt++;
 				if(shoot_control.last_key_Q_sts == 0)
@@ -572,13 +583,50 @@ static void shoot_set_mode(void)
 		}
 		//---------Q按键计数以及相关检测结束---------
 		
-    if(shoot_control.shoot_mode == SHOOT_READY_FRIC && shoot_control.fric1_ramp.out == shoot_control.fric1_ramp.max_value && shoot_control.fric2_ramp.out == shoot_control.fric2_ramp.max_value)
+		// left barrel related FSM, 先处理
+    if(shoot_control.shoot_mode_L == SHOOT_READY_FRIC && shoot_control.L_barrel_fric1_ramp.out == shoot_control.L_barrel_fric1_ramp.max_value && shoot_control.L_barrel_fric2_ramp.out == shoot_control.L_barrel_fric2_ramp.max_value)
     {
-        shoot_control.shoot_mode = SHOOT_READY_BULLET; //当摩擦轮完成预热 //A
+        shoot_control.shoot_mode_L = SHOOT_READY_BULLET; //当摩擦轮完成预热 //A
     }
-    else if(shoot_control.shoot_mode == SHOOT_READY_BULLET) //&& shoot_control.key == SWITCH_TRIGGER_ON)
+    else if(shoot_control.shoot_mode_L == SHOOT_READY_BULLET) //&& shoot_control.key == SWITCH_TRIGGER_ON)
     {
-			shoot_control.shoot_mode = SHOOT_READY;  //shoot_control.key被默认初始化为0 所以:第一次会进入A 第二次会进入这儿 使得shoot_mode = SHOOT_READY
+			shoot_control.shoot_mode_L = SHOOT_READY;  //shoot_control.key被默认初始化为0 所以:第一次会进入A 第二次会进入这儿 使得shoot_mode = SHOOT_READY
+    }
+    else if(0) //shoot_control.shoot_mode == SHOOT_READY && shoot_control.key == SWITCH_TRIGGER_OFF)
+    {
+        shoot_control.shoot_mode_L = SHOOT_READY_BULLET;//从不会进入这个else if
+    }
+    else if(shoot_control.shoot_mode_L == SHOOT_READY)
+    {
+			if(shoot_control.trigger_motor17mm_L_is_online)//发射机构断电时, shoot_mode状态机不会被置为发射相关状态
+			{
+        //下拨一次或者鼠标按下一次，进入射击状态
+        if ((switch_is_down(shoot_control.shoot_rc->rc.s[SHOOT_RC_MODE_CHANNEL]) && !switch_is_down(last_s)) || (shoot_control.press_l && shoot_control.last_press_l == 0))
+        {
+            shoot_control.shoot_mode_L = SHOOT_BULLET;
+        }
+			}
+    }
+    else if(shoot_control.shoot_mode_L == SHOOT_DONE)
+    {
+        shoot_control.L_barrel_key_time++; // .key_time++;
+				//微动开关 抖动时间到了之后, 再弄成SHOOT_READY_BULLET
+				//现在是 缓冲时间
+        if(shoot_control.L_barrel_key_time > SHOOT_DONE_KEY_OFF_TIME)
+        {
+            shoot_control.L_barrel_key_time = 0;
+            shoot_control.shoot_mode_L = SHOOT_READY_BULLET;
+        }
+    }
+		
+		// right barrel related FSM, 后处理
+		if(shoot_control.shoot_mode_R == SHOOT_READY_FRIC && shoot_control. .fric1_ramp.out == shoot_control.fric1_ramp.max_value && shoot_control.fric2_ramp.out == shoot_control.fric2_ramp.max_value)
+    {
+        shoot_control.shoot_mode_R = SHOOT_READY_BULLET; //当摩擦轮完成预热 //A
+    }
+    else if(shoot_control.shoot_mode_R == SHOOT_READY_BULLET) //&& shoot_control.key == SWITCH_TRIGGER_ON)
+    {
+			shoot_control.shoot_mode_R = SHOOT_READY;  //shoot_control.key被默认初始化为0 所以:第一次会进入A 第二次会进入这儿 使得shoot_mode = SHOOT_READY
     }
     else if(0) //shoot_control.shoot_mode == SHOOT_READY && shoot_control.key == SWITCH_TRIGGER_OFF)
     {
@@ -606,6 +654,7 @@ static void shoot_set_mode(void)
             shoot_control.shoot_mode = SHOOT_READY_BULLET;
         }
     }
+		
 /*
     if(shoot_control.shoot_mode > SHOOT_READY_FRIC){ //自动开火指令处理
 		   if(shootCommand == 0xff){
@@ -946,7 +995,7 @@ static void shoot_bullet_control_17mm(void)
 }
 
 /*
-4-16-2023 目前未使用 卡尔曼滤波 这个函数是直接赋值
+4-16-2023 目前未使用 卡尔曼滤波 这个函数是直接赋值 也就是调整ramp.max_value 
 */
 static void snail_fric_wheel_kalman_adjustment(ramp_function_source_t *fric1, ramp_function_source_t *fric2)
 {
@@ -968,7 +1017,7 @@ static void snail_fric_wheel_kalman_adjustment(ramp_function_source_t *fric1, ra
 	}
 	else
 	{
-		return;
+		return; // no val change
 	}
 	
 }
