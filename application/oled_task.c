@@ -27,6 +27,7 @@
 
 const error_t *error_list_local;
 
+uint8_t other_toe_name0[5][5] = {"yaw\0","pitL\0","pitR\0","triL\0","triR\0"};
 uint8_t other_toe_name[4][4] = {"GYR\0","ACC\0","MAG\0","REF\0"};
 
 uint8_t last_oled_error = 0;
@@ -124,7 +125,7 @@ void oled_task(void const * argument)
 								OLED_show_string(64, 0, (uint8_t*)"FR");
 								OLED_show_graphic(64+12, 0, &check_box[error_list_local[SHOOT_FRIC_R_TOE].error_exist]);
 								
-                for(i = CHASSIS_MOTOR1_TOE; i < TRIGGER_MOTOR_TOE + 1; i++)
+                for(i = CHASSIS_MOTOR1_TOE; i < CHASSIS_MOTOR4_TOE + 1; i++) //for(i = CHASSIS_MOTOR1_TOE; i < TRIGGER_MOTOR_TOE + 1; i++)
                 {
                     show_col = ((i-1) * 32) % 128;
                     show_row = 15 + (i-1) / 4 * 12;
@@ -132,6 +133,14 @@ void oled_task(void const * argument)
                     OLED_show_char(show_col + 6, show_row, '0'+i);
                     OLED_show_graphic(show_col + 12, show_row, &check_box[error_list_local[i].error_exist]);
                 }
+								
+								for(i = YAW_GIMBAL_MOTOR_TOE; i < TRIGGER_MOTOR17mm_R_TOE + 1; i++)
+								{
+										show_col = (i * 32) % 128;
+                    show_row = 15 + i / 4 * 12;
+                    OLED_show_string(show_col, show_row, other_toe_name0[i - YAW_GIMBAL_MOTOR_TOE]);
+                    OLED_show_graphic(show_col + 18, show_row, &check_box[error_list_local[i].error_exist]);
+								}
 
                 for(i = BOARD_GYRO_TOE; i < REFEREE_TOE + 1; i++)
                 {

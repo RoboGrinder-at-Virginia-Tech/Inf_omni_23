@@ -63,23 +63,42 @@
 //rpm to rad/s
 #define MOTOR_RPM_TO_SPEED          0.00290888208665721596153948461415f
 #define MOTOR_ECD_TO_ANGLE          0.000021305288720633905968306772076277f
-#define FULL_COUNT                  18
+#define FULL_COUNT                  18 // 未使用
+// 拨弹电机 Left barrel 左枪管 相关数据
 //拨弹速度
-#define TRIGGER_SPEED               10.0f
-#define CONTINUE_TRIGGER_SPEED      10.0f //12.0f//9.0f //SZL3-13 change from 12 to 10
-#define READY_TRIGGER_SPEED         5.0f
+#define TRIGGER_SPEED_L               10.0f
+#define CONTINUE_TRIGGER_SPEED_L      10.0f //12.0f//9.0f //SZL3-13 change from 12 to 10
+#define READY_TRIGGER_SPEED_L         5.0f
 
-#define KEY_OFF_JUGUE_TIME          500
-#define SWITCH_TRIGGER_ON           0
-#define SWITCH_TRIGGER_OFF          1
+#define KEY_OFF_JUGUE_TIME_L          500
+#define SWITCH_TRIGGER_ON_L           0
+#define SWITCH_TRIGGER_OFF_L          1
 
 //卡单时间 以及反转时间
-#define BLOCK_TRIGGER_SPEED         1.0f
-#define BLOCK_TIME                  700
-#define REVERSE_TIME                500
-#define REVERSE_SPEED_LIMIT         13.0f
+#define BLOCK_TRIGGER_SPEED_L         1.0f
+#define BLOCK_TIME_L                  700
+#define REVERSE_TIME_L                500
+#define REVERSE_SPEED_LIMIT_L         13.0f
 
-#define PI_FOUR                     0.78539816339744830961566084581988f
+#define PI_FOUR                     0.78539816339744830961566084581988f //未使用
+
+// 拨弹电机 Right barrel 左枪管 相关数据
+//拨弹速度
+#define TRIGGER_SPEED_R               10.0f
+#define CONTINUE_TRIGGER_SPEED_R      10.0f //12.0f//9.0f //SZL3-13 change from 12 to 10
+#define READY_TRIGGER_SPEED_R         5.0f
+
+#define KEY_OFF_JUGUE_TIME_R          500
+#define SWITCH_TRIGGER_ON_R           0
+#define SWITCH_TRIGGER_OFF_R          1
+
+//卡单时间 以及反转时间
+#define BLOCK_TRIGGER_SPEED_R         1.0f
+#define BLOCK_TIME_R                  700
+#define REVERSE_TIME_R                500
+#define REVERSE_SPEED_LIMIT_R         13.0f
+
+
 /*
 Angle calculations for different robot <-> SZL 5-19-2022
 弧度制, 范围 (0,2PI], 注意这与 (-PI,PI] 的相位差 不同
@@ -95,11 +114,13 @@ Omni drive 机器人 炮塔; 拨盘有8个洞, 2pi/8 = 0.78539816339744830961566084581988f
 1.5PI = 4.712388980f
 2.0PI = 6.283185307f
 */
-#define PI_TEN                      0.70f
+#define PI_TEN_L                      0.70f
+#define PI_TEN_R                      0.70f
 //2.05f//3.1415926f//0.67f//0.698131701f//3.1415926f//2.094395102f//0.69f//initial 0.314 radian,0.69 is approximately 40 degree
 
 /*仿照云台控制逻辑 新增一个宏定义 电机和转盘安装方向*/
-#define TRIG_MOTOR_TURN 1
+#define TRIG_MOTOR_TURN_LEFT_BARREL 1
+#define TRIG_MOTOR_TURN_RIGHT_BARREL 1
 
 /*
 SZL
@@ -245,7 +266,7 @@ typedef struct
     ramp_function_source_t R_barrel_fric2_ramp;
     uint16_t R_barrel_fric_pwm2;
 		
-		// 17mm left barrel 各种控制 逻辑相关 --------------
+		// 17mm left barrel TRIG 各种控制 逻辑相关 --------------
     pid_type_def L_barrel_trigger_motor_pid;//内环PID
 		pid_type_def L_barrel_trigger_motor_angle_pid;//外环PID--只是写在这里 没用
     fp32 L_barrel_trigger_speed_set; // 需要用trigger_speed_set 来 update speed_set(PID 用)
@@ -256,7 +277,7 @@ typedef struct
     int16_t L_barrel_given_current;
     int8_t L_barrel_ecd_count; //未使用
 		
-		// 17mm right barrel 各种控制 逻辑相关 --------------
+		// 17mm right barrel TRIG 各种控制 逻辑相关 --------------
 		pid_type_def R_barrel_trigger_motor_pid;//内环PID
 		pid_type_def R_barrel_trigger_motor_angle_pid;//外环PID--只是写在这里 没用
     fp32 R_barrel_trigger_speed_set;

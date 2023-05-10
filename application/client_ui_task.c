@@ -377,7 +377,7 @@ void ui_coord_update()
 	 }
 	 
 	 //GUN ״̬�� ״̬
-	 if(shoot_control.shoot_mode == SHOOT_STOP)
+	 if(shoot_control.shoot_mode_L == SHOOT_STOP) //shoot_mode
 	 {
 		 ui_info.ui_gun_sts = gunOFF;
 		 ui_info.box_gun_sts_coord[0] = TopLeft_REC_on_gun_OFF_START_X;

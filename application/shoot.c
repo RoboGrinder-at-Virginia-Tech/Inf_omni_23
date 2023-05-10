@@ -64,18 +64,32 @@ static void shoot_set_mode(void);
 static void shoot_feedback_update(void);
 
 /**
-  * @brief          堵转倒转处理
+  * @brief          Left barrel 堵转倒转处理
   * @param[in]      void
   * @retval         void
   */
-static void trigger_motor_turn_back_17mm(void);
+static void L_barrel_trigger_motor_turn_back_17mm(void);
 
 /**
-  * @brief          射击控制，控制拨弹电机角度，完成一次发射
+  * @brief          Right barrel 堵转倒转处理
   * @param[in]      void
   * @retval         void
   */
-static void shoot_bullet_control_17mm(void);
+static void R_barrel_trigger_motor_turn_back_17mm(void);
+
+/**
+  * @brief          Left barrel 射击控制，控制拨弹电机角度，完成一次发射
+  * @param[in]      void
+  * @retval         void
+  */
+static void L_barrel_shoot_bullet_control_17mm(void);
+
+/**
+  * @brief          Right barrel 射击控制，控制拨弹电机角度，完成一次发射
+  * @param[in]      void
+  * @retval         void
+  */
+static void R_barrel_shoot_bullet_control_17mm(void);
 
 /*
 尝试卡尔曼滤波
@@ -322,13 +336,13 @@ int16_t shoot_control_loop(void)
     {
         shoot_control.L_barrel_trigger_motor_pid.max_out = TRIGGER_BULLET_PID_MAX_OUT;
         shoot_control.L_barrel_trigger_motor_pid.max_iout = TRIGGER_BULLET_PID_MAX_IOUT;
-        shoot_bullet_control_17mm();
+        L_barrel_shoot_bullet_control_17mm();
     }
     else if (shoot_control.shoot_mode_L == SHOOT_CONTINUE_BULLET)
     {
         //设置拨弹轮的拨动速度,并开启堵转反转处理
-        shoot_control.L_barrel_trigger_speed_set = CONTINUE_TRIGGER_SPEED;
-        trigger_motor_turn_back_17mm();
+        shoot_control.L_barrel_trigger_speed_set = CONTINUE_TRIGGER_SPEED_L;
+        L_barrel_trigger_motor_turn_back_17mm();
     }
     else if(shoot_control.shoot_mode_L == SHOOT_DONE)
     {
@@ -413,13 +427,13 @@ int16_t shoot_control_loop(void)
     {
         shoot_control.R_barrel_trigger_motor_pid.max_out = TRIGGER_BULLET_PID_MAX_OUT;//-----------------------------------------
         shoot_control.R_barrel_trigger_motor_pid.max_iout = TRIGGER_BULLET_PID_MAX_IOUT;
-        shoot_bullet_control_17mm();
+        L_barrel_shoot_bullet_control_17mm();
     }
     else if (shoot_control.shoot_mode_R == SHOOT_CONTINUE_BULLET)
     {
         //设置拨弹轮的拨动速度,并开启堵转反转处理
-        shoot_control.R_barrel_trigger_speed_set = CONTINUE_TRIGGER_SPEED; //.trigger_speed_set
-        trigger_motor_turn_back_17mm();
+        shoot_control.R_barrel_trigger_speed_set = CONTINUE_TRIGGER_SPEED_R; //.trigger_speed_set
+        R_barrel_trigger_motor_turn_back_17mm();
     }
     else if(shoot_control.shoot_mode_R == SHOOT_DONE)
     {
@@ -636,7 +650,7 @@ static void shoot_set_mode(void)
 			if(shoot_control.trigger_motor17mm_R_is_online)//发射机构断电时, shoot_mode状态机不会被置为发射相关状态
 			{
         //下拨一次或者鼠标按下一次，进入射击状态
-        if ((switch_is_down(shoot_control.shoot_rc->rc.s[SHOOT_RC_MODE_CHANNEL]) && !switch_is_down(last_s)) || (shoot_control.press_l && shoot_control.last_press_l == 0))
+        if ((switch_is_down(shoot_control.shoot_rc->rc.s[SHOOT_RC_MODE_CHANNEL]) && !switch_is_down(last_s)) || (shoot_control.press_r && shoot_control.last_press_r == 0))
         {
             shoot_control.shoot_mode_R = SHOOT_BULLET;
         }
@@ -702,7 +716,7 @@ static void shoot_set_mode(void)
 			miniPC_info.autoAimFlag = 1;
 		}
 		
-		if(shoot_control.press_r_time == PRESS_LONG_TIME_R || shoot_control.press_key_V_time == PRESS_LONG_TIME_V)
+		if(shoot_control.press_key_V_time == PRESS_LONG_TIME_V) //shoot_control.press_r_time == PRESS_LONG_TIME_R || r开枪用
 		{
 			miniPC_info.autoAimFlag = 2;
 			//shoot_control.key_X_cnt = 2;
@@ -782,7 +796,7 @@ static void shoot_set_mode(void)
 			
 				if(shoot_control.user_fire_ctrl==user_SHOOT_SEMI)
 				{
-					if (((miniPC_info.shootCommand == 0xff) && (miniPC_info.autoAimFlag > 0))|| (shoot_control.press_l_time == PRESS_LONG_TIME_L ) || (shoot_control.rc_s_time == RC_S_LONG_TIME))
+					if (((miniPC_info.shootCommand == 0xff) && (miniPC_info.autoAimFlag > 0))|| (shoot_control.press_r_time == PRESS_LONG_TIME_R ) || (shoot_control.rc_s_time == RC_S_LONG_TIME))
 					{
 							shoot_control.shoot_mode_R = SHOOT_CONTINUE_BULLET;
 					}
@@ -793,7 +807,7 @@ static void shoot_set_mode(void)
 				}
 				else if(shoot_control.user_fire_ctrl==user_SHOOT_AUTO)
 				{
-					if (((miniPC_info.shootCommand == 0xff) && (miniPC_info.autoAimFlag > 0)) || (shoot_control.press_l ))
+					if (((miniPC_info.shootCommand == 0xff) && (miniPC_info.autoAimFlag > 0)) || (shoot_control.press_r ))
 					{
 							shoot_control.shoot_mode_R = SHOOT_CONTINUE_BULLET;
 					}
@@ -814,9 +828,9 @@ static void shoot_set_mode(void)
 					}
 				}
     }
-		// 4-21
-    get_shooter_id1_17mm_heat_limit_and_heat(&shoot_control.L_barrel_heat_limit, &shoot_control.heat);
-    if(!toe_is_error(REFEREE_TOE) && (shoot_control.heat + SHOOT_HEAT_REMAIN_VALUE > shoot_control.heat_limit))
+
+    get_shooter_id1_17mm_heat_limit_and_heat(&shoot_control.L_barrel_heat_limit, &shoot_control.L_barrel_heat);
+    if(!toe_is_error(REFEREE_TOE) && (shoot_control.L_barrel_heat + SHOOT_HEAT_REMAIN_VALUE > shoot_control.L_barrel_heat_limit))
     {
         if(shoot_control.shoot_mode_R == SHOOT_BULLET || shoot_control.shoot_mode_R == SHOOT_CONTINUE_BULLET)
         {
@@ -840,36 +854,66 @@ static void shoot_set_mode(void)
   */
 static void shoot_feedback_update(void)
 {
-
-    static fp32 speed_fliter_1 = 0.0f;
-    static fp32 speed_fliter_2 = 0.0f;
-    static fp32 speed_fliter_3 = 0.0f;
+		// 默认的是Left Barrel
+    static fp32 speed_fliter_1_L = 0.0f;
+    static fp32 speed_fliter_2_L = 0.0f;
+    static fp32 speed_fliter_3_L = 0.0f;
 
     //拨弹轮电机速度滤波一下
-    static const fp32 fliter_num[3] = {1.725709860247969f, -0.75594777109163436f, 0.030237910843665373f};
+    static const fp32 fliter_num_L[3] = {1.725709860247969f, -0.75594777109163436f, 0.030237910843665373f};
+		
+		//Right Barrel
+		static fp32 speed_fliter_1_R = 0.0f;
+    static fp32 speed_fliter_2_R = 0.0f;
+    static fp32 speed_fliter_3_R = 0.0f;
+    //拨弹轮电机速度滤波一下
+    static const fp32 fliter_num_R[3] = {1.725709860247969f, -0.75594777109163436f, 0.030237910843665373f};
 
-    //二阶低通滤波
-#if TRIG_MOTOR_TURN
-    speed_fliter_1 = speed_fliter_2;
-    speed_fliter_2 = speed_fliter_3;
-    speed_fliter_3 = speed_fliter_2 * fliter_num[0] + speed_fliter_1 * fliter_num[1] - (shoot_control.shoot_motor_measure->speed_rpm * MOTOR_RPM_TO_SPEED) * fliter_num[2];
-    shoot_control.speed = speed_fliter_3;
+    //二阶低通滤波 Left barrel 拨弹
+#if TRIG_MOTOR_TURN_LEFT_BARREL
+    speed_fliter_1_L = speed_fliter_2_L;
+    speed_fliter_2_L = speed_fliter_3_L;
+    speed_fliter_3_L = speed_fliter_2_L * fliter_num_L[0] + speed_fliter_1_L * fliter_num_L[1] - (shoot_control.shoot_motor_L_measure->speed_rpm * MOTOR_RPM_TO_SPEED) * fliter_num_L[2]; //shoot_motor_measure
+    shoot_control.L_barrel_speed = speed_fliter_3_L; //shoot_control.speed = speed_fliter_3;
 #else
-		speed_fliter_1 = speed_fliter_2;
-    speed_fliter_2 = speed_fliter_3;
-    speed_fliter_3 = speed_fliter_2 * fliter_num[0] + speed_fliter_1 * fliter_num[1] + (shoot_control.shoot_motor_measure->speed_rpm * MOTOR_RPM_TO_SPEED) * fliter_num[2];
-    shoot_control.speed = speed_fliter_3;
+		speed_fliter_1_L = speed_fliter_2_L;
+    speed_fliter_2_L = speed_fliter_3_L;
+    speed_fliter_3_L = speed_fliter_2_L * fliter_num[0] + speed_fliter_1 * fliter_num[1] + (shoot_control.shoot_motor_L_measure->speed_rpm * MOTOR_RPM_TO_SPEED) * fliter_num[2];
+    shoot_control.L_barrel_speed = speed_fliter_3_L;
+#endif
+		//二阶低通滤波 Right barrel 拨弹
+#if TRIG_MOTOR_TURN_RIGHT_BARREL
+    speed_fliter_1_R = speed_fliter_2_R;
+    speed_fliter_2_R = speed_fliter_3_R;
+    speed_fliter_3_R = speed_fliter_2_R * fliter_num_R[0] + speed_fliter_1_R * fliter_num_R[1] - (shoot_control.shoot_motor_R_measure->speed_rpm * MOTOR_RPM_TO_SPEED) * fliter_num_R[2]; //shoot_motor_measure
+    shoot_control.L_barrel_speed = speed_fliter_3_R; //shoot_control.speed = speed_fliter_3;
+#else
+		speed_fliter_1_R = speed_fliter_2_R;
+    speed_fliter_2_R = speed_fliter_3_R;
+    speed_fliter_3_R = speed_fliter_2_R * fliter_num_R[0] + speed_fliter_1_R * fliter_num_R[1] + (shoot_control.shoot_motor_R_measure->speed_rpm * MOTOR_RPM_TO_SPEED) * fliter_num_R[2];
+    shoot_control.L_barrel_speed = speed_fliter_3_R;
 #endif
 		
 		//电机是否离线检测
 		/*只扫描一次按键这个思路*/
-		if(toe_is_error(TRIGGER_MOTOR_TOE))
+		// Left barrel 左拨弹 电机
+		if(toe_is_error(TRIGGER_MOTOR17mm_L_TOE))
 		{
-			shoot_control.trigger_motor_17mm_is_online = 0x00;
+			shoot_control.trigger_motor17mm_L_is_online = 0x00;
 		}
 		else
 		{
-			shoot_control.trigger_motor_17mm_is_online = 0x01;
+			shoot_control.trigger_motor17mm_L_is_online = 0x01;
+		}
+		
+		// Right barrel 右拨弹 电机
+		if(toe_is_error(TRIGGER_MOTOR17mm_R_TOE))
+		{
+			shoot_control.trigger_motor17mm_R_is_online = 0x00;
+		}
+		else
+		{
+			shoot_control.trigger_motor17mm_R_is_online = 0x01;
 		}
 
 //    /*
@@ -901,10 +945,18 @@ static void shoot_feedback_update(void)
 		
 		//添加了码盘值积分后 对拨弹盘angle的计算 SZL 5-19
 		//之前的转了几圈 + 当前的编码器值 将其转换为弧度制 马盘值里程计
-#if TRIG_MOTOR_TURN
-		shoot_control.angle = -(shoot_control.shoot_motor_measure->total_ecd + shoot_control.shoot_motor_measure->delta_ecd) * MOTOR_ECD_TO_ANGLE;
+#if TRIG_MOTOR_TURN_LEFT_BARREL
+//		shoot_control.angle = -(shoot_control.shoot_motor_measure->total_ecd + shoot_control.shoot_motor_measure->delta_ecd) * MOTOR_ECD_TO_ANGLE;
+		shoot_control.L_barrel_angle = -(shoot_control.shoot_motor_L_measure->total_ecd + shoot_control.shoot_motor_L_measure->delta_ecd) * MOTOR_ECD_TO_ANGLE;
 #else
-		shoot_control.angle = (shoot_control.shoot_motor_measure->total_ecd + shoot_control.shoot_motor_measure->delta_ecd) * MOTOR_ECD_TO_ANGLE;
+		shoot_control.L_barrel_angle = (shoot_control.shoot_motor_L_measure->total_ecd + shoot_control.shoot_motor_L_measure->delta_ecd) * MOTOR_ECD_TO_ANGLE;
+		//shoot_control.angle = (shoot_control.shoot_motor_measure->total_ecd + shoot_control.shoot_motor_measure->ecd) * MOTOR_ECD_TO_ANGLE;
+#endif
+
+#if TRIG_MOTOR_TURN_RIGHT_BARREL
+		shoot_control.R_barrel_angle = -(shoot_control.shoot_motor_R_measure->total_ecd + shoot_control.shoot_motor_R_measure->delta_ecd) * MOTOR_ECD_TO_ANGLE;
+#else
+		shoot_control.R_barrel_angle = (shoot_control.shoot_motor_R_measure->total_ecd + shoot_control.shoot_motor_R_measure->delta_ecd) * MOTOR_ECD_TO_ANGLE;
 		//shoot_control.angle = (shoot_control.shoot_motor_measure->total_ecd + shoot_control.shoot_motor_measure->ecd) * MOTOR_ECD_TO_ANGLE;
 #endif
 
@@ -955,7 +1007,7 @@ static void shoot_feedback_update(void)
     }
 
     //射击开关下档时间计时
-    if (shoot_control.shoot_mode != SHOOT_STOP && switch_is_down(shoot_control.shoot_rc->rc.s[SHOOT_RC_MODE_CHANNEL]))
+    if (shoot_control.shoot_mode_L != SHOOT_STOP && switch_is_down(shoot_control.shoot_rc->rc.s[SHOOT_RC_MODE_CHANNEL])) //shoot_mode
     {
 
         if (shoot_control.rc_s_time < RC_S_LONG_TIME)
@@ -967,80 +1019,150 @@ static void shoot_feedback_update(void)
     {
         shoot_control.rc_s_time = 0;
     }
-		//12-30-2021 SZL 添加 friction 电机 反馈 数据
-		shoot_control.left_fricMotor.fricW_speed = M3508_FRIC_MOTOR_RPM_TO_LINEAR_VETOR_SEN * shoot_control.left_friction_motor_measure->speed_rpm;
-		shoot_control.right_fricMotor.fricW_speed = M3508_FRIC_MOTOR_RPM_TO_LINEAR_VETOR_SEN * shoot_control.right_friction_motor_measure->speed_rpm;
 		
-		//Added for J-scope debug
-		temp_rpm_right = shoot_control.right_friction_motor_measure->speed_rpm;
-		temp_rpm_left = shoot_control.left_friction_motor_measure->speed_rpm;
+		//NOT USED for MD
+//		//12-30-2021 SZL 添加 friction 电机 反馈 数据
+//		shoot_control.left_fricMotor.fricW_speed = M3508_FRIC_MOTOR_RPM_TO_LINEAR_VETOR_SEN * shoot_control.left_friction_motor_measure->speed_rpm;
+//		shoot_control.right_fricMotor.fricW_speed = M3508_FRIC_MOTOR_RPM_TO_LINEAR_VETOR_SEN * shoot_control.right_friction_motor_measure->speed_rpm;
+//		
+//		//Added for J-scope debug
+//		temp_rpm_right = shoot_control.right_friction_motor_measure->speed_rpm;
+//		temp_rpm_left = shoot_control.left_friction_motor_measure->speed_rpm;
 		
 }
 
-static void trigger_motor_turn_back_17mm(void)
+static void L_barrel_trigger_motor_turn_back_17mm(void)
 {
-    if( shoot_control.block_time < BLOCK_TIME)
+    if( shoot_control.L_barrel_block_time < BLOCK_TIME_L) //block_time
     {
-        shoot_control.speed_set = shoot_control.trigger_speed_set;
+        shoot_control.L_barrel_speed_set = shoot_control.L_barrel_trigger_speed_set; //speed_set trigger_speed_set
     }
     else
     {
-        shoot_control.speed_set = -shoot_control.trigger_speed_set;
+        shoot_control.L_barrel_speed_set = -shoot_control.L_barrel_trigger_speed_set; //speed_set trigger_speed_set
     }
 
-    if(fabs(shoot_control.speed) < BLOCK_TRIGGER_SPEED && shoot_control.block_time < BLOCK_TIME)
+    if(fabs(shoot_control.L_barrel_speed) < BLOCK_TRIGGER_SPEED_L && shoot_control.L_barrel_block_time < BLOCK_TIME_L) //speed block_time
     {
-        shoot_control.block_time++;
-        shoot_control.reverse_time = 0;
+        shoot_control.L_barrel_block_time++; //block_time
+        shoot_control.L_barrel_reverse_time = 0; //reverse_time
     }
-    else if (shoot_control.block_time == BLOCK_TIME && shoot_control.reverse_time < REVERSE_TIME)
+    else if (shoot_control.L_barrel_block_time == BLOCK_TIME_L && shoot_control.L_barrel_reverse_time < REVERSE_TIME_L) //block_time reverse_time
     {
-        shoot_control.reverse_time++;
+        shoot_control.L_barrel_reverse_time++; //reverse_time
     }
     else
     {
-        shoot_control.block_time = 0;
+        shoot_control.L_barrel_block_time = 0; //block_time
+    }
+}
+
+static void R_barrel_trigger_motor_turn_back_17mm(void)
+{
+    if( shoot_control.R_barrel_block_time < BLOCK_TIME_R)
+    {
+        shoot_control.R_barrel_speed_set = shoot_control.R_barrel_trigger_speed_set;
+    }
+    else
+    {
+        shoot_control.R_barrel_speed_set = -shoot_control.R_barrel_trigger_speed_set;
+    }
+
+    if(fabs(shoot_control.R_barrel_speed) < BLOCK_TRIGGER_SPEED_R && shoot_control.R_barrel_block_time < BLOCK_TIME_R)
+    {
+        shoot_control.R_barrel_block_time++;
+        shoot_control.R_barrel_reverse_time = 0;
+    }
+    else if (shoot_control.R_barrel_block_time == BLOCK_TIME_R && shoot_control.R_barrel_reverse_time < REVERSE_TIME_R)
+    {
+        shoot_control.R_barrel_reverse_time++;
+    }
+    else
+    {
+        shoot_control.R_barrel_block_time = 0;
     }
 }
 
 /**
-  * @brief          射击控制，控制拨弹电机角度，完成一次发射
+  * @brief          左侧枪管 射击控制，控制拨弹电机角度，完成一次发射
   * @param[in]      void
   * @retval         void
   */
-static void shoot_bullet_control_17mm(void)
+static void L_barrel_shoot_bullet_control_17mm(void)
 {
     //每次拨动 1/4PI的角度
-    if (shoot_control.move_flag == 0)
+    if (shoot_control.L_barrel_move_flag == 0) //move_flag
     {
-        shoot_control.set_angle = (shoot_control.angle + PI_TEN);//rad_format(shoot_control.angle + PI_TEN); shooter_rad_format
-        shoot_control.move_flag = 1;
+        shoot_control.L_barrel_set_angle = (shoot_control.L_barrel_angle + PI_TEN_L);//rad_format(shoot_control.angle + PI_TEN); shooter_rad_format //set_angle angle
+        shoot_control.L_barrel_move_flag = 1;
     }
 		
 		/*这段代码的测试是在NewINF v6.4.1 中测试的, 也就是不会出现:(发射机构断电时, shoot_mode状态机不会被置为发射相关状态)
 		整体的逻辑是: 如果发射机构断电, shoot_mode状态机不会被置为发射相关状态, 不会进入此函数; 这段代码只是在这里保险
 	  电机掉线, 即发射机构断电特征出现时, 放弃当前发射请求*/
-		if(shoot_control.trigger_motor_17mm_is_online == 0x00)
+		if(shoot_control.trigger_motor17mm_L_is_online == 0x00)
 		{
-				shoot_control.set_angle = shoot_control.angle;
+				shoot_control.L_barrel_set_angle = shoot_control.L_barrel_angle; //set_angle  angle
 				return;
 		}
 		
     if(0)//shoot_control.key == SWITCH_TRIGGER_OFF)
     {
-        shoot_control.shoot_mode = SHOOT_DONE;
+        shoot_control.shoot_mode_L = SHOOT_DONE;
     }
     //到达角度判断
-    if ((shoot_control.set_angle - shoot_control.angle) > 0.05f)//(rad_format(shoot_control.set_angle - shoot_control.angle) > 0.0005f)//0.15f) //pr改动前为0.05f shooter_rad_format
+    if ((shoot_control.L_barrel_set_angle - shoot_control.L_barrel_angle) > 0.05f)//(rad_format(shoot_control.set_angle - shoot_control.angle) > 0.0005f)//0.15f) //pr改动前为0.05f shooter_rad_format
     {
         //没到达一直设置旋转速度
-        shoot_control.trigger_speed_set = TRIGGER_SPEED;
-        trigger_motor_turn_back_17mm();
+        shoot_control.L_barrel_trigger_speed_set = TRIGGER_SPEED_L; //trigger_speed_set
+        L_barrel_trigger_motor_turn_back_17mm();
     }
     else
     {
-        shoot_control.move_flag = 0;
-			  shoot_control.shoot_mode = SHOOT_DONE; //pr test
+        shoot_control.L_barrel_move_flag = 0; // move_flag
+			  shoot_control.shoot_mode_L = SHOOT_DONE; //pr test shoot_mode
+    }
+   
+}
+
+/**
+  * @brief          左侧枪管 射击控制，控制拨弹电机角度，完成一次发射
+  * @param[in]      void
+  * @retval         void
+  */
+static void R_barrel_shoot_bullet_control_17mm(void)
+{
+    //每次拨动 1/4PI的角度
+    if (shoot_control.R_barrel_move_flag == 0)
+    {
+        shoot_control.R_barrel_set_angle = (shoot_control.R_barrel_angle + PI_TEN_R);//rad_format(shoot_control.angle + PI_TEN); shooter_rad_format
+        shoot_control.R_barrel_move_flag = 1;
+    }
+		
+		/*这段代码的测试是在NewINF v6.4.1 中测试的, 也就是不会出现:(发射机构断电时, shoot_mode状态机不会被置为发射相关状态)
+		整体的逻辑是: 如果发射机构断电, shoot_mode状态机不会被置为发射相关状态, 不会进入此函数; 这段代码只是在这里保险
+	  电机掉线, 即发射机构断电特征出现时, 放弃当前发射请求*/
+		if(shoot_control.trigger_motor17mm_R_is_online == 0x00)
+		{
+				shoot_control.R_barrel_set_angle = shoot_control.R_barrel_angle;
+				return;
+		}
+		
+    if(0)//shoot_control.key == SWITCH_TRIGGER_OFF)
+    {
+        shoot_control.shoot_mode_R = SHOOT_DONE;
+    }
+    //到达角度判断
+    if ((shoot_control.R_barrel_set_angle - shoot_control.R_barrel_angle) > 0.05f)//(rad_format(shoot_control.set_angle - shoot_control.angle) > 0.0005f)//0.15f) //pr改动前为0.05f shooter_rad_format
+    {
+        //没到达一直设置旋转速度
+        shoot_control.R_barrel_trigger_speed_set = TRIGGER_SPEED_R;
+        R_barrel_trigger_motor_turn_back_17mm();
+    }
+    else
+    {
+        shoot_control.R_barrel_move_flag = 0;
+			  shoot_control.shoot_mode_R = SHOOT_DONE; //pr test
     }
    
 }

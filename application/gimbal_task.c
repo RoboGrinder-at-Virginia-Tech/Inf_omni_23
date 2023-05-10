@@ -307,6 +307,8 @@ gimbal_control_t gimbal_control;
 //motor current 
 //发送的电机电流
 static int16_t yaw_can_set_current = 0, pitch_can_set_current = 0, shoot_can_set_current = 0;
+//aid motor copy current
+static int16_t pitch_can_set_current_aid = 0;
 
 /**
   * @brief          gimbal task, osDelay GIMBAL_CONTROL_TIME (1ms) 
@@ -359,8 +361,10 @@ void gimbal_task(void const *pvParameters)
         pitch_can_set_current = gimbal_control.gimbal_pitch_motor.given_current;
 #endif
 
+				pitch_can_set_current_aid = (int16_t) ((-0.8f) * pitch_can_set_current); //助力电机
+			
         if (!(toe_is_error(YAW_GIMBAL_MOTOR_TOE) && toe_is_error(PITCH_GIMBAL_MOTOR_L_TOE) && toe_is_error(PITCH_GIMBAL_MOTOR_R_TOE) 
-					&& toe_is_error(TRIGGER_MOTOR_L_TOE) && toe_is_error(TRIGGER_MOTOR_R_TOE)))
+					&& toe_is_error(TRIGGER_MOTOR17mm_L_TOE) && toe_is_error(TRIGGER_MOTOR17mm_R_TOE)))
         {
             if (toe_is_error(DBUS_TOE))
             {
@@ -667,7 +671,7 @@ static void gimbal_init(gimbal_control_t *init)
     static const fp32 Yaw_speed_pid[3] = {YAW_SPEED_PID_KP, YAW_SPEED_PID_KI, YAW_SPEED_PID_KD};
     //电机数据指针获取
     init->gimbal_yaw_motor.gimbal_motor_measure = get_yaw_gimbal_motor_measure_point();
-    init->gimbal_pitch_motor.gimbal_motor_measure = get_pitch_gimbal_motor_measure_point();
+    init->gimbal_pitch_motor.gimbal_motor_measure = get_pitch_gimbal_motor_L_measure_point(); //get_pitch_gimbal_motor_measure_point();
     //陀螺仪数据指针获取
 		//SZL-2-3-2022修改
     init->gimbal_INT_angle_point = get_INS_angle_point();
