@@ -46,8 +46,8 @@ typedef enum
 		//CAN_SHOOTL_ID = 0x201, // no use
 		//CAN_SHOOTR_ID = 0x202, // no use
 	
-		CAN_TRIGGER_MOTOR_17mm_L_ID = 0x203, // left trig motor
-		CAN_TRIGGER_MOTOR_17mm_R_ID = 0x204, // right trig motor
+		CAN_TRIGGER_MOTOR_17mm_L_ID = 0x205, // left trig motor
+		CAN_TRIGGER_MOTOR_17mm_R_ID = 0x208, // right trig motor
 	
     
 	
@@ -56,6 +56,7 @@ typedef enum
 	
     //CAN_TRIGGER_MOTOR_17mm_ID = 0x207, // dev changed
     CAN_GIMBAL_ALL_ID = 0x1FF,
+		CAN_GIMBAL2_ALL_ID = 0x2FF,
 
 } can_msg_id_e;
 
@@ -90,7 +91,7 @@ typedef struct
   * @param[in]      rev: (0x208) 保留，电机控制电流
   * @retval         none
   */
-extern void CAN_cmd_gimbal(int16_t pitch, int16_t rev);
+extern void CAN_cmd_gimbal(int16_t pitch1, int16_t pitch2, int16_t shoot1, int16_t shoot2);
 
 /**
   * @brief          发送电机控制电流(0x207)
@@ -98,7 +99,7 @@ extern void CAN_cmd_gimbal(int16_t pitch, int16_t rev);
 	* @param[in]      yaw: (0x205) 6020电机控制电流, 范围 [-30000,30000]
   * @retval         none
   */
-extern void CAN_cmd_gimbal2(int16_t shoot,int16_t yaw);
+extern void CAN_cmd_gimbal2(int16_t rev,int16_t yaw);
 /**
   * @brief          send CAN packet of ID 0x700, it will set chassis motor 3508 to quick ID setting
   * @param[in]      none

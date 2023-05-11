@@ -298,7 +298,7 @@ static void J_scope_gimbal_test(void);
 #endif
 
 extern miniPC_info_t miniPC_info;
-
+extern shoot_control_t shoot_control;
 
 //gimbal control data
 //云台控制所有相关数据
@@ -306,7 +306,7 @@ gimbal_control_t gimbal_control;
 
 //motor current 
 //发送的电机电流
-static int16_t yaw_can_set_current = 0, pitch_can_set_current = 0, shoot_can_set_current = 0;
+static int16_t yaw_can_set_current = 0, pitch_can_set_current = 0, shootL_can_set_current = 0, shootR_can_set_current = 0;
 //aid motor copy current
 static int16_t pitch_can_set_current_aid = 0;
 
@@ -348,7 +348,8 @@ void gimbal_task(void const *pvParameters)
         gimbal_feedback_update(&gimbal_control);             //云台数据反馈
         gimbal_set_control(&gimbal_control);                 //设置云台控制量
         gimbal_control_loop(&gimbal_control);                //云台控制PID计算
-        shoot_can_set_current = shoot_control_loop();        //射击任务控制循环
+        shootL_can_set_current = shoot_control_loop();        //射击任务控制循环
+				shootR_can_set_current = shoot_control.R_barrel_given_current;
 #if YAW_TURN
         yaw_can_set_current = -gimbal_control.gimbal_yaw_motor.given_current;
 #else
@@ -361,20 +362,20 @@ void gimbal_task(void const *pvParameters)
         pitch_can_set_current = gimbal_control.gimbal_pitch_motor.given_current;
 #endif
 
-				pitch_can_set_current_aid = (int16_t) ((-0.8f) * pitch_can_set_current); //助力电机
+				pitch_can_set_current_aid = (int16_t) ((-0.8f) * pitch_can_set_current); //助力电机 pitchR
 			
         if (!(toe_is_error(YAW_GIMBAL_MOTOR_TOE) && toe_is_error(PITCH_GIMBAL_MOTOR_L_TOE) && toe_is_error(PITCH_GIMBAL_MOTOR_R_TOE) 
 					&& toe_is_error(TRIGGER_MOTOR17mm_L_TOE) && toe_is_error(TRIGGER_MOTOR17mm_R_TOE)))
         {
             if (toe_is_error(DBUS_TOE))
             {
-                CAN_cmd_gimbal(0, 0);
-							CAN_cmd_gimbal2(0,0);
+                CAN_cmd_gimbal(0, 0, 0, 0);
+								CAN_cmd_gimbal2(0,0);
             }
             else
             {
-                CAN_cmd_gimbal(pitch_can_set_current, 0);
-							CAN_cmd_gimbal2(shoot_can_set_current,yaw_can_set_current);
+                CAN_cmd_gimbal(pitch_can_set_current, pitch_can_set_current_aid, shootL_can_set_current, shootR_can_set_current);
+								CAN_cmd_gimbal2(0,yaw_can_set_current);
             }
         }
 

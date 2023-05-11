@@ -126,8 +126,8 @@ void shoot_init(void)
     shoot_control.shoot_rc = get_remote_control_point();
     //电机指针
 //    shoot_control.shoot_motor_measure = get_trigger_motor_measure_point();
-		shoot_control.shoot_motor_L_measure = get_pitch_gimbal_motor_L_measure_point();
-		shoot_control.shoot_motor_R_measure = get_pitch_gimbal_motor_R_measure_point();
+		shoot_control.shoot_motor_L_measure = get_trigger_motor_L_measure_point();
+		shoot_control.shoot_motor_R_measure = get_trigger_motor_R_measure_point();
 		
     //初始化PID
 //    PID_init(&shoot_control.trigger_motor_pid, PID_POSITION, Trigger_speed_pid, TRIGGER_READY_PID_MAX_OUT, TRIGGER_READY_PID_MAX_IOUT);
@@ -184,11 +184,11 @@ void shoot_init(void)
 		
 		shoot_control.currentLIM_shoot_speed_17mm = 0;
 		
-		
-		//LEFT friction PID const init
-		static const fp32 Left_friction_speed_pid[3] = {M3508_LEFT_FRICTION_PID_KP, M3508_LEFT_FRICTION_PID_KI, M3508_LEFT_FRICTION_PID_KD};
-		//RIGHT friction PID const init
-		static const fp32 Right_friction_speed_pid[3] = {M3508_RIGHT_FRICTION_PID_KP, M3508_RIGHT_FRICTION_PID_KI, M3508_RIGHT_FRICTION_PID_KD};
+//		// NOT used for MD
+//		//LEFT friction PID const init
+//		static const fp32 Left_friction_speed_pid[3] = {M3508_LEFT_FRICTION_PID_KP, M3508_LEFT_FRICTION_PID_KI, M3508_LEFT_FRICTION_PID_KD};
+//		//RIGHT friction PID const init
+//		static const fp32 Right_friction_speed_pid[3] = {M3508_RIGHT_FRICTION_PID_KP, M3508_RIGHT_FRICTION_PID_KI, M3508_RIGHT_FRICTION_PID_KD};
 
 //		//电机指针 M3508屁股 左右摩擦轮 - not used for MD
 //		shoot_control.left_friction_motor_measure = get_left_friction_motor_measure_point();
@@ -249,7 +249,7 @@ int16_t shoot_control_loop(void)
 	  }
 		
 	  //17mm 的两档
-	  //shoot_control.referee_current_shooter_17mm_speed_limit = 18;//强制使其=18 用于调试-----------------------------------------------------------------------------------------------
+	  shoot_control.referee_current_shooter_17mm_speed_limit = 15;//强制使其=18 用于调试-----------------------------------------------------------------------------------------------
 	  if(shoot_control.referee_current_shooter_17mm_speed_limit == 15)
 	  {
 		  shoot_control.currentLIM_shoot_speed_17mm = (fp32)(15 - 3.0);//待定----------------------------
@@ -427,7 +427,7 @@ int16_t shoot_control_loop(void)
     {
         shoot_control.R_barrel_trigger_motor_pid.max_out = TRIGGER_BULLET_PID_MAX_OUT;//-----------------------------------------
         shoot_control.R_barrel_trigger_motor_pid.max_iout = TRIGGER_BULLET_PID_MAX_IOUT;
-        L_barrel_shoot_bullet_control_17mm();
+        R_barrel_shoot_bullet_control_17mm();
     }
     else if (shoot_control.shoot_mode_R == SHOOT_CONTINUE_BULLET)
     {
@@ -506,7 +506,7 @@ int16_t shoot_control_loop(void)
 //		//NOT USED for MD
 //		M3508_fric_wheel_spin_control(-shoot_control.currentLeft_speed_set, shoot_control.currentRight_speed_set);
 		
-    return shoot_control.L_barrel_given_current; // 0 shoot_control.given_current; values stored in global variable not return anymore
+    return shoot_control.L_barrel_given_current; // only return L_barrel_given_current. All other store in global variable 
 }
 
 
@@ -886,12 +886,12 @@ static void shoot_feedback_update(void)
     speed_fliter_1_R = speed_fliter_2_R;
     speed_fliter_2_R = speed_fliter_3_R;
     speed_fliter_3_R = speed_fliter_2_R * fliter_num_R[0] + speed_fliter_1_R * fliter_num_R[1] - (shoot_control.shoot_motor_R_measure->speed_rpm * MOTOR_RPM_TO_SPEED) * fliter_num_R[2]; //shoot_motor_measure
-    shoot_control.L_barrel_speed = speed_fliter_3_R; //shoot_control.speed = speed_fliter_3;
+    shoot_control.R_barrel_speed = speed_fliter_3_R; //shoot_control.speed = speed_fliter_3;
 #else
 		speed_fliter_1_R = speed_fliter_2_R;
     speed_fliter_2_R = speed_fliter_3_R;
     speed_fliter_3_R = speed_fliter_2_R * fliter_num_R[0] + speed_fliter_1_R * fliter_num_R[1] + (shoot_control.shoot_motor_R_measure->speed_rpm * MOTOR_RPM_TO_SPEED) * fliter_num_R[2];
-    shoot_control.L_barrel_speed = speed_fliter_3_R;
+    shoot_control.R_barrel_speed = speed_fliter_3_R;
 #endif
 		
 		//电机是否离线检测

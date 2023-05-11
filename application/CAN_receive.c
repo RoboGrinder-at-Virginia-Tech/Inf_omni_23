@@ -66,7 +66,7 @@ motor data,  0:chassis motor1 3508;1:chassis motor3 3508;2:chassis motor3 3508;3
 
 		
 */
-static motor_measure_t motor_chassis[7];
+static motor_measure_t motor_chassis[10];
 union debug_result
 {
 	float d;
@@ -76,7 +76,7 @@ union debug_result
 		绑定在CAN2上的电机 数组
 		
 		*/
-static motor_measure_t motor_CAN2Bus[7];
+static motor_measure_t motor_CAN2Bus[10];
 
 static CAN_TxHeaderTypeDef  gimbal_tx_message;
 static uint8_t              gimbal_can_send_data[8];
@@ -167,48 +167,47 @@ void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan)
   * @param[in]      rev: (0x208) 保留，电机控制电流
   * @retval         none
   */
-void CAN_cmd_gimbal(int16_t pitch, int16_t rev)
-{
+void CAN_cmd_gimbal(int16_t pitch1, int16_t pitch2, int16_t shoot1, int16_t shoot2)
+{   //pitch1 - pitchL; pitch2 - pitchR; shoot1 - shootL; shoot2 - shootR
     uint32_t send_mail_box;
     gimbal_tx_message.StdId = CAN_GIMBAL_ALL_ID;
     gimbal_tx_message.IDE = CAN_ID_STD;
     gimbal_tx_message.RTR = CAN_RTR_DATA;
     gimbal_tx_message.DLC = 0x08;
-    gimbal_can_send_data[0] = 0;//(yaw >> 8);
-    gimbal_can_send_data[1] = 0;//yaw;
-    gimbal_can_send_data[2] = (pitch >> 8);
-    gimbal_can_send_data[3] = pitch;
-   // gimbal_can_send_data[4] = (shoot >> 8);
-    //gimbal_can_send_data[5] = shoot;
-	gimbal_can_send_data[4] = 0;
-	gimbal_can_send_data[5] = 0;
-    gimbal_can_send_data[6] = (rev >> 8);
-    gimbal_can_send_data[7] = rev;
+    gimbal_can_send_data[0] = (shoot1 >> 8);
+    gimbal_can_send_data[1] = shoot1;
+    gimbal_can_send_data[2] = (pitch1 >> 8);
+    gimbal_can_send_data[3] = pitch1;
+		gimbal_can_send_data[4] = (pitch2 >> 8);
+    gimbal_can_send_data[5] = pitch2;
+    gimbal_can_send_data[6] = (shoot2 >> 8);
+    gimbal_can_send_data[7] = shoot2;
     HAL_CAN_AddTxMessage(&GIMBAL_CAN, &gimbal_tx_message, gimbal_can_send_data, &send_mail_box);
 }
 /**
-  * @brief          发送电机控制电流(0x207)
+  * @brief          发送电机控制电流 主要控制Gimbal
   * @param[in]      shoot: (0x207) 2006电机控制电流, 范围 [-10000,10000]
   * @param[in]      yaw: (0x205) 6020电机控制电流, 范围 [-30000,30000]
   * @retval         none
   */
-void CAN_cmd_gimbal2(int16_t shoot,int16_t yaw){
+void CAN_cmd_gimbal2(int16_t rev,int16_t yaw){
 	
 	uint32_t send_mail_box;
-    gimbal_tx_message.StdId = CAN_GIMBAL_ALL_ID;
-    gimbal_tx_message.IDE = CAN_ID_STD;
-    gimbal_tx_message.RTR = CAN_RTR_DATA;
-    gimbal_tx_message.DLC = 0x08;
-    gimbal_can_send_data[0] = (yaw >> 8);
-    gimbal_can_send_data[1] = yaw;
-    gimbal_can_send_data[2] = 0;
-    gimbal_can_send_data[3] = 0;
-    gimbal_can_send_data[4] = (shoot >> 8);
-    gimbal_can_send_data[5] = shoot;
-		gimbal_can_send_data[6] = 0;
-	gimbal_can_send_data[7] = 0;
+  gimbal_tx_message.StdId = CAN_GIMBAL_ALL_ID;
+  gimbal_tx_message.IDE = CAN_ID_STD;
+  gimbal_tx_message.RTR = CAN_RTR_DATA;
+  gimbal_tx_message.DLC = 0x08;
+  gimbal_can_send_data[0] = (yaw >> 8);
+  gimbal_can_send_data[1] = yaw;
+  gimbal_can_send_data[2] = 0;
+  gimbal_can_send_data[3] = 0;
+  gimbal_can_send_data[4] = 0;
+  gimbal_can_send_data[5] = 0;
+	gimbal_can_send_data[6] = 0; //(shoot >> 8);
+	gimbal_can_send_data[7] = 0; //shoot;
 	HAL_CAN_AddTxMessage(&CHASSIS_CAN, &gimbal_tx_message, gimbal_can_send_data, &send_mail_box);
 }
+
 /**
   * @brief          send CAN packet of ID 0x700, it will set chassis motor 3508 to quick ID setting
   * @param[in]      none
@@ -357,12 +356,12 @@ const motor_measure_t *get_pitch_gimbal_motor_R_measure_point(void)
 const motor_measure_t *get_trigger_motor_L_measure_point(void)
 {
     //SZL修改 4-15-2021 由于电机在CAN 2 上 目前解包到motor_CAN2Bus数组中
-		return &motor_CAN2Bus[2]; // CAN_TRIGGER_MOTOR_17mm_L_ID - CAN2_START_ID = [0x203-0x201=2]
+		return &motor_CAN2Bus[4]; // CAN_TRIGGER_MOTOR_17mm_L_ID - CAN2_START_ID = [0x205-0x201=4]
 }
 
 const motor_measure_t *get_trigger_motor_R_measure_point(void)
 {
-	  return &motor_CAN2Bus[3]; // CAN_TRIGGER_MOTOR_17mm_R_ID - CAN2_START_ID = [0x204-0x201=3]
+	  return &motor_CAN2Bus[7]; // CAN_TRIGGER_MOTOR_17mm_R_ID - CAN2_START_ID = [0x208-0x201=7]
 }
 
 
