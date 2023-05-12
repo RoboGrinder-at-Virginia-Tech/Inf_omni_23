@@ -120,7 +120,7 @@ Omni drive 机器人 炮塔; 拨盘有8个洞, 2pi/8 = 0.78539816339744830961566084581988f
 
 /*仿照云台控制逻辑 新增一个宏定义 电机和转盘安装方向*/
 #define TRIG_MOTOR_TURN_LEFT_BARREL 1
-#define TRIG_MOTOR_TURN_RIGHT_BARREL 1
+#define TRIG_MOTOR_TURN_RIGHT_BARREL 0
 
 /*
 SZL

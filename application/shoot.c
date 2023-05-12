@@ -376,7 +376,7 @@ int16_t shoot_control_loop(void)
         //计算拨弹轮电机PID
         PID_calc(&shoot_control.L_barrel_trigger_motor_pid, shoot_control.L_barrel_speed, shoot_control.L_barrel_speed_set);
         
-#if TRIG_MOTOR_TURN
+#if TRIG_MOTOR_TURN_LEFT_BARREL
 				shoot_control.L_barrel_given_current = -(int16_t)(shoot_control.L_barrel_trigger_motor_pid.out);
 #else
 				shoot_control.L_barrel_given_current = (int16_t)(shoot_control.L_barrel_trigger_motor_pid.out);
@@ -397,7 +397,7 @@ int16_t shoot_control_loop(void)
 //				shoot_control.currentRight_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 
     }
-		
+		// ------------------------------ Left Right 分割线 ------------------------------
 		// 处理 right barrel 的FSM
     if (shoot_control.shoot_mode_R == SHOOT_STOP) // shoot_mode_R
     {
@@ -467,7 +467,7 @@ int16_t shoot_control_loop(void)
         //计算拨弹轮电机PID
         PID_calc(&shoot_control.R_barrel_trigger_motor_pid, shoot_control.R_barrel_speed, shoot_control.R_barrel_speed_set);
         
-#if TRIG_MOTOR_TURN
+#if TRIG_MOTOR_TURN_RIGHT_BARREL
 				shoot_control.R_barrel_given_current = -(int16_t)(shoot_control.R_barrel_trigger_motor_pid.out);
 #else
 				shoot_control.R_barrel_given_current = (int16_t)(shoot_control.R_barrel_trigger_motor_pid.out);
