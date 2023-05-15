@@ -137,11 +137,11 @@ void shoot_init(void)
     //更新数据
     shoot_feedback_update();
 		// left barrel ramp
-    ramp_init(&shoot_control.L_barrel_fric1_ramp, SHOOT_CONTROL_TIME * 0.001f, FRIC_DOWN, FRIC_OFF);
-    ramp_init(&shoot_control.L_barrel_fric2_ramp, SHOOT_CONTROL_TIME * 0.001f, FRIC_DOWN, FRIC_OFF);
+    ramp_init(&shoot_control.L_barrel_fric1_ramp, SHOOT_CONTROL_TIME * 0.001f, FRIC_OFF, FRIC_OFF); //FRIC_DOWN, FRIC_OFF
+    ramp_init(&shoot_control.L_barrel_fric2_ramp, SHOOT_CONTROL_TIME * 0.001f, FRIC_OFF, FRIC_OFF);
 		// right barrel ramp
-		ramp_init(&shoot_control.R_barrel_fric1_ramp, SHOOT_CONTROL_TIME * 0.001f, FRIC_DOWN, FRIC_OFF);
-    ramp_init(&shoot_control.R_barrel_fric2_ramp, SHOOT_CONTROL_TIME * 0.001f, FRIC_DOWN, FRIC_OFF);
+		ramp_init(&shoot_control.R_barrel_fric1_ramp, SHOOT_CONTROL_TIME * 0.001f, FRIC_OFF, FRIC_OFF);
+    ramp_init(&shoot_control.R_barrel_fric2_ramp, SHOOT_CONTROL_TIME * 0.001f, FRIC_OFF, FRIC_OFF);
 		
 		// left barrel - control
 		shoot_control.L_barrel_fric_pwm1 = FRIC_OFF;
@@ -210,8 +210,26 @@ void shoot_init(void)
 		L_barrel_fric_off();
 		R_barrel_fric_off();
 		vTaskDelay(3000);
+		
+		//设置油门 斜坡开启行程
+		shoot_control.L_barrel_fric1_ramp.max_value = FRIC_OFF; //重复
+		shoot_control.L_barrel_fric1_ramp.min_value = FRIC_OFF; //重复
+		shoot_control.L_barrel_fric1_ramp.out = FRIC_OFF;//主要 覆盖掉out
+		
+		shoot_control.L_barrel_fric2_ramp.max_value = FRIC_OFF;
+		shoot_control.L_barrel_fric2_ramp.min_value = FRIC_OFF;
+		shoot_control.L_barrel_fric2_ramp.out = FRIC_OFF;
+		
+		shoot_control.R_barrel_fric1_ramp.max_value = FRIC_OFF;
+		shoot_control.R_barrel_fric1_ramp.min_value = FRIC_OFF;
+		shoot_control.R_barrel_fric1_ramp.out = FRIC_OFF;
+		
+		shoot_control.R_barrel_fric2_ramp.max_value = FRIC_OFF;
+		shoot_control.R_barrel_fric2_ramp.min_value = FRIC_OFF;
+		shoot_control.R_barrel_fric2_ramp.out = FRIC_OFF;
 }
 
+uint16_t new_fric_allms_debug = NEW_FRIC_15ms;
 /**
   * @brief          射击循环
   * @param[in]      void
@@ -276,10 +294,10 @@ int16_t shoot_control_loop(void)
 		  shoot_control.R_barrel_fric2_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 		  
 		  // 更新MD snail 摩擦轮的PWM上限
-		  shoot_control.L_barrel_fric1_ramp.max_value_constant = NEW_FRIC_15ms; //NEW_FRIC_15ms_higher
-		  shoot_control.L_barrel_fric2_ramp.max_value_constant = NEW_FRIC_15ms;
-		  shoot_control.R_barrel_fric1_ramp.max_value_constant = NEW_FRIC_15ms;
-		  shoot_control.R_barrel_fric2_ramp.max_value_constant = NEW_FRIC_15ms;
+		  shoot_control.L_barrel_fric1_ramp.max_value_constant = new_fric_allms_debug; //NEW_FRIC_15ms; //NEW_FRIC_15ms_higher
+		  shoot_control.L_barrel_fric2_ramp.max_value_constant = new_fric_allms_debug; //NEW_FRIC_15ms;
+		  shoot_control.R_barrel_fric1_ramp.max_value_constant = new_fric_allms_debug; //NEW_FRIC_15ms;
+		  shoot_control.R_barrel_fric2_ramp.max_value_constant = new_fric_allms_debug; //NEW_FRIC_15ms;
 	  }
 	  else if(shoot_control.referee_current_shooter_17mm_speed_limit == 18)
 	  { //6-15之前的自瞄一直是按这个测试的
@@ -373,14 +391,14 @@ int16_t shoot_control_loop(void)
 				shoot_control.L_barrel_fric_pwm2 = FRIC_OFF; //.fric_pwm2
 				//关闭不需要斜坡关闭
 			
-				//更改斜坡数据
-				shoot_control.L_barrel_fric1_ramp.max_value = FRIC_OFF;
-				shoot_control.L_barrel_fric1_ramp.min_value = FRIC_OFF;
-				shoot_control.L_barrel_fric1_ramp.out = FRIC_OFF;
-			
-				shoot_control.L_barrel_fric2_ramp.max_value = FRIC_OFF;
-				shoot_control.L_barrel_fric2_ramp.min_value = FRIC_OFF;
-				shoot_control.L_barrel_fric2_ramp.out = FRIC_OFF;
+//				//更改斜坡数据 挪到初始化中
+//				shoot_control.L_barrel_fric1_ramp.max_value = FRIC_OFF;
+//				shoot_control.L_barrel_fric1_ramp.min_value = FRIC_OFF;
+//				shoot_control.L_barrel_fric1_ramp.out = FRIC_OFF;
+//			
+//				shoot_control.L_barrel_fric2_ramp.max_value = FRIC_OFF;
+//				shoot_control.L_barrel_fric2_ramp.min_value = FRIC_OFF;
+//				shoot_control.L_barrel_fric2_ramp.out = FRIC_OFF;
 			
 			
 //			//SZL添加, 也可以使用斜波开启 低通滤波 //NOT USED for MD
@@ -412,6 +430,9 @@ int16_t shoot_control_loop(void)
         //摩擦轮需要一个个斜波开启，不能同时直接开启，否则可能电机不转
         ramp_calc(&shoot_control.L_barrel_fric1_ramp, SHOOT_FRIC_PWM_ADD_VALUE); //.fric1_ramp
         ramp_calc(&shoot_control.L_barrel_fric2_ramp, SHOOT_FRIC_PWM_ADD_VALUE); //.fric2_ramp
+				// Update fric PWM
+				shoot_control.L_barrel_fric_pwm1 = (uint16_t)(shoot_control.L_barrel_fric1_ramp.out);// + 19); //.fric_pwm1 .fric1_ramp
+				shoot_control.L_barrel_fric_pwm2 = (uint16_t)(shoot_control.L_barrel_fric2_ramp.out);   //.fric_pwm2 .fric2_ramp
 				
 //				//SZL添加, 也可以使用斜波开启 低通滤波 //NOT USED for MD
 //				shoot_control.currentLeft_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
@@ -473,14 +494,14 @@ int16_t shoot_control_loop(void)
 				shoot_control.R_barrel_fric_pwm2 = FRIC_OFF; //.fric_pwm2
 				//关闭不需要斜坡关闭
 			
-				//更改斜坡数据
-				shoot_control.R_barrel_fric1_ramp.max_value = FRIC_OFF;
-				shoot_control.R_barrel_fric1_ramp.min_value = FRIC_OFF;
-				shoot_control.R_barrel_fric1_ramp.out = FRIC_OFF;
-			
-				shoot_control.R_barrel_fric2_ramp.max_value = FRIC_OFF;
-				shoot_control.R_barrel_fric2_ramp.min_value = FRIC_OFF;
-				shoot_control.R_barrel_fric2_ramp.out = FRIC_OFF;
+//				//更改斜坡数据 挪到初始化中
+//				shoot_control.R_barrel_fric1_ramp.max_value = FRIC_OFF;
+//				shoot_control.R_barrel_fric1_ramp.min_value = FRIC_OFF;
+//				shoot_control.R_barrel_fric1_ramp.out = FRIC_OFF;
+//			
+//				shoot_control.R_barrel_fric2_ramp.max_value = FRIC_OFF;
+//				shoot_control.R_barrel_fric2_ramp.min_value = FRIC_OFF;
+//				shoot_control.R_barrel_fric2_ramp.out = FRIC_OFF;
 			
 //			//SZL添加, 也可以使用斜波开启 低通滤波 //NOT USED for MD
 //			shoot_control.currentLeft_speed_set = M3508_FRIC_STOP;
@@ -511,6 +532,9 @@ int16_t shoot_control_loop(void)
         //摩擦轮需要一个个斜波开启，不能同时直接开启，否则可能电机不转
         ramp_calc(&shoot_control.R_barrel_fric1_ramp, SHOOT_FRIC_PWM_ADD_VALUE);
         ramp_calc(&shoot_control.R_barrel_fric2_ramp, SHOOT_FRIC_PWM_ADD_VALUE);
+				// Update fric PWM
+				shoot_control.R_barrel_fric_pwm1 = (uint16_t)(shoot_control.R_barrel_fric1_ramp.out);
+				shoot_control.R_barrel_fric_pwm2 = (uint16_t)(shoot_control.R_barrel_fric2_ramp.out);
 				
 //				//SZL添加, 也可以使用斜波开启 低通滤波 //NOT USED for MD
 //				shoot_control.currentLeft_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
@@ -518,14 +542,14 @@ int16_t shoot_control_loop(void)
 
     }
 		// left and right barrel FSM 处理完成; 以下开始 实际输出
-		
+//		// 挪到了if状态判断里面
 //		if((shoot_control.shoot_mode_L != SHOOT_STOP) || (shoot_control.shoot_mode_R != SHOOT_STOP))
 //		{
-			shoot_control.L_barrel_fric_pwm1 = (uint16_t)(shoot_control.L_barrel_fric1_ramp.out);// + 19); //.fric_pwm1 .fric1_ramp
-			shoot_control.L_barrel_fric_pwm2 = (uint16_t)(shoot_control.L_barrel_fric2_ramp.out);   //.fric_pwm2 .fric2_ramp
-			
-			shoot_control.R_barrel_fric_pwm1 = (uint16_t)(shoot_control.R_barrel_fric1_ramp.out);
-			shoot_control.R_barrel_fric_pwm2 = (uint16_t)(shoot_control.R_barrel_fric2_ramp.out);
+//			shoot_control.L_barrel_fric_pwm1 = (uint16_t)(shoot_control.L_barrel_fric1_ramp.out);// + 19); //.fric_pwm1 .fric1_ramp
+//			shoot_control.L_barrel_fric_pwm2 = (uint16_t)(shoot_control.L_barrel_fric2_ramp.out);   //.fric_pwm2 .fric2_ramp
+//			
+//			shoot_control.R_barrel_fric_pwm1 = (uint16_t)(shoot_control.R_barrel_fric1_ramp.out);
+//			shoot_control.R_barrel_fric_pwm2 = (uint16_t)(shoot_control.R_barrel_fric2_ramp.out);
 //		}
 		
 		

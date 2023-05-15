@@ -47,6 +47,10 @@ NEW_FRIC_15ms 1070
 #define NEW_FRIC_15ms 1150 //1150// --------------- Debug --------------------
 #define NEW_FRIC_18ms 1206
 
+/* This comment bolck for Inf_omni_23 OR MD17
+
+*/
+
 //1320 speed level 2 single shoot - fric_down
 //1400 speed level 2 continuous shoot- fric_up
 //1206 speed level 1 single 18m/s
