@@ -197,7 +197,19 @@ void shoot_init(void)
 //		//初始化PID - not used for MD
 //		PID_init(&shoot_control.left_fric_motor_pid, PID_POSITION, Left_friction_speed_pid, M3508_LEFT_FRICTION_PID_MAX_OUT, M3508_LEFT_FRICTION_PID_MAX_IOUT);
 //		PID_init(&shoot_control.right_fric_motor_pid, PID_POSITION, Right_friction_speed_pid, M3508_RIGHT_FRICTION_PID_MAX_OUT, M3508_RIGHT_FRICTION_PID_MAX_IOUT);
-
+		
+		//C615 电调行程校准
+//		L_barrel_fric_off();
+//		R_barrel_fric_off();
+//		vTaskDelay(1000);
+//		L_barrel_fric1_on(1300);
+//		L_barrel_fric2_on(1300);
+//		R_barrel_fric1_on(1300);
+//		R_barrel_fric2_on(1300);
+//		vTaskDelay(1000);
+		L_barrel_fric_off();
+		R_barrel_fric_off();
+		vTaskDelay(3000);
 }
 
 /**
@@ -361,6 +373,15 @@ int16_t shoot_control_loop(void)
 				shoot_control.L_barrel_fric_pwm2 = FRIC_OFF; //.fric_pwm2
 				//关闭不需要斜坡关闭
 			
+				//更改斜坡数据
+				shoot_control.L_barrel_fric1_ramp.max_value = FRIC_OFF;
+				shoot_control.L_barrel_fric1_ramp.min_value = FRIC_OFF;
+				shoot_control.L_barrel_fric1_ramp.out = FRIC_OFF;
+			
+				shoot_control.L_barrel_fric2_ramp.max_value = FRIC_OFF;
+				shoot_control.L_barrel_fric2_ramp.min_value = FRIC_OFF;
+				shoot_control.L_barrel_fric2_ramp.out = FRIC_OFF;
+			
 			
 //			//SZL添加, 也可以使用斜波开启 低通滤波 //NOT USED for MD
 //			shoot_control.currentLeft_speed_set = M3508_FRIC_STOP;
@@ -452,6 +473,14 @@ int16_t shoot_control_loop(void)
 				shoot_control.R_barrel_fric_pwm2 = FRIC_OFF; //.fric_pwm2
 				//关闭不需要斜坡关闭
 			
+				//更改斜坡数据
+				shoot_control.R_barrel_fric1_ramp.max_value = FRIC_OFF;
+				shoot_control.R_barrel_fric1_ramp.min_value = FRIC_OFF;
+				shoot_control.R_barrel_fric1_ramp.out = FRIC_OFF;
+			
+				shoot_control.R_barrel_fric2_ramp.max_value = FRIC_OFF;
+				shoot_control.R_barrel_fric2_ramp.min_value = FRIC_OFF;
+				shoot_control.R_barrel_fric2_ramp.out = FRIC_OFF;
 			
 //			//SZL添加, 也可以使用斜波开启 低通滤波 //NOT USED for MD
 //			shoot_control.currentLeft_speed_set = M3508_FRIC_STOP;
@@ -490,11 +519,14 @@ int16_t shoot_control_loop(void)
     }
 		// left and right barrel FSM 处理完成; 以下开始 实际输出
 		
-    shoot_control.L_barrel_fric_pwm1 = (uint16_t)(shoot_control.L_barrel_fric1_ramp.out);// + 19); //.fric_pwm1 .fric1_ramp
-    shoot_control.L_barrel_fric_pwm2 = (uint16_t)(shoot_control.L_barrel_fric2_ramp.out);   //.fric_pwm2 .fric2_ramp
-		
-		shoot_control.R_barrel_fric_pwm1 = (uint16_t)(shoot_control.R_barrel_fric1_ramp.out);
-    shoot_control.R_barrel_fric_pwm2 = (uint16_t)(shoot_control.R_barrel_fric2_ramp.out);
+//		if((shoot_control.shoot_mode_L != SHOOT_STOP) || (shoot_control.shoot_mode_R != SHOOT_STOP))
+//		{
+			shoot_control.L_barrel_fric_pwm1 = (uint16_t)(shoot_control.L_barrel_fric1_ramp.out);// + 19); //.fric_pwm1 .fric1_ramp
+			shoot_control.L_barrel_fric_pwm2 = (uint16_t)(shoot_control.L_barrel_fric2_ramp.out);   //.fric_pwm2 .fric2_ramp
+			
+			shoot_control.R_barrel_fric_pwm1 = (uint16_t)(shoot_control.R_barrel_fric1_ramp.out);
+			shoot_control.R_barrel_fric_pwm2 = (uint16_t)(shoot_control.R_barrel_fric2_ramp.out);
+//		}
 		
 		
 		// set the calculated final pwm to TIM, actually control the motor
