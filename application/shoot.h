@@ -66,8 +66,8 @@
 #define FULL_COUNT                  18 // 未使用
 // 拨弹电机 Left barrel 左枪管 相关数据
 //拨弹速度
-#define TRIGGER_SPEED_L               10.0f
-#define CONTINUE_TRIGGER_SPEED_L      10.0f //12.0f//9.0f //SZL3-13 change from 12 to 10
+#define TRIGGER_SPEED_L               10.0f //8.0f //10.0f
+#define CONTINUE_TRIGGER_SPEED_L      8.0f //10.0f //12.0f//9.0f //SZL3-13 change from 12 to 10
 #define READY_TRIGGER_SPEED_L         5.0f
 
 #define KEY_OFF_JUGUE_TIME_L          500
@@ -84,8 +84,8 @@
 
 // 拨弹电机 Right barrel 左枪管 相关数据
 //拨弹速度
-#define TRIGGER_SPEED_R               10.0f
-#define CONTINUE_TRIGGER_SPEED_R      10.0f //12.0f//9.0f //SZL3-13 change from 12 to 10
+#define TRIGGER_SPEED_R               10.0f //8.0f //10.0f
+#define CONTINUE_TRIGGER_SPEED_R      8.0f //10.0f //12.0f//9.0f //SZL3-13 change from 12 to 10
 #define READY_TRIGGER_SPEED_R         5.0f
 
 #define KEY_OFF_JUGUE_TIME_R          500
