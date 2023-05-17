@@ -135,7 +135,7 @@
 //云台测试模式 宏定义 0 为不使用测试模式
 #define GIMBAL_TEST_MODE 0
 
-#define PITCH_TURN  0
+#define PITCH_TURN  1
 #define YAW_TURN    0
 
 //电机码盘值最大以及中值
