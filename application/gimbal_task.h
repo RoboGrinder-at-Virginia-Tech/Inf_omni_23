@@ -253,6 +253,13 @@ typedef struct
     gimbal_motor_t gimbal_yaw_motor;
     gimbal_motor_t gimbal_pitch_motor;
     gimbal_step_cali_t gimbal_cali;
+	
+		//add minipc or pc_info related value, related to abs coord control in case of filtering needs
+	  fp32 pc_absolute_yaw;
+		fp32 pc_absolute_pitch;
+	
+		fp32 pc_last_absolute_yaw; 
+		fp32 pc_last_absolute_pitch;
 } gimbal_control_t;
 
 /**

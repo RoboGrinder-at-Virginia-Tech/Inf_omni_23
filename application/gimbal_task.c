@@ -297,7 +297,7 @@ static void calc_gimbal_cali(const gimbal_step_cali_t *gimbal_cali, uint16_t *ya
 static void J_scope_gimbal_test(void);
 #endif
 
-extern miniPC_info_t miniPC_info;
+//extern miniPC_info_t miniPC_info; //3-26-2023 update never use this again
 extern shoot_control_t shoot_control;
 
 //gimbal control data

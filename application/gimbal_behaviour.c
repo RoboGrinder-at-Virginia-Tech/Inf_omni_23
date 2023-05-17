@@ -86,8 +86,9 @@
 
 #include "user_lib.h"
 #include "referee_usart_task.h"
+#include "miniPC_msg.h"
 
-extern miniPC_info_t miniPC_info;
+//extern miniPC_info_t miniPC_info; //3-26-2023 update never use this again
 
 //when gimbal is in calibrating, set buzzer frequency and strenght
 //当云台在校准, 设置蜂鸣器频率和强度
@@ -533,7 +534,7 @@ static void gimbal_behavour_set(gimbal_control_t *gimbal_mode_set)
 				{
 					gimbal_behaviour = GIMBAL_ABSOLUTE_ANGLE;
 				}
-			  else if(miniPC_info.autoAimFlag == 2 && miniPC_info.cv_status == 2 && miniPC_info.enemy_detected == 1)
+			  else if(get_autoAimFlag() == 2 && get_cv_gimbal_sts() == 2 && get_enemy_detected() == 1) //(get_autoAimFlag() == 2 && miniPC_info.cv_status == 2 && miniPC_info.enemy_detected == 1)
 				{
 					gimbal_behaviour = GIMBAL_MINIPC_AUTOAIM_LOCK;
 				}
@@ -717,9 +718,6 @@ static void gimbal_cali_control(fp32 *yaw, fp32 *pitch, gimbal_control_t *gimbal
   * @param[in]      gimbal_control_set:云台数据指针
   * @retval         none
   */
-fp32 temp_yaw, temp_pitch;
-fp32 temp_absolute_yaw, temp_absolute_pitch;
-fp32 temp_last_absolute_yaw, temp_last_absolute_pitch;
 static void gimbal_absolute_angle_control(fp32 *yaw, fp32 *pitch, gimbal_control_t *gimbal_control_set)
 {
     if (yaw == NULL || pitch == NULL || gimbal_control_set == NULL)
@@ -735,27 +733,37 @@ static void gimbal_absolute_angle_control(fp32 *yaw, fp32 *pitch, gimbal_control
 		//掉线 数据保护
 		if(toe_is_error(PC_TOE))
 		{
-			miniPC_info.yawMove_aid = 0;
-			miniPC_info.pitchMove_aid = 0;
-		}
-		
-		if(miniPC_info.autoAimFlag == 1) //&& (miniPC_info.cv_status == 0x01))
-		{ 
-			*yaw = yaw_channel * YAW_RC_SEN - gimbal_control_set->gimbal_rc_ctrl->mouse.x * YAW_MOUSE_SEN + miniPC_info.yawMove_aid;
-			*pitch = pitch_channel * PITCH_RC_SEN + gimbal_control_set->gimbal_rc_ctrl->mouse.y * PITCH_MOUSE_SEN + miniPC_info.pitchMove_aid;
-			
-			gimbal_control_set->gimbal_yaw_motor.miniPC_absolute_angle_set = gimbal_control_set->gimbal_yaw_motor.absolute_angle;
-			gimbal_control_set->gimbal_pitch_motor.miniPC_absolute_angle_set = gimbal_control_set->gimbal_pitch_motor.absolute_angle;
-			//待添加reset pid
-		} 
-		else if(miniPC_info.autoAimFlag == 0)
-		{
-//    *yaw = yaw_channel * YAW_RC_SEN - gimbal_control_set->gimbal_rc_ctrl->mouse.x * YAW_MOUSE_SEN;
-//    *pitch = pitch_channel * PITCH_RC_SEN + gimbal_control_set->gimbal_rc_ctrl->mouse.y * PITCH_MOUSE_SEN;
+//			miniPC_info.yawMove_aid = 0;
+//			miniPC_info.pitchMove_aid = 0;
+			//same contents as miniPC_info.autoAimFlag == 0
 			*yaw = yaw_channel * YAW_RC_SEN - gimbal_control_set->gimbal_rc_ctrl->mouse.x * YAW_MOUSE_SEN;
 			*pitch = pitch_channel * PITCH_RC_SEN + gimbal_control_set->gimbal_rc_ctrl->mouse.y * PITCH_MOUSE_SEN;
-			
-		}		
+		}
+		else
+		{
+			if(get_autoAimFlag() == 1) //(miniPC_info.autoAimFlag == 1) //&& (miniPC_info.cv_status == 0x01))
+			{ 
+				//old code:
+//				*yaw = yaw_channel * YAW_RC_SEN - gimbal_control_set->gimbal_rc_ctrl->mouse.x * YAW_MOUSE_SEN + miniPC_info.yawMove_aid;
+//				*pitch = pitch_channel * PITCH_RC_SEN + gimbal_control_set->gimbal_rc_ctrl->mouse.y * PITCH_MOUSE_SEN + miniPC_info.pitchMove_aid;
+				
+				*yaw = yaw_channel * YAW_RC_SEN - gimbal_control_set->gimbal_rc_ctrl->mouse.x * YAW_MOUSE_SEN + get_yawMove_aid();
+				*pitch = pitch_channel * PITCH_RC_SEN + gimbal_control_set->gimbal_rc_ctrl->mouse.y * PITCH_MOUSE_SEN + get_pitchMove_aid();
+				
+				gimbal_control_set->gimbal_yaw_motor.miniPC_absolute_angle_set = gimbal_control_set->gimbal_yaw_motor.absolute_angle;
+				gimbal_control_set->gimbal_pitch_motor.miniPC_absolute_angle_set = gimbal_control_set->gimbal_pitch_motor.absolute_angle;
+				//待添加reset pid
+			} 
+			else if(get_autoAimFlag() == 0) //(miniPC_info.autoAimFlag == 0)
+			{
+	//    *yaw = yaw_channel * YAW_RC_SEN - gimbal_control_set->gimbal_rc_ctrl->mouse.x * YAW_MOUSE_SEN;
+	//    *pitch = pitch_channel * PITCH_RC_SEN + gimbal_control_set->gimbal_rc_ctrl->mouse.y * PITCH_MOUSE_SEN;
+				*yaw = yaw_channel * YAW_RC_SEN - gimbal_control_set->gimbal_rc_ctrl->mouse.x * YAW_MOUSE_SEN;
+				*pitch = pitch_channel * PITCH_RC_SEN + gimbal_control_set->gimbal_rc_ctrl->mouse.y * PITCH_MOUSE_SEN;
+				
+			}
+		}
+		
     /*已经屏蔽掉的 掉头转身, 即 不用掉头转身
     {
         static uint16_t last_turn_keyboard = 0;
@@ -821,8 +829,11 @@ static void gimbal_miniPC_autoaim_lock_absolute_angle_control(fp32 *yaw, fp32 *p
 //			}
 			*/
 			//MiniPC lock 模式 绝对角度, 角度环 增量为相对于原来的增加的量
-			temp_absolute_yaw = fp32_constrain(miniPC_info.yawMove_absolute, -PI, PI);
-			temp_absolute_pitch = fp32_constrain(miniPC_info.pitchMove_absolute, -PI, PI);
+			// old code before 3-26-2023
+//			temp_absolute_yaw = fp32_constrain(miniPC_info.yawMove_absolute, -PI, PI);
+//			temp_absolute_pitch = fp32_constrain(miniPC_info.pitchMove_absolute, -PI, PI);
+			gimbal_control_set->pc_absolute_yaw = fp32_constrain(get_yawMove_absolute(), -PI, PI);
+			gimbal_control_set->pc_absolute_pitch = fp32_constrain(get_pitchMove_absolute(), -PI, PI);
 			
 //注释掉是暂时不需要这种滤波
 //			if( fabs(temp_absolute_yaw - temp_last_absolute_yaw) < 0.01)
@@ -835,20 +846,31 @@ static void gimbal_miniPC_autoaim_lock_absolute_angle_control(fp32 *yaw, fp32 *p
 //				temp_absolute_pitch = temp_last_absolute_pitch;
 //			}
 			
-			gimbal_control_set->gimbal_yaw_motor.miniPC_absolute_angle_set = temp_absolute_yaw; //fp32_constrain(temp_absolute_yaw, -gimbal_control_set->gimbal_yaw_motor.max_relative_angle, gimbal_control_set->gimbal_yaw_motor.max_relative_angle);
-			gimbal_control_set->gimbal_pitch_motor.miniPC_absolute_angle_set = temp_absolute_pitch; //fp32_constrain(temp_absolute_pitch, -gimbal_control_set->gimbal_pitch_motor.max_relative_angle, gimbal_control_set->gimbal_pitch_motor.max_relative_angle);
+			// old code before 3-26-2023
+//			gimbal_control_set->gimbal_yaw_motor.miniPC_absolute_angle_set = temp_absolute_yaw; //fp32_constrain(temp_absolute_yaw, -gimbal_control_set->gimbal_yaw_motor.max_relative_angle, gimbal_control_set->gimbal_yaw_motor.max_relative_angle);
+//			gimbal_control_set->gimbal_pitch_motor.miniPC_absolute_angle_set = temp_absolute_pitch; //fp32_constrain(temp_absolute_pitch, -gimbal_control_set->gimbal_pitch_motor.max_relative_angle, gimbal_control_set->gimbal_pitch_motor.max_relative_angle);
+			
+			gimbal_control_set->gimbal_yaw_motor.miniPC_absolute_angle_set = gimbal_control_set->pc_absolute_yaw;
+			gimbal_control_set->gimbal_pitch_motor.miniPC_absolute_angle_set = gimbal_control_set->pc_absolute_pitch;
 			
 //			这一坨的想法是错误的
 //			temp_yaw = rad_format((gimbal_control_set->gimbal_yaw_motor.miniPC_absolute_angle_set) - (gimbal_control_set->gimbal_yaw_motor.absolute_angle));
 //			temp_pitch = rad_format((gimbal_control_set->gimbal_pitch_motor.miniPC_absolute_angle_set) - (gimbal_control_set->gimbal_pitch_motor.absolute_angle));
 //			*yaw = fp32_deadline(temp_yaw, -0.01f, 0.01f);
 //			*pitch = fp32_deadline(temp_pitch, -0.01f, 0.01f);
+
+			// old code before 3-16-23
+//			temp_last_absolute_yaw = temp_absolute_yaw;
+//			temp_last_absolute_pitch = temp_absolute_pitch;
 			
-			temp_last_absolute_yaw = temp_absolute_yaw;
-			temp_last_absolute_pitch = temp_absolute_pitch;
+			//update last
+			gimbal_control_set->pc_last_absolute_yaw = gimbal_control_set->pc_absolute_yaw;
+			gimbal_control_set->pc_last_absolute_pitch = gimbal_control_set->pc_absolute_pitch;
 			
-			miniPC_info.yawMove_aid = 0.0f;
-			miniPC_info.pitchMove_aid = 0.0f;
+			// 是否需要覆盖掉 yawMove_aid 和 pitchMove_aid, 3-26-2023 应该不用
+			//miniPC_info.yawMove_aid = 0.0f;
+			//miniPC_info.pitchMove_aid = 0.0f;
+			
 //下面这部分也暂时注释掉
 //		} 
 //		else if(miniPC_info.autoAimFlag == 1)
@@ -867,6 +889,7 @@ static void gimbal_miniPC_autoaim_lock_absolute_angle_control(fp32 *yaw, fp32 *p
 //			*yaw = yaw_channel * YAW_RC_SEN - gimbal_control_set->gimbal_rc_ctrl->mouse.x * YAW_MOUSE_SEN;
 //			*pitch = pitch_channel * PITCH_RC_SEN + gimbal_control_set->gimbal_rc_ctrl->mouse.y * PITCH_MOUSE_SEN;
 //		}
+
 }
 
 /**
