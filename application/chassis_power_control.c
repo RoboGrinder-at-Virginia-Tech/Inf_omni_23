@@ -30,7 +30,7 @@
 
 extern  supercap_can_msg_id_e current_superCap;
 
-static void update_energy_buffer_debuff_total_current_limit(uint16_t chassis_p_lim, fp32* total_i_lim);
+void update_energy_buffer_debuff_total_current_limit(uint16_t chassis_p_lim, fp32* total_i_lim);
 static void map_superCap_charge_pwr_to_debuff_total_current_limit(uint16_t charge_pwr, fp32* total_i_lim);
 
 //调试用
@@ -560,7 +560,7 @@ static void map_superCap_charge_pwr_to_debuff_total_current_limit(uint16_t charg
 #endif
 }
 
-static void update_energy_buffer_debuff_total_current_limit(uint16_t chassis_p_lim, fp32* total_i_lim)
+void update_energy_buffer_debuff_total_current_limit(uint16_t chassis_p_lim, fp32* total_i_lim)
 {
 #ifdef HERO_CHASSIS_POWER_CONTROL
 		/* Hero 通过标定 将功率上限 映射为 电机最大电流值; 对于debuff这一档 */
