@@ -82,7 +82,7 @@ extern UART_HandleTypeDef huart1;
 /* USER CODE END EV */
 
 /******************************************************************************/
-/*           Cortex-M4 Processor Interruption and Exception Handlers          */ 
+/*           Cortex-M4 Processor Interruption and Exception Handlers          */
 /******************************************************************************/
 /**
   * @brief This function handles Non maskable interrupt.
@@ -275,10 +275,10 @@ void EXTI9_5_IRQHandler(void)
 //void USART1_IRQHandler(void)
 //{
 //  /* USER CODE BEGIN USART1_IRQn 0 */
-//	
-//	/* USER CODE END USART1_IRQn 0 */
-//	HAL_UART_IRQHandler(&huart1);
-//	/* USER CODE BEGIN USART1_IRQn 1 */
+////	
+//  /* USER CODE END USART1_IRQn 0 */
+//  HAL_UART_IRQHandler(&huart1);
+//  /* USER CODE BEGIN USART1_IRQn 1 */
 
 //  /* USER CODE END USART1_IRQn 1 */
 //}
