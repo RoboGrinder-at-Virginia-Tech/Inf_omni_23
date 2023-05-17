@@ -52,8 +52,8 @@
 
 //1-10-2023ÐÞ¸Ä
 #define BMI088_BOARD_INSTALL_SPIN_MATRIX    \
-    {0.0f, 1.0f, 0.0f},                     \
-    {-1.0f, 0.0f, 0.0f},                     \
+    {0.0f, -1.0f, 0.0f},                     \
+    {1.0f, 0.0f, 0.0f},                     \
     {0.0f, 0.0f, 1.0f}                      \
 
 
@@ -381,11 +381,11 @@ void INS_task(void const *pvParameters)
         accel_fliter_3[2] = accel_fliter_2[2] * fliter_num[0] + accel_fliter_1[2] * fliter_num[1] + INS_accel[2] * fliter_num[2];
 
 
-//        AHRS_update(INS_quat, timing_time, INS_gyro, accel_fliter_3, INS_mag);
-//        get_angle(INS_quat, INS_angle + INS_YAW_ADDRESS_OFFSET, INS_angle + INS_PITCH_ADDRESS_OFFSET, INS_angle + INS_ROLL_ADDRESS_OFFSET);
+        AHRS_update(INS_quat, timing_time, INS_gyro, accel_fliter_3, INS_mag);
+        get_angle(INS_quat, INS_angle + INS_YAW_ADDRESS_OFFSET, INS_angle + INS_PITCH_ADDRESS_OFFSET, INS_angle + INS_ROLL_ADDRESS_OFFSET);
 				
-				AHRS_update_ins(INS_quat, timing_time, INS_gyro, accel_fliter_3, INS_mag);
-				get_angle_ins(INS_quat, INS_angle + INS_YAW_ADDRESS_OFFSET, INS_angle + INS_PITCH_ADDRESS_OFFSET, INS_angle + INS_ROLL_ADDRESS_OFFSET);
+//				AHRS_update_ins(INS_quat, timing_time, INS_gyro, accel_fliter_3, INS_mag);
+//				get_angle_ins(INS_quat, INS_angle + INS_YAW_ADDRESS_OFFSET, INS_angle + INS_PITCH_ADDRESS_OFFSET, INS_angle + INS_ROLL_ADDRESS_OFFSET);
 
 				//1-10-2023ÐÞ¸Ä
 //				//SZL 2-2-2022 add; 5-31-2022 add

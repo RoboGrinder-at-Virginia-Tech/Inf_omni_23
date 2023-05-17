@@ -44,11 +44,11 @@ NEW_FRIC_15ms 1070
 //SZL 6-16-2022 新定义的 for 2022-Heros
 #define NEW_FRIC_15ms_higher 1135//1150//1170         speed is around 14m/s at 1140 and 1085 
 //#define NEW_FRIC_15ms 1080//1095 //1070 正常使用的
-#define NEW_FRIC_15ms 1150 //1150// --------------- Debug --------------------
-#define NEW_FRIC_18ms 1206
+#define NEW_FRIC_15ms 1200 //1150// --------------- Debug --------------------
+#define NEW_FRIC_18ms 1219
 
 /* This comment bolck for Inf_omni_23 OR MD17
-
+起转PWM 1150
 */
 
 //1320 speed level 2 single shoot - fric_down
