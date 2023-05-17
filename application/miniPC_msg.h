@@ -217,7 +217,7 @@ typedef struct
 	uint8_t shootCommand; //自动开火指令  0x00 = 停火  0xff = 开火
 	//uint8_t cv_status; //0自瞄关闭, 1AID, 2LOCK
 	/*
-	0 no cmd; happens when cv offline
+	0 no cmd; happens when cv offline; old: cv_status
 	1 cmd for gimbal AID
 	2 cmd for gimbal LOCK
 	*/
@@ -238,18 +238,24 @@ typedef struct
 }pc_info_t;
 /*---------------------------------------------------- Processed Data - End Above ----------------------------------------------------*/
 
-void init_miniPC_comm_struct_data(void);
+void init_pc_to_embed_Main_comm_struct_data(void);
+void init_embed_to_pc_comm_struct_data(void);
+
 void pc_comm_data_solve(uint8_t *frame);
 void embed_send_data_to_pc_loop(void);
 
-////declear getter method
-//fp32 get_yawMove_aid(void);
-//fp32 pitchMove_aid();
-//fp32 yawMove_absolute();
-//fp32 pitchMove_absolute();
-//uint8_t enemy_detected();
-//uint8_t shootCommand();
-//uint8_t cv_gimbal_sts();
-//fp32 aim_pos_dis();
+//declear getter method
+fp32 get_yawMove_aid(void);
+fp32 get_pitchMove_aid(void);
+fp32 get_yawMove_absolute(void);
+fp32 get_pitchMove_absolute(void);
+uint8_t get_enemy_detected(void);
+uint8_t get_shootCommand(void);
+uint8_t get_cv_gimbal_sts(void);
+fp32 get_aim_pos_dis(void);
+uint8_t get_autoAimFlag(void);
+
+//declear setter method
+void set_autoAimFlag(uint8_t autoAimFlag);
 
 #endif

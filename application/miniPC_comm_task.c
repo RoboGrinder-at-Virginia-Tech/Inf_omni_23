@@ -41,7 +41,8 @@
 #include "miniPC_msg.h"
 	
 #if INCLUDE_uxTaskGetStackHighWaterMark
-uint32_t miniPC_comm_task_high_water;
+uint32_t embed_receive_comm_task_high_water;
+uint32_t embed_send_comm_task_high_water;
 #endif
 
 extern UART_HandleTypeDef huart1;
@@ -67,28 +68,62 @@ uint8_t embed_send_fifo_buf[MINIPC_COMM_TX_FIFO_BUF_LENGTH];
 //uint8_t embed_send_usart1_buf[2][MINIPC_COMM_UART_DMA_TX_BUF_LENGHT];
 uint8_t embed_send_usart1_buf[MINIPC_COMM_UART_DMA_TX_BUF_LENGHT];
 
-void pc_communication_task(void const *pvParameters)
+/**pc_communication_task; this is the main task
+This task is for receiving the information from cv; pc_to_embed
+pc -> embed
+we call this the "Main" task becase embed receive is more important based on the functionnality
+
+*/
+void embed_receive_Main_communication_task(void const *pvParameters)
 {
-	init_miniPC_comm_struct_data();
+	init_pc_to_embed_Main_comm_struct_data();
 	fifo_s_init(&pc_comm_fifo, pc_comm_fifo_buf, MINIPC_COMM_RX_FIFO_BUF_LENGTH);
+	
+	//the is needed for both tasks
 	usart1_init(pc_comm_usart1_buf[0], pc_comm_usart1_buf[1], MINIPC_COMM_UART_DMA_RX_BUF_LENGHT);
 	
 	//miniPC_info.miniPC_connection_status = miniPC_offline;//init connection status
 	
-	//send msg data struct init
+	while(1)
+	{
+		//PC-->Embeded; received data unpack
+		pc_unpack_fifo_data();
+		
+		//osDelay(10);
+		vTaskDelay(100);
+		
+		//record high water mark
+#if INCLUDE_uxTaskGetStackHighWaterMark
+        embed_receive_comm_task_high_water = uxTaskGetStackHighWaterMark(NULL);
+#endif
+	}
+}
+
+/**pc_communication_task
+This task is for sending the information from cv; embed_to_pc
+embed -> pc
+*/
+void embed_send_communication_task(void const *pvParameters)
+{
 	
 	fifo_s_init(&embed_send.tx_fifo, embed_send_fifo_buf, MINIPC_COMM_TX_FIFO_BUF_LENGTH);
+	
+	//need to wait for the main comm task to finish init, wait for usart1_init(...) which is in main task
 	//usart1_tx_dma_init was called in main
+//	vTaskDelay(300); 
+	
+	//send msg data struct init
+	init_embed_to_pc_comm_struct_data();
+	
 	embed_send.tx_dma_buf = &embed_send_usart1_buf[0];
 	embed_send.tx_dma_buf_size = sizeof(embed_send_usart1_buf);
 	embed_send.status = 0;
 	
+	vTaskDelay(300);  //wait here not above
+	
 	while(1)
 	{
-		
-		//PC-->Embeded; received data unpack
-		pc_unpack_fifo_data();
-		
+
 		//Embeded-->PC; send data to PC
 		embed_send_data_to_pc_loop();
 		
@@ -96,11 +131,11 @@ void pc_communication_task(void const *pvParameters)
 		//osDelay(4);
 		//osDelay(100);
 		//vTaskDelay(100);
-		vTaskDelay(4); //4
+		vTaskDelay(4); //3-27 use 4 for now
 		
 		//record high water mark
 #if INCLUDE_uxTaskGetStackHighWaterMark
-        miniPC_comm_task_high_water = uxTaskGetStackHighWaterMark(NULL);
+        embed_send_comm_task_high_water = uxTaskGetStackHighWaterMark(NULL);
 #endif
 	}
 }

@@ -46,7 +46,7 @@
   * @param[in]      void
   * @retval         none
   */
-static void referee_unpack_fifo_data(void);
+void referee_unpack_fifo_data(void);
 
  
 extern UART_HandleTypeDef huart6;
@@ -59,9 +59,9 @@ fifo_s_t referee_fifo;
 uint8_t referee_fifo_buf[REFEREE_FIFO_BUF_LENGTH];
 unpack_data_t referee_unpack_obj;
 
-struct typeC_msg_to_PC_t typeC_msg_to_PC;
+//struct typeC_msg_to_PC_t typeC_msg_to_PC;
 
-miniPC_info_t miniPC_info;
+//miniPC_info_t miniPC_info;
 
 //uint32_t temp_time_check_RTOS = 0;
 //uint32_t temp_time_check_HAL = 0;
@@ -85,7 +85,7 @@ void referee_usart_task(void const * argument)
     usart6_init(usart6_buf[0], usart6_buf[1], USART_RX_BUF_LENGHT);
 //    pc_control_init();
 		
-	  miniPC_info.miniPC_connection_status = miniPC_offline;//初始化
+//	  miniPC_info.miniPC_connection_status = miniPC_offline;//初始化
     while(1)
     {
 			
@@ -103,7 +103,8 @@ void referee_usart_task(void const * argument)
 //			 temp_time_check_HAL = HAL_GetTick();
 //			 _temp_a++;
 			
-			  osDelay(4);
+				vTaskDelay(10);
+//			  osDelay(4);
 //				osDelay(100);
     }
 }
@@ -264,8 +265,8 @@ void USART6_IRQHandler(void)
                 Rui Peng 2021/2/25
 								测试版本
 */
-uint32_t sendTask_TimeStamp = 0; //发送时间戳
-const uint16_t sendFreq = 10; //发送间隔 （ms)
+//uint32_t sendTask_TimeStamp = 0; //发送时间戳
+//const uint16_t sendFreq = 10; //发送间隔 （ms)
 
 
 //void sendPack(uint8_t cmd_ID,uint8_t level, uint8_t robot_ID){
@@ -302,98 +303,98 @@ const uint16_t sendFreq = 10; //发送间隔 （ms)
 
 //fp32 temp_quat_test[4] = {0.998, 0.123, 0.456, 0.789};
 
-void sendData_Task_EE_To_PC()
-{
-	typeC_msg_to_PC.header = HEADER;
-	if(miniPC_info.autoAimFlag == 1)
-	{
-		typeC_msg_to_PC.cmd_id = AUTOAIM;//AUTOAIM
-	}
-	else
-	{
-		typeC_msg_to_PC.cmd_id = AUTOFIRE;// RUIZHE CHANGE MANUEL TO AUTOAIM
-	}
-	typeC_msg_to_PC.shooter_speed = (uint16_t)(shoot_control.predict_shoot_speed*10); //预计枪口初速
-	
-//	if(toe_is_error(REFEREE_TOE))
+//void sendData_Task_EE_To_PC()
+//{
+//	typeC_msg_to_PC.header = HEADER;
+//	if(miniPC_info.autoAimFlag == 1)
 //	{
-//			typeC_msg_to_PC.robot_id = 0x00;//unknow, since referee is off-line
+//		typeC_msg_to_PC.cmd_id = AUTOAIM;//AUTOAIM
 //	}
 //	else
 //	{
-//			typeC_msg_to_PC.robot_id = get_robot_id();//get from referee
+//		typeC_msg_to_PC.cmd_id = AUTOFIRE;// RUIZHE CHANGE MANUEL TO AUTOAIM
 //	}
-	
-	//Hard code 己方机器人颜色
-	
-	typeC_msg_to_PC.robot_id = RED_STANDARD_1;
-	
-	for(uint8_t i = 0; i < 4; i++)
-	{
-			if(fabs(INS_gimbal_quat[i]) > 1)
-			{
-				for(uint8_t j = 0; j < 4; j++)
-				{
-					typeC_msg_to_PC.INS_pc_quat[j]=0;
-				}
-				break;
-			}
-			
-			typeC_msg_to_PC.INS_pc_quat[i] = (INS_gimbal_quat[i]+1)*10000; //(temp_quat_test[i]+1)*10000;//
-	}
-		
-//	typeC_msg_to_PC.checksum = typeC_msg_to_PC.header + typeC_msg_to_PC.cmd_id + 
-//															typeC_msg_to_PC.shooter_speed + typeC_msg_to_PC.robot_id + 
-//															typeC_msg_to_PC.INS_pc_quat[0] + typeC_msg_to_PC.INS_pc_quat[1] + typeC_msg_to_PC.INS_pc_quat[2] + typeC_msg_to_PC.INS_pc_quat[3];
+//	typeC_msg_to_PC.shooter_speed = (uint16_t)(shoot_control.predict_shoot_speed*10); //预计枪口初速
+//	
+////	if(toe_is_error(REFEREE_TOE))
+////	{
+////			typeC_msg_to_PC.robot_id = 0x00;//unknow, since referee is off-line
+////	}
+////	else
+////	{
+////			typeC_msg_to_PC.robot_id = get_robot_id();//get from referee
+////	}
+//	
+//	//Hard code 己方机器人颜色
+//	
+//	typeC_msg_to_PC.robot_id = RED_STANDARD_1;
+//	
+//	for(uint8_t i = 0; i < 4; i++)
+//	{
+//			if(fabs(INS_gimbal_quat[i]) > 1)
+//			{
+//				for(uint8_t j = 0; j < 4; j++)
+//				{
+//					typeC_msg_to_PC.INS_pc_quat[j]=0;
+//				}
+//				break;
+//			}
+//			
+//			typeC_msg_to_PC.INS_pc_quat[i] = (INS_gimbal_quat[i]+1)*10000; //(temp_quat_test[i]+1)*10000;//
+//	}
+//		
+////	typeC_msg_to_PC.checksum = typeC_msg_to_PC.header + typeC_msg_to_PC.cmd_id + 
+////															typeC_msg_to_PC.shooter_speed + typeC_msg_to_PC.robot_id + 
+////															typeC_msg_to_PC.INS_pc_quat[0] + typeC_msg_to_PC.INS_pc_quat[1] + typeC_msg_to_PC.INS_pc_quat[2] + typeC_msg_to_PC.INS_pc_quat[3];
 
-		typeC_msg_to_PC.checksum = 0;
-	//if(xTaskGetTickCount()-sendFreq >sendTask_TimeStamp){ //若时间间隔已到，则发送并更新时间戳
-		 
-		 sendTask_TimeStamp = xTaskGetTickCount(); //更新时间戳   
-		 uint8_t dataToSend = typeC_msg_to_PC.header;
-		 typeC_msg_to_PC.checksum += dataToSend;
-     HAL_UART_Transmit(&huart1, &dataToSend, 1, 3); // 发送包头
-		 
-		 dataToSend = typeC_msg_to_PC.cmd_id; 
-		 typeC_msg_to_PC.checksum += dataToSend;
-		 HAL_UART_Transmit(&huart1, &dataToSend, 1, 3); // 发送CMD_ID
-		
-		 dataToSend = (typeC_msg_to_PC.shooter_speed >> 8); 
-		 typeC_msg_to_PC.checksum += dataToSend;
-		 HAL_UART_Transmit(&huart1, &dataToSend, 1, 3); // 发送
-				
-		 dataToSend = (uint8_t)typeC_msg_to_PC.shooter_speed; 
-		 typeC_msg_to_PC.checksum += dataToSend;
-		 HAL_UART_Transmit(&huart1, &dataToSend, 1, 3); // 发送
-		
-		 dataToSend = typeC_msg_to_PC.robot_id; 
-		 typeC_msg_to_PC.checksum += dataToSend;
-		 HAL_UART_Transmit(&huart1, &dataToSend, 1, 3); // 发送
-		
-		 //
-		 for(uint8_t i = 0; i < 4; i++)
-		 {
-			 dataToSend = (typeC_msg_to_PC.INS_pc_quat[i] >> 8); 
-			 typeC_msg_to_PC.checksum += dataToSend;
-			 HAL_UART_Transmit(&huart1, &dataToSend, 1, 3);
-			 
-			 dataToSend = typeC_msg_to_PC.INS_pc_quat[i]; 
-			 typeC_msg_to_PC.checksum += dataToSend;
-			 HAL_UART_Transmit(&huart1, &dataToSend, 1, 3);
-		 }
-		 
-		 dataToSend = typeC_msg_to_PC.checksum; 
-//		 temp_time_check_RTOS = xTaskGetTickCount();
-//		 temp_time_check_HAL = HAL_GetTick();
-//		 //int _temp_a = 0;
-//		 _temp_a++;
-//		 HAL_Delay(10);
-//		 temp_time_check_RTOS = xTaskGetTickCount();
-//		 temp_time_check_HAL = HAL_GetTick();
-//		 _temp_a++;
-		 HAL_UART_Transmit(&huart1, &dataToSend, 1, 3); // 发送校验和
-	//}
-}
+//		typeC_msg_to_PC.checksum = 0;
+//	//if(xTaskGetTickCount()-sendFreq >sendTask_TimeStamp){ //若时间间隔已到，则发送并更新时间戳
+//		 
+//		 sendTask_TimeStamp = xTaskGetTickCount(); //更新时间戳   
+//		 uint8_t dataToSend = typeC_msg_to_PC.header;
+//		 typeC_msg_to_PC.checksum += dataToSend;
+//     HAL_UART_Transmit(&huart1, &dataToSend, 1, 3); // 发送包头
+//		 
+//		 dataToSend = typeC_msg_to_PC.cmd_id; 
+//		 typeC_msg_to_PC.checksum += dataToSend;
+//		 HAL_UART_Transmit(&huart1, &dataToSend, 1, 3); // 发送CMD_ID
+//		
+//		 dataToSend = (typeC_msg_to_PC.shooter_speed >> 8); 
+//		 typeC_msg_to_PC.checksum += dataToSend;
+//		 HAL_UART_Transmit(&huart1, &dataToSend, 1, 3); // 发送
+//				
+//		 dataToSend = (uint8_t)typeC_msg_to_PC.shooter_speed; 
+//		 typeC_msg_to_PC.checksum += dataToSend;
+//		 HAL_UART_Transmit(&huart1, &dataToSend, 1, 3); // 发送
+//		
+//		 dataToSend = typeC_msg_to_PC.robot_id; 
+//		 typeC_msg_to_PC.checksum += dataToSend;
+//		 HAL_UART_Transmit(&huart1, &dataToSend, 1, 3); // 发送
+//		
+//		 //
+//		 for(uint8_t i = 0; i < 4; i++)
+//		 {
+//			 dataToSend = (typeC_msg_to_PC.INS_pc_quat[i] >> 8); 
+//			 typeC_msg_to_PC.checksum += dataToSend;
+//			 HAL_UART_Transmit(&huart1, &dataToSend, 1, 3);
+//			 
+//			 dataToSend = typeC_msg_to_PC.INS_pc_quat[i]; 
+//			 typeC_msg_to_PC.checksum += dataToSend;
+//			 HAL_UART_Transmit(&huart1, &dataToSend, 1, 3);
+//		 }
+//		 
+//		 dataToSend = typeC_msg_to_PC.checksum; 
+////		 temp_time_check_RTOS = xTaskGetTickCount();
+////		 temp_time_check_HAL = HAL_GetTick();
+////		 //int _temp_a = 0;
+////		 _temp_a++;
+////		 HAL_Delay(10);
+////		 temp_time_check_RTOS = xTaskGetTickCount();
+////		 temp_time_check_HAL = HAL_GetTick();
+////		 _temp_a++;
+//		 HAL_UART_Transmit(&huart1, &dataToSend, 1, 3); // 发送校验和
+//	//}
+//}
 	
 		// uint8_t task_cmdID = MANUEL;   //默认值
 		// uint8_t task_robotID = ROBOTID_RED; //默认值
@@ -405,115 +406,115 @@ void sendData_Task_EE_To_PC()
 
 
 
-#define PC_RX_BUF_NUM 50
-__IO uint8_t pc_rx_buf[2][PC_RX_BUF_NUM];
+//#define PC_RX_BUF_NUM 50
+//__IO uint8_t pc_rx_buf[2][PC_RX_BUF_NUM];
 
 
 
-//struct gimbal_cmd gimbal_cmd_t;
+////struct gimbal_cmd gimbal_cmd_t;
 
-void pc_control_init(void)
-{
-    usart1_init((uint8_t*)pc_rx_buf[0], (uint8_t*)pc_rx_buf[1], PC_RX_BUF_NUM);
-}
+//void pc_control_init(void)
+//{
+//    usart1_init((uint8_t*)pc_rx_buf[0], (uint8_t*)pc_rx_buf[1], PC_RX_BUF_NUM);
+//}
 
-uint8_t shootCommand = 0x00;//自动开火指令  0x00 = 停火  0xff = 开火
-uint8_t fricCommand = 0x01;// 摩擦轮转速指令  0x01 =低转  0x02 = 高转
-fp32 yawMove = 0;  //云台数据
-fp32 pitchMove = 0;  //云台数据
-uint32_t timeFlag = 0; //
+//uint8_t shootCommand = 0x00;//自动开火指令  0x00 = 停火  0xff = 开火
+//uint8_t fricCommand = 0x01;// 摩擦轮转速指令  0x01 =低转  0x02 = 高转
+//fp32 yawMove = 0;  //云台数据
+//fp32 pitchMove = 0;  //云台数据
+//uint32_t timeFlag = 0; //
 
 
-static void pc_command_unpack(uint8_t *buf, uint16_t len)
-{  
-	if(len == PACK_LENG)
-	{
-		if( buf[0] == HEADER)
-		{ //若为包头
-			uint8_t checkSum = 0;  
-			for(uint8_t i = 0;i<PACK_LENG-1;i++)
-			{
-				checkSum = buf[i] + checkSum;
-			}
-			if(checkSum == buf[PACK_LENG-1])//检查校验和 if checkSum OK		
-			{   
-				/*记得添加 CV_status 0x01 AID; 0x02 LOCK 传的数据不一样*/
-				miniPC_info.cmd_id = buf[1];
-				miniPC_info.cv_status = buf[2];
-				miniPC_info.yawCommand = (int16_t)(buf[3] << 8 | buf[4]);
-				miniPC_info.pitchCommand = (int16_t)(buf[5] << 8 | buf[6]);
-
-//			 yawMove = -(fp32)yawCommand*(3.14159f/180.0f)*0.004f;
-//			 pitchMove = -(fp32)pitchCommand*(3.14159f/180.0f)*0.008f;
-				
-				miniPC_info.dis_raw = (int16_t)(buf[7] << 8 | buf[8]);
-				miniPC_info.dis = (fp32) ((fp32)miniPC_info.dis_raw / 100.0f);
-				if(miniPC_info.cv_status == 0)
-				{ //自瞄因某些原因 意外关闭了
-					//set every thing to safe
-					miniPC_info.yawMove_absolute = 0;
-					miniPC_info.pitchMove_absolute = 0;
-					miniPC_info.yawMove_aid = 0.0f;//0.004
-					miniPC_info.pitchMove_aid = 0.0f;//0.008
-				}
-				else if(miniPC_info.cv_status == 1)
-				{	//目前提供的信息是 辅助瞄准
-					if(miniPC_info.dis_raw != 0)
-					{
-						miniPC_info.yawMove_aid = 0.003f * (fp32)((fp32)miniPC_info.yawCommand/10000.0f);//0.004
-						miniPC_info.pitchMove_aid = 0.008f * (fp32)((fp32)miniPC_info.pitchCommand/10000.0f);//0.008
-						miniPC_info.enemy_detected = 1;
-					}
-					else
-					{
-						miniPC_info.yawMove_aid = 0.0f;//-0.002f * (fp32)((fp32)miniPC_info.yawCommand/10000.0f);//0.004
-						miniPC_info.pitchMove_aid = 0.0f;//0.008f * (fp32)((fp32)miniPC_info.pitchCommand/10000.0f);//0.008
-						miniPC_info.enemy_detected = 0;
-					}
-					//是否处理miniPC_info.yawMove_absolute和pitchMove呢
-				}
-				else
-				{//自瞄 LOCK 模式
-					if(miniPC_info.dis_raw != 0)//识别到目标
-					{
-						miniPC_info.enemy_detected = 1;
-						miniPC_info.yawMove_absolute = (fp32)((fp32)miniPC_info.yawCommand/10000.0f);
-						miniPC_info.pitchMove_absolute = (fp32)((fp32)miniPC_info.pitchCommand/10000.0f);
-					}
-					else
-					{
-						miniPC_info.enemy_detected = 0;
-					}
-					miniPC_info.yawMove_aid = 0.0f;//0.004
-					miniPC_info.pitchMove_aid = 0.0f;//0.008
-				}	
-				//miniPC_info.yawMove_aid = 0.1f * (fp32)((fp32)miniPC_info.yawCommand/10000.0f);//0.004
-				//miniPC_info.pitchMove_aid = 0.1f * (fp32)((fp32)miniPC_info.pitchCommand/10000.0f);//0.008
-				
-				if(buf[9]== 0xff)
-				{  //开火指令
-					miniPC_info.shootCommand = 0xff;
-				}
-				else
-				{
-					miniPC_info.shootCommand = 0x00;
-				}
-//			 	detect_hook(MINIPC_TOE);
-			}
-//			else
-//			{ //if checkSum bad，set all to zero for safty
-//	  		//SZL 6-12-2022 校验错误 起始什么都不需要改 把那一帧丢掉就行了
-//				
-//				miniPC_info.shootCommand = 0x00;//自动开火指令  0x00 = 停火  0xff = 开火
-//				miniPC_info.yawMove_absolute = 0;  //云台数据
-//				miniPC_info.pitchMove_absolute = 0;  //云台数据
-//				
-//				
-//	 
+//static void pc_command_unpack(uint8_t *buf, uint16_t len)
+//{  
+//	if(len == PACK_LENG)
+//	{
+//		if( buf[0] == HEADER)
+//		{ //若为包头
+//			uint8_t checkSum = 0;  
+//			for(uint8_t i = 0;i<PACK_LENG-1;i++)
+//			{
+//				checkSum = buf[i] + checkSum;
 //			}
-		}
-	}
-}
+//			if(checkSum == buf[PACK_LENG-1])//检查校验和 if checkSum OK		
+//			{   
+//				/*记得添加 CV_status 0x01 AID; 0x02 LOCK 传的数据不一样*/
+//				miniPC_info.cmd_id = buf[1];
+//				miniPC_info.cv_status = buf[2];
+//				miniPC_info.yawCommand = (int16_t)(buf[3] << 8 | buf[4]);
+//				miniPC_info.pitchCommand = (int16_t)(buf[5] << 8 | buf[6]);
+
+////			 yawMove = -(fp32)yawCommand*(3.14159f/180.0f)*0.004f;
+////			 pitchMove = -(fp32)pitchCommand*(3.14159f/180.0f)*0.008f;
+//				
+//				miniPC_info.dis_raw = (int16_t)(buf[7] << 8 | buf[8]);
+//				miniPC_info.dis = (fp32) ((fp32)miniPC_info.dis_raw / 100.0f);
+//				if(miniPC_info.cv_status == 0)
+//				{ //自瞄因某些原因 意外关闭了
+//					//set every thing to safe
+//					miniPC_info.yawMove_absolute = 0;
+//					miniPC_info.pitchMove_absolute = 0;
+//					miniPC_info.yawMove_aid = 0.0f;//0.004
+//					miniPC_info.pitchMove_aid = 0.0f;//0.008
+//				}
+//				else if(miniPC_info.cv_status == 1)
+//				{	//目前提供的信息是 辅助瞄准
+//					if(miniPC_info.dis_raw != 0)
+//					{
+//						miniPC_info.yawMove_aid = 0.003f * (fp32)((fp32)miniPC_info.yawCommand/10000.0f);//0.004
+//						miniPC_info.pitchMove_aid = 0.008f * (fp32)((fp32)miniPC_info.pitchCommand/10000.0f);//0.008
+//						miniPC_info.enemy_detected = 1;
+//					}
+//					else
+//					{
+//						miniPC_info.yawMove_aid = 0.0f;//-0.002f * (fp32)((fp32)miniPC_info.yawCommand/10000.0f);//0.004
+//						miniPC_info.pitchMove_aid = 0.0f;//0.008f * (fp32)((fp32)miniPC_info.pitchCommand/10000.0f);//0.008
+//						miniPC_info.enemy_detected = 0;
+//					}
+//					//是否处理miniPC_info.yawMove_absolute和pitchMove呢
+//				}
+//				else
+//				{//自瞄 LOCK 模式
+//					if(miniPC_info.dis_raw != 0)//识别到目标
+//					{
+//						miniPC_info.enemy_detected = 1;
+//						miniPC_info.yawMove_absolute = (fp32)((fp32)miniPC_info.yawCommand/10000.0f);
+//						miniPC_info.pitchMove_absolute = (fp32)((fp32)miniPC_info.pitchCommand/10000.0f);
+//					}
+//					else
+//					{
+//						miniPC_info.enemy_detected = 0;
+//					}
+//					miniPC_info.yawMove_aid = 0.0f;//0.004
+//					miniPC_info.pitchMove_aid = 0.0f;//0.008
+//				}	
+//				//miniPC_info.yawMove_aid = 0.1f * (fp32)((fp32)miniPC_info.yawCommand/10000.0f);//0.004
+//				//miniPC_info.pitchMove_aid = 0.1f * (fp32)((fp32)miniPC_info.pitchCommand/10000.0f);//0.008
+//				
+//				if(buf[9]== 0xff)
+//				{  //开火指令
+//					miniPC_info.shootCommand = 0xff;
+//				}
+//				else
+//				{
+//					miniPC_info.shootCommand = 0x00;
+//				}
+////			 	detect_hook(MINIPC_TOE);
+//			}
+////			else
+////			{ //if checkSum bad，set all to zero for safty
+////	  		//SZL 6-12-2022 校验错误 起始什么都不需要改 把那一帧丢掉就行了
+////				
+////				miniPC_info.shootCommand = 0x00;//自动开火指令  0x00 = 停火  0xff = 开火
+////				miniPC_info.yawMove_absolute = 0;  //云台数据
+////				miniPC_info.pitchMove_absolute = 0;  //云台数据
+////				
+////				
+////	 
+////			}
+//		}
+//	}
+//}
 
 //void USART1_IRQHandler(void)
 //{

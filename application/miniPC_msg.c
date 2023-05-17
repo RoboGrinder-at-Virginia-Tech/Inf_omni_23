@@ -62,10 +62,13 @@ chassis_info 60 Hz
 gimbal_info 60 Hz
 
 */
-const uint32_t chassis_info_embed_sendFreq = 16; //pre-determined send freq
+const uint32_t chassis_info_embed_sendFreq = 16; //10; //17; //pre-determined send freq
 const uint32_t gimbal_info_embed_sendFreq = 16; 
 
-void init_miniPC_comm_struct_data(void)
+/*init_miniPC_comm_struct_data; this is the main task
+pc -> embed
+*/
+void init_pc_to_embed_Main_comm_struct_data(void)
 {
 	memset(&pc_comm_receive_header, 0, sizeof(pc_comm_frame_header_t));
 	memset(&pc_send_header, 0, sizeof(pc_comm_embed_send_header_t));
@@ -75,77 +78,99 @@ void init_miniPC_comm_struct_data(void)
 	memset(&pc_cmd_gimbal_ctrl_aid, 0, sizeof(pc_cmd_gimbal_ctrl_t));
 	memset(&pc_cmd_gimbal_ctrl_full, 0, sizeof(pc_cmd_gimbal_ctrl_t));
 	
-	memset(&embed_chassis_info, 0, sizeof(embed_chassis_info_t));
-	memset(&embed_gimbal_info, 0, sizeof(embed_gimbal_info_t));
-	
-	memset(&embed_send_protocol, 0, sizeof(embed_send_protocol_t));
-	
-	memset(&pc_info, 0, sizeof(pc_info_t));
-	
-	//init information pckg
-	embed_msg_to_pc.chassis_move_ptr = get_chassis_pointer();
-	embed_msg_to_pc.gimbal_control_ptr = get_gimbal_pointer();
-	embed_msg_to_pc.quat_ptr = get_INS_quat();
-	embed_msg_to_pc.shoot_control_ptr = get_robot_shoot_control();
-	
-	embed_send_protocol.p_header = &pc_send_header;
-	embed_send_protocol.chassis_info_embed_send_TimeStamp = xTaskGetTickCount();
-	embed_send_protocol.gimbal_info_embed_send_TimeStamp = xTaskGetTickCount();
+	memset(&pc_info, 0, sizeof(pc_info_t)); // this is used in both tasks
 	
 	//init important control related values
 	pc_info.autoAimFlag = 0;
 	
 }
+//embed -> pc
+void init_embed_to_pc_comm_struct_data(void)
+{
+	memset(&embed_chassis_info, 0, sizeof(embed_chassis_info_t));
+	memset(&embed_gimbal_info, 0, sizeof(embed_gimbal_info_t));
+	
+	memset(&embed_send_protocol, 0, sizeof(embed_send_protocol_t));
+	memset(&embed_msg_to_pc, 0, sizeof(embed_msg_to_pc_t));
+	
+	//init information pckg
+	embed_msg_to_pc.chassis_move_ptr = get_chassis_pointer();
+	embed_msg_to_pc.gimbal_control_ptr = get_gimbal_pointer();
+	embed_msg_to_pc.quat_ptr = get_INS_quat(); //get_INS_gimbal_quat();
+	embed_msg_to_pc.shoot_control_ptr = get_robot_shoot_control();
+	
+	embed_send_protocol.p_header = &pc_send_header;
+	embed_send_protocol.chassis_info_embed_send_TimeStamp = xTaskGetTickCount();
+	embed_send_protocol.gimbal_info_embed_send_TimeStamp = xTaskGetTickCount();
+}
+
+/* ---------- setter method 赋值到 pc_info中 ---------- */
+void set_autoAimFlag(uint8_t autoAimFlag)
+{
+	pc_info.autoAimFlag = autoAimFlag;
+}
+/* ---------- setter method end ---------- */
 
 /* ---------- getter method 获取最终解包到 pc_info 中的数据 ---------- */
-//// see the struct for the detailed information
-//// fp32 yawMove_aid;
-//fp32 get_yawMove_aid()
-//{
-//	return pc_info.yawMove_aid;
-//}
+// see the struct for the detailed information
+// fp32 yawMove_aid;
+fp32 get_yawMove_aid()
+{
+	return pc_info.yawMove_aid;
+}
 
-////fp32 pitchMove_aid;
-//fp32 pitchMove_aid()
-//{
-//	return pc_info.pitchMove_aid;
-//}
+//fp32 pitchMove_aid;
+fp32 get_pitchMove_aid()
+{
+	return pc_info.pitchMove_aid;
+}
 
-////fp32 yawMove_absolute;
-//fp32 yawMove_absolute()
-//{
-//	return pc_info.yawMove_absolute;
-//}
+//fp32 yawMove_absolute;
+fp32 get_yawMove_absolute()
+{
+	return pc_info.yawMove_absolute;
+}
 
-////fp32 pitchMove_absolute;
-//fp32 pitchMove_absolute()
-//{
-//	return pc_info.pitchMove_absolute;
-//}
+//fp32 pitchMove_absolute;
+fp32 get_pitchMove_absolute()
+{
+	return pc_info.pitchMove_absolute;
+}
 
-////uint8_t enemy_detected;
-//uint8_t enemy_detected()
-//{
-//	return pc_info.enemy_detected;
-//}
+//uint8_t enemy_detected;
+uint8_t get_enemy_detected()
+{
+	if(toe_is_error(PC_TOE))
+	{
+		return 0;
+	}
+	
+	return pc_info.enemy_detected;
+}
 
-////uint8_t shootCommand;
-//uint8_t shootCommand()
-//{
-//	return pc_info.shootCommand;
-//}
+//uint8_t shootCommand;
+uint8_t get_shootCommand()
+{
+	return pc_info.shootCommand;
+}
 
-////uint8_t cv_gimbal_sts;
-//uint8_t cv_gimbal_sts()
-//{
-//	return pc_info.cv_gimbal_sts;
-//}
+//uint8_t cv_gimbal_sts;
+uint8_t get_cv_gimbal_sts()
+{
+	return pc_info.cv_gimbal_sts;
+}
 
-////fp32 aim_pos_dis;
-//fp32 aim_pos_dis()
-//{
-//	return pc_info.aim_pos_dis;
-//}
+//fp32 aim_pos_dis;
+fp32 get_aim_pos_dis()
+{
+	return pc_info.aim_pos_dis;
+}
+
+//uint8_t autoAimFlag
+uint8_t get_autoAimFlag()
+{
+	return pc_info.autoAimFlag;
+}
 
 /* ---------- getter method end ---------- */
 
@@ -184,14 +209,15 @@ void cmd_process_pc_cmd_gimbal_ctrl_aid(void) //TODO添加数据合理性判断
 	pc_info.cv_gimbal_sts = 1; //aim mode FSM
 	
 	//Need to handle the erase of miniPC_info.yawMove_absolute and pitchMove?
+	//3-26-2023 no need to do that for now
 }
 
 void cmd_process_pc_cmd_gimbal_ctrl_full(void) //TODO添加数据合理性判断
 {
-	pc_info.yawMove_absolute = (fp32)pc_cmd_gimbal_ctrl_aid.yaw / 10000.0f;
-	pc_info.pitchMove_absolute = (fp32)pc_cmd_gimbal_ctrl_aid.pitch / 10000.0f;
-	pc_info.enemy_detected = pc_cmd_gimbal_ctrl_aid.is_detect;
-	pc_info.shootCommand = pc_cmd_gimbal_ctrl_aid.shoot;
+	pc_info.yawMove_absolute = (fp32)pc_cmd_gimbal_ctrl_full.yaw / 10000.0f;
+	pc_info.pitchMove_absolute = (fp32)pc_cmd_gimbal_ctrl_full.pitch / 10000.0f;
+	pc_info.enemy_detected = pc_cmd_gimbal_ctrl_full.is_detect;
+	pc_info.shootCommand = pc_cmd_gimbal_ctrl_full.shoot;
 
 	pc_info.cv_gimbal_sts = 2; //aim mode FSM
 	
@@ -306,42 +332,33 @@ void embed_all_info_update_from_sensor()
 	
 	// = (uint16_t)(shoot_control.predict_shoot_speed*10); //anticipated predicated bullet speed
 	embed_msg_to_pc.shoot_bullet_speed = embed_msg_to_pc.shoot_control_ptr->predict_shoot_speed;
-	embed_msg_to_pc.robot_id = RED_STANDARD_1;
+	embed_msg_to_pc.robot_id = RED_STANDARD_1; //TODO: whether get from ref or hardcode
 	
 	
 	
 }
 
 void embed_chassis_info_msg_data_update(embed_chassis_info_t* embed_chassis_info_ptr, embed_msg_to_pc_t* embed_msg_to_pc_ptr)
-{
-//	embed_chassis_info.vx_mm = 
-//	embed_chassis_info
-//	embed_chassis_info
-//	embed_chassis_info
-//	embed_chassis_info
-//	embed_chassis_info
-//	embed_chassis_info
-//	embed_chassis_info
-//	embed_chassis_info
+{	
+	//m/s * 1000 <-->mm/s 
+	embed_chassis_info_ptr->vx_mm = (int16_t) (embed_msg_to_pc_ptr->s_vx_m * 1000.0f);
+	embed_chassis_info_ptr->vy_mm = (int16_t) (embed_msg_to_pc_ptr->s_vy_m * 1000.0f);
+	embed_chassis_info_ptr->vw_mm = (int16_t) (embed_msg_to_pc_ptr->s_vw_m * 1000.0f);
 	
-//	//m/s * 1000 <-->mm/s 
-//	embed_chassis_info_ptr->vx_mm = (int16_t)embed_msg_to_pc_ptr->s_vx_m * 1000;
-//	embed_chassis_info_ptr->vy_mm = (int16_t)embed_msg_to_pc_ptr->s_vy_m * 1000;
-//	embed_chassis_info_ptr->vw_mm = (int16_t)embed_msg_to_pc_ptr->s_vw_m * 1000;
+	embed_chassis_info_ptr->energy_buff_pct = embed_msg_to_pc_ptr->energy_buff_pct;
+	
+//	//For debug only
+//	embed_chassis_info_ptr->vx_mm = 0x1234;
+//	embed_chassis_info_ptr->vy_mm = 0x5678;
+//	embed_chassis_info_ptr->vw_mm = 0x9ABC;
 //	
-//	embed_chassis_info_ptr->energy_buff_pct = embed_msg_to_pc_ptr->energy_buff_pct;
-	
-	//For debug only
-	embed_chassis_info_ptr->vx_mm = 0x1234;
-	embed_chassis_info_ptr->vy_mm = 0x5678;
-	embed_chassis_info_ptr->vw_mm = 0x9ABC;
-	
-	embed_chassis_info_ptr->energy_buff_pct = 0xDE;
+//	embed_chassis_info_ptr->energy_buff_pct = 0xDE;
 }
 
 void embed_gimbal_info_msg_data_update(embed_gimbal_info_t* embed_gimbal_info_ptr, embed_msg_to_pc_t* embed_msg_to_pc_ptr)
 {
-	embed_gimbal_info_ptr->pitch_relative_angle = embed_msg_to_pc_ptr->pitch_relative_angle; //= rad * 10000
+	embed_gimbal_info_ptr->pitch_relative_angle = (int16_t) (embed_msg_to_pc_ptr->pitch_relative_angle * 10000.0f); //= rad * 10000
+	embed_gimbal_info_ptr->yaw_relative_angle = (int16_t) (embed_msg_to_pc_ptr->yaw_relative_angle * 10000.0f);
 	
 	for(uint8_t i = 0; i < 4; i++)
 	{
@@ -354,74 +371,84 @@ void embed_gimbal_info_msg_data_update(embed_gimbal_info_t* embed_gimbal_info_pt
 				break;
 			}
 			
-			embed_gimbal_info_ptr->quat[i] = (embed_msg_to_pc_ptr->quat[i]+1)*10000; //(quat[i]+1)*10000; linear trans.
+			embed_gimbal_info_ptr->quat[i] = (uint16_t) ( (embed_msg_to_pc_ptr->quat[i]+1) * 10000.0f ); //(quat[i]+1)*10000; linear trans.
 	}
 	
 	embed_gimbal_info_ptr->robot_id = embed_msg_to_pc_ptr->robot_id;
-	embed_gimbal_info_ptr->shoot_bullet_speed = embed_msg_to_pc_ptr->shoot_bullet_speed;
-	embed_gimbal_info_ptr->yaw_relative_angle = embed_msg_to_pc_ptr->yaw_relative_angle;
-  
+	embed_gimbal_info_ptr->shoot_bullet_speed = (uint16_t) (embed_msg_to_pc_ptr->shoot_bullet_speed * 10.0f);
 }
 
 /**
  * @brief refresh data struct to ring buffer fifo or send directly
- *
- * @param data_size: variable lengthed data; data section data size
+ * 
+ * To use: uniform refresh function substitute: embed_chassis_info_refresh + embed_gimbal_info_refresh
+ * The use of global variable pc_send_header for debug purpose
+ * @param data section point; data_size: variable lengthed data; data section data size; cmdid
  */
-//use global variable pc_send_header for debug purpose
-void embed_chassis_info_refresh(embed_chassis_info_t* embed_chassis_info_ptr, uint32_t data_size)
+void embed_info_msg_refresh(uint8_t* embed_info_ptr, uint32_t data_size, uint16_t cmd_id_para)
 {
-	unsigned char *framepoint;  //read write pointer
+	//uint8_t is unsigned char for STM32
+	uint8_t* framepoint;  //read write pointer
   uint16_t frametailCRC=0xFFFF;  //CRC16 check sum
 	uint16_t* frametail_ptr;
 	
-	framepoint = (unsigned char *)embed_send_protocol.p_header;
+	framepoint = (uint8_t*)embed_send_protocol.p_header;
 	embed_send_protocol.p_header->SOF = PC_HEADER_SOF; //0xAF;
-	embed_send_protocol.p_header->frame_length = PC_HEADER_CRC_CMDID_LEN + data_size;
-	embed_send_protocol.p_header->seq = 1; //Add global for this
-	embed_send_protocol.p_header->CRC8 = get_CRC8_check_sum(framepoint, PC_PROTOCOL_HEADER_SIZE-1, 0xFF);
+	embed_send_protocol.p_header->frame_length = PC_HEADER_CRC_CMDID_LEN + data_size; //frame_length是整帧长度
+	embed_send_protocol.p_header->seq = 1; //TODO: add global for this
+	embed_send_protocol.p_header->CRC8 = get_CRC8_check_sum((unsigned char *) framepoint, PC_PROTOCOL_HEADER_SIZE-1, 0xFF);
 	
-	embed_send_protocol.p_header->cmd_id = CHASSIS_INFO_CMD_ID;
+	embed_send_protocol.p_header->cmd_id = cmd_id_para;
 	
 	
 	//put header + cmdid to ram buffer
 	for(embed_send_protocol.index = 0; embed_send_protocol.index < PC_HEADER_CMDID_LEN; embed_send_protocol.index++ )
 	{
 		embed_send_protocol.send_ram_buff[embed_send_protocol.index] = *framepoint;
+		uart1_embed_send_byte(embed_send_protocol.send_ram_buff[embed_send_protocol.index]); //现在发送
+		
 		frametailCRC = get_CRC16_check_sum(framepoint, 1, frametailCRC);
 		framepoint++;
 	}
 	
 	//put data section to ram buffer
-	framepoint = (unsigned char *)embed_chassis_info_ptr;
+	framepoint = (uint8_t*)embed_info_ptr;
 	for(; embed_send_protocol.index < PC_HEADER_CMDID_LEN + data_size; embed_send_protocol.index++ )
 	{
 		embed_send_protocol.send_ram_buff[embed_send_protocol.index] = *framepoint;
+		uart1_embed_send_byte(embed_send_protocol.send_ram_buff[embed_send_protocol.index]); //现在发送
+		
 		frametailCRC = get_CRC16_check_sum(framepoint, 1, frametailCRC);
 		framepoint++;
 	}
 	
-	//put frame tail check sum to ram buffer CRC16 换向
+	//put frame tail check sum to ram buffer CRC16 小端模式 换向
 	frametail_ptr = (uint16_t*) &embed_send_protocol.send_ram_buff[embed_send_protocol.index];
 	frametail_ptr[0] = frametailCRC;
 	
-	//集中发送
-	for(embed_send_protocol.index = 0; embed_send_protocol.index < embed_send_protocol.p_header->frame_length; embed_send_protocol.index++)
+	//发送包尾
+	for(; embed_send_protocol.index < embed_send_protocol.p_header->frame_length; embed_send_protocol.index++)
 	{
-		uart1_embed_send_byte(embed_send_protocol.send_ram_buff[embed_send_protocol.index]);
+		uart1_embed_send_byte(embed_send_protocol.send_ram_buff[embed_send_protocol.index]); //现在发送
 	}
 	
-}
-
-//TO DO
-/**
- * @brief refresh data struct to ring buffer fifo or send directly
- *
- * @param variable lengthed data
- */
-void embed_gimbal_info_refresh()
-{
-	return;
+	/*
+	3-26现象记录: sendFreq = 16, 实际上在ROS rqt上显示只有52Hz左右. 分析:
+	1/60 = 0.016s = 16ms; 1/52 = 0.0192; 1/50 = 0.020 = 20ms; 且 20ms - 16ms = 4ms
+	vTaskDelay(4); 在这个task的while中循环; 一般情况sendFreq = 16里, 都会远小于16ms
+	理想情况下, 假设这个task是实时的: 没有vTaskDelay(4), sendFreq = 16会使得 执行这个东西的频率为60Hz;
+	16  16  16  16  16  16  16  16 理想周期, 16ms 一次
+	 |---|晚开始赋值 只能 影响相位差 "比"的那个点更靠后了
+	|   |   |   |   |   |   |   |
+	(2) (2) (2) (2) (2) (2) (2) (2) 每一次执行sendFreq = 16中的耗时
+	
+	如果while中循环一次再vTaskDelay(4), 是会使得16的理想发送周期 + 4ms = 20ms
+	20  20  20  20  20  20  20  20
+	|   |   |   |   |   |   |   |
+	(2) (2) (2) (2) (2) (2) (2) (2) 每一次执行sendFreq = 16中的耗时
+	也就是观察到的 1/50 = 0.020 = 20ms
+	*/
+	
 }
 
 void embed_send_data_to_pc_loop()
@@ -440,26 +467,35 @@ void embed_send_data_to_pc_loop()
 	if(xTaskGetTickCount() - chassis_info_embed_sendFreq > embed_send_protocol.chassis_info_embed_send_TimeStamp)
 	{
 		embed_send_protocol.chassis_info_embed_send_TimeStamp = xTaskGetTickCount();
-		//time to do another send
+		//its time to do 1 msg send
+		
 		//Copy value to send struct. simular to Float_Draw
 		embed_chassis_info_msg_data_update(&embed_chassis_info, &embed_msg_to_pc);
-	
-		//msg to fifo
-		embed_chassis_info_refresh(&embed_chassis_info, sizeof(embed_chassis_info_t));
+		embed_gimbal_info_msg_data_update(&embed_gimbal_info, &embed_msg_to_pc);
+		
+		//msg to fifo; this is like refresh
+//		embed_chassis_info_refresh(&embed_chassis_info, sizeof(embed_chassis_info_t));
+//		uart1_poll_dma_tx();
+//		embed_gimbal_info_refresh(&embed_gimbal_info, sizeof(embed_gimbal_info_t)); // written later
+		
+		//try uniform function to refresh
+		embed_info_msg_refresh((uint8_t*) &embed_chassis_info, sizeof(embed_chassis_info_t), CHASSIS_INFO_CMD_ID);	
+		uart1_poll_dma_tx();
+		embed_info_msg_refresh((uint8_t*) &embed_gimbal_info, sizeof(embed_gimbal_info_t), GIMBAL_INFO_CMD_ID);
 		
 		/*
 		进入这个if的频率决定了生产频率, 到时间后才进入这个if, 没到时间不进入这个if
 		没到时间需确认消费者在消费状态
 		*/
 	}//
-	else //testing
-	{
-		vTaskDelay(1); //频率 58.37 ~ 58.4
-		{
-			uint8_t i = 0;
-			i++;
-		}
-	}
+//	else //testing
+//	{
+//		vTaskDelay(1); //频率 58.37 ~ 58.4
+//		{
+//			uint8_t i = 0;
+//			i++;
+//		}
+//	}
 	
 	
 	//enable uart tx DMA which is the DMA poll
@@ -472,7 +508,7 @@ void embed_send_data_to_pc_loop()
 		embed_send_protocol.relative_send_fail_cnts = 0;
 	}
 	
-	//if reach a certain number, enforce sending
+	//if reach a certain number, enforce sending, ensure fifo will not be used out
 	if(embed_send_protocol.relative_send_fail_cnts >= 5)
 	{
 		while(!(get_uart1_embed_send_status()==0))
@@ -488,3 +524,149 @@ void embed_send_data_to_pc_loop()
 }
 
 /* -------------------------------- USART SEND DATA FILL END-------------------------------- */
+
+
+
+/* -------------------------------- Old code back up --------------------------------------- */
+/*这个是集中发送的版本 仅作保存 时间复杂度略微的比现在的高*/
+//void embed_info_msg_refresh(uint8_t* embed_info_ptr, uint32_t data_size, uint16_t cmd_id_para)
+//{
+//	//uint8_t is unsigned char for STM32
+//	uint8_t* framepoint;  //read write pointer
+//  uint16_t frametailCRC=0xFFFF;  //CRC16 check sum
+//	uint16_t* frametail_ptr;
+//	
+//	framepoint = (uint8_t*)embed_send_protocol.p_header;
+//	embed_send_protocol.p_header->SOF = PC_HEADER_SOF; //0xAF;
+//	embed_send_protocol.p_header->frame_length = PC_HEADER_CRC_CMDID_LEN + data_size; //frame_length是整帧长度
+//	embed_send_protocol.p_header->seq = 1; //TODO: add global for this
+//	embed_send_protocol.p_header->CRC8 = get_CRC8_check_sum((unsigned char *) framepoint, PC_PROTOCOL_HEADER_SIZE-1, 0xFF);
+//	
+//	embed_send_protocol.p_header->cmd_id = cmd_id_para;
+//	
+//	
+//	//put header + cmdid to ram buffer
+//	for(embed_send_protocol.index = 0; embed_send_protocol.index < PC_HEADER_CMDID_LEN; embed_send_protocol.index++ )
+//	{
+//		embed_send_protocol.send_ram_buff[embed_send_protocol.index] = *framepoint;
+//		frametailCRC = get_CRC16_check_sum(framepoint, 1, frametailCRC);
+//		framepoint++;
+//	}
+//	
+//	//put data section to ram buffer
+//	framepoint = (uint8_t*)embed_info_ptr;
+//	for(; embed_send_protocol.index < PC_HEADER_CMDID_LEN + data_size; embed_send_protocol.index++ )
+//	{
+//		embed_send_protocol.send_ram_buff[embed_send_protocol.index] = *framepoint;
+//		frametailCRC = get_CRC16_check_sum(framepoint, 1, frametailCRC);
+//		framepoint++;
+//	}
+//	
+//	//put frame tail check sum to ram buffer CRC16 小端模式 换向
+//	frametail_ptr = (uint16_t*) &embed_send_protocol.send_ram_buff[embed_send_protocol.index];
+//	frametail_ptr[0] = frametailCRC;
+//	
+//	//集中发送
+//	for(embed_send_protocol.index = 0; embed_send_protocol.index < embed_send_protocol.p_header->frame_length; embed_send_protocol.index++)
+//	{
+//		uart1_embed_send_byte(embed_send_protocol.send_ram_buff[embed_send_protocol.index]);
+//	}
+//	
+//}
+
+///**
+// * @brief refresh data struct to ring buffer fifo or send directly
+// * 仅作保存 时间复杂度略微的比现在的高
+// * @param variable lengthed data
+// */
+//void embed_gimbal_info_refresh(embed_gimbal_info_t* embed_gimbal_info_ptr, uint32_t data_size)
+//{
+//	unsigned char *framepoint;  //read write pointer
+//  uint16_t frametailCRC=0xFFFF;  //CRC16 check sum
+//	uint16_t* frametail_ptr;
+//	
+//	framepoint = (unsigned char *)embed_send_protocol.p_header;
+//	embed_send_protocol.p_header->SOF = PC_HEADER_SOF; //0xAF;
+//	embed_send_protocol.p_header->frame_length = PC_HEADER_CRC_CMDID_LEN + data_size;
+//	embed_send_protocol.p_header->seq = 1; //TODO: add global for this
+//	embed_send_protocol.p_header->CRC8 = get_CRC8_check_sum(framepoint, PC_PROTOCOL_HEADER_SIZE-1, 0xFF);
+//	
+//	embed_send_protocol.p_header->cmd_id = GIMBAL_INFO_CMD_ID;
+//	
+//	
+//	//put header + cmdid to ram buffer
+//	for(embed_send_protocol.index = 0; embed_send_protocol.index < PC_HEADER_CMDID_LEN; embed_send_protocol.index++ )
+//	{
+//		embed_send_protocol.send_ram_buff[embed_send_protocol.index] = *framepoint;
+//		frametailCRC = get_CRC16_check_sum(framepoint, 1, frametailCRC);
+//		framepoint++;
+//	}
+//	
+//	//put data section to ram buffer
+//	framepoint = (unsigned char *)embed_gimbal_info_ptr;
+//	for(; embed_send_protocol.index < PC_HEADER_CMDID_LEN + data_size; embed_send_protocol.index++ )
+//	{
+//		embed_send_protocol.send_ram_buff[embed_send_protocol.index] = *framepoint;
+//		frametailCRC = get_CRC16_check_sum(framepoint, 1, frametailCRC);
+//		framepoint++;
+//	}
+//	
+//	//put frame tail check sum to ram buffer CRC16 小端模式 换向(就是避开之前的8bits写, 直接16bits写, STM32 小端模式)
+//	frametail_ptr = (uint16_t*) &embed_send_protocol.send_ram_buff[embed_send_protocol.index];
+//	frametail_ptr[0] = frametailCRC;
+//	
+//	//集中发送
+//	for(embed_send_protocol.index = 0; embed_send_protocol.index < embed_send_protocol.p_header->frame_length; embed_send_protocol.index++)
+//	{
+//		uart1_embed_send_byte(embed_send_protocol.send_ram_buff[embed_send_protocol.index]);
+//	}
+//}
+
+///**
+// * @brief refresh data struct to ring buffer fifo or send directly
+// *
+// * @param data_size: variable lengthed data; data section data size
+// */
+//void embed_chassis_info_refresh(embed_chassis_info_t* embed_chassis_info_ptr, uint32_t data_size)
+//{
+//	unsigned char *framepoint;  //read write pointer
+//  uint16_t frametailCRC=0xFFFF;  //CRC16 check sum
+//	uint16_t* frametail_ptr;
+//	
+//	framepoint = (unsigned char *)embed_send_protocol.p_header;
+//	embed_send_protocol.p_header->SOF = PC_HEADER_SOF; //0xAF;
+//	embed_send_protocol.p_header->frame_length = PC_HEADER_CRC_CMDID_LEN + data_size;
+//	embed_send_protocol.p_header->seq = 1; //TODO: add global for this
+//	embed_send_protocol.p_header->CRC8 = get_CRC8_check_sum(framepoint, PC_PROTOCOL_HEADER_SIZE-1, 0xFF);
+//	
+//	embed_send_protocol.p_header->cmd_id = CHASSIS_INFO_CMD_ID;
+//	
+//	
+//	//put header + cmdid to ram buffer
+//	for(embed_send_protocol.index = 0; embed_send_protocol.index < PC_HEADER_CMDID_LEN; embed_send_protocol.index++ )
+//	{
+//		embed_send_protocol.send_ram_buff[embed_send_protocol.index] = *framepoint;
+//		frametailCRC = get_CRC16_check_sum(framepoint, 1, frametailCRC);
+//		framepoint++;
+//	}
+//	
+//	//put data section to ram buffer
+//	framepoint = (unsigned char *)embed_chassis_info_ptr;
+//	for(; embed_send_protocol.index < PC_HEADER_CMDID_LEN + data_size; embed_send_protocol.index++ )
+//	{
+//		embed_send_protocol.send_ram_buff[embed_send_protocol.index] = *framepoint;
+//		frametailCRC = get_CRC16_check_sum(framepoint, 1, frametailCRC);
+//		framepoint++;
+//	}
+//	
+//	//put frame tail check sum to ram buffer CRC16 小端模式 换向
+//	frametail_ptr = (uint16_t*) &embed_send_protocol.send_ram_buff[embed_send_protocol.index];
+//	frametail_ptr[0] = frametailCRC;
+//	
+//	//集中发送
+//	for(embed_send_protocol.index = 0; embed_send_protocol.index < embed_send_protocol.p_header->frame_length; embed_send_protocol.index++)
+//	{
+//		uart1_embed_send_byte(embed_send_protocol.send_ram_buff[embed_send_protocol.index]);
+//	}
+//	
+//}

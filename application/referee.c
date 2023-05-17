@@ -21,12 +21,12 @@ ext_referee_warning_t referee_warning_t;
 ext_game_robot_status_t robot_state;//------------
 ext_power_heat_data_t power_heat_data_t;
 ext_game_robot_pos_t game_robot_pos_t;
-ext_buff_musk_t buff_musk_t;
+ext_buff_t buff_musk_t;
 aerial_robot_energy_t robot_energy_t;
 ext_robot_hurt_t robot_hurt_t;
 ext_shoot_data_t shoot_data_t;
 ext_bullet_remaining_t bullet_remaining_t;
-ext_student_interactive_data_t student_interactive_data_t;
+ext_student_interactive_header_data_t student_interactive_data_t;
 
 
 
@@ -50,14 +50,14 @@ void init_referee_struct_data(void)
     memset(&robot_state, 0, sizeof(ext_game_robot_status_t));
     memset(&power_heat_data_t, 0, sizeof(ext_power_heat_data_t));
     memset(&game_robot_pos_t, 0, sizeof(ext_game_robot_pos_t));
-    memset(&buff_musk_t, 0, sizeof(ext_buff_musk_t));
+    memset(&buff_musk_t, 0, sizeof(ext_buff_t));
     memset(&robot_energy_t, 0, sizeof(aerial_robot_energy_t));
     memset(&robot_hurt_t, 0, sizeof(ext_robot_hurt_t));
     memset(&shoot_data_t, 0, sizeof(ext_shoot_data_t));
     memset(&bullet_remaining_t, 0, sizeof(ext_bullet_remaining_t));
 
 
-    memset(&student_interactive_data_t, 0, sizeof(ext_student_interactive_data_t));
+    memset(&student_interactive_data_t, 0, sizeof(ext_student_interactive_header_data_t));
 
 
 

@@ -6,7 +6,8 @@
 #include "fifo.h"
 
 //Declare
-extern void pc_communication_task(void const *pvParameters);
+extern void embed_receive_Main_communication_task(void const *pvParameters);
+extern void embed_send_communication_task(void const *pvParameters);
 extern void uart1_embed_send_byte(uint8_t ch);
 extern uint8_t get_uart1_embed_send_status(void);
 extern uint8_t uart1_poll_dma_tx(void);
@@ -29,7 +30,7 @@ note 1-17-2023: current data size did not exceed 50 bytes
 #define PC_PROTOCOL_FRAME_MAX_SIZE  50 //128
 
 //Information for different packages' size
-#define PC_PROTOCOL_HEADER_SIZE            sizeof(pc_comm_frame_header_t)
+#define PC_PROTOCOL_HEADER_SIZE            sizeof(pc_comm_frame_header_t) //4
 #define PC_PROTOCOL_CMD_SIZE               2   //sizeof(uint16_t) size for the cmd_id
 #define PC_PROTOCOL_CRC16_SIZE             2   //sizeof(uint16_t) size for the CRC16
 #define PC_HEADER_CRC_LEN                  (PC_PROTOCOL_HEADER_SIZE + PC_PROTOCOL_CRC16_SIZE)
