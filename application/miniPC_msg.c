@@ -70,6 +70,9 @@ pc -> embed
 */
 void init_pc_to_embed_Main_comm_struct_data(void)
 {
+	const static fp32 yawMove_aid_order_filter[1] = {0.3333333333f};
+	const static fp32 pitchMove_aid_order_filter[1] = {0.3333333333f};
+	
 	memset(&pc_comm_receive_header, 0, sizeof(pc_comm_frame_header_t));
 	memset(&pc_send_header, 0, sizeof(pc_comm_embed_send_header_t));
 	
@@ -82,6 +85,10 @@ void init_pc_to_embed_Main_comm_struct_data(void)
 	
 	//init important control related values
 	pc_info.autoAimFlag = 0;
+	
+	//低通滤波
+	first_order_filter_init(&pc_info.pitchMove_aid_filter, MINIPC_AID_GIMBAL_CONTROL_MSG_TIME, pitchMove_aid_order_filter);
+	first_order_filter_init(&pc_info.yawMove_aid_filter, MINIPC_AID_GIMBAL_CONTROL_MSG_TIME, yawMove_aid_order_filter);
 	
 }
 //embed -> pc
@@ -113,16 +120,44 @@ void set_autoAimFlag(uint8_t autoAimFlag)
 
 /* ---------- getter method 获取最终解包到 pc_info 中的数据 ---------- */
 // see the struct for the detailed information
-// fp32 yawMove_aid;
-fp32 get_yawMove_aid()
+// fp32 yawMove_aid; enable_not_detect_set_zero=1使能 未检测到时 返回值set为0
+fp32 get_yawMove_aid(uint8_t enable_not_detect_set_zero)
 {
-	return pc_info.yawMove_aid;
+	if(enable_not_detect_set_zero)
+	{
+		if(get_enemy_detected())
+		{
+			return pc_info.yawMove_aid;
+		}
+		else
+		{
+			return 0.0f;
+		}
+	}
+	else
+	{
+		return pc_info.yawMove_aid;
+	}
 }
 
-//fp32 pitchMove_aid;
-fp32 get_pitchMove_aid()
+//fp32 pitchMove_aid; enable_not_detect_set_zero=1使能 未检测到时 返回值set为0
+fp32 get_pitchMove_aid(uint8_t enable_not_detect_set_zero)
 {
-	return pc_info.pitchMove_aid;
+	if(enable_not_detect_set_zero)
+	{
+		if(get_enemy_detected())
+		{
+			return pc_info.pitchMove_aid;
+		}
+		else
+		{
+			return 0.0f;
+		}
+	}
+	else
+	{
+		return pc_info.pitchMove_aid;
+	}
 }
 
 //fp32 yawMove_absolute;
@@ -201,8 +236,15 @@ void cmd_process_pc_cmd_chassis_control(void)
 
 void cmd_process_pc_cmd_gimbal_ctrl_aid(void) //TODO添加数据合理性判断
 {
-	pc_info.yawMove_aid = 0.003f * (fp32)pc_cmd_gimbal_ctrl_aid.yaw / 10000.0f;
-	pc_info.pitchMove_aid = 0.008f * (fp32)pc_cmd_gimbal_ctrl_aid.pitch / 10000.0f;
+	//测试滤波
+	first_order_filter_cali(&pc_info.yawMove_aid_filter, pc_cmd_gimbal_ctrl_aid.yaw);
+	first_order_filter_cali(&pc_info.pitchMove_aid_filter, pc_cmd_gimbal_ctrl_aid.pitch);
+	
+//	pc_info.yawMove_aid = 0.003f * (fp32)pc_cmd_gimbal_ctrl_aid.yaw / 10000.0f; //003f 008f
+//	pc_info.pitchMove_aid = 0.008f * (fp32)pc_cmd_gimbal_ctrl_aid.pitch / 10000.0f; //008f 010f
+	pc_info.yawMove_aid = 0.003f * (fp32)pc_info.yawMove_aid_filter.out / 10000.0f; //003f 008f
+	pc_info.pitchMove_aid = 0.008f * (fp32)pc_info.pitchMove_aid_filter.out / 10000.0f; //008f 010f
+	
 	pc_info.enemy_detected = pc_cmd_gimbal_ctrl_aid.is_detect;
 	pc_info.shootCommand = pc_cmd_gimbal_ctrl_aid.shoot;
 

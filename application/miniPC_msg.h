@@ -188,6 +188,9 @@ typedef struct
 	/* ------------------ sensor & information sent to pc END ------------------*/
 }embed_msg_to_pc_t;
 
+//底盘任务控制间隔 0.002s
+#define MINIPC_AID_GIMBAL_CONTROL_MSG_TIME 0.06f
+
 typedef struct
 {
 	/* -------------------- Var from cv comm -------------------- */
@@ -208,6 +211,11 @@ typedef struct
 	//gimbal related: pc_cmd_gimbal_ctrl_t
 	fp32 yawMove_aid;
 	fp32 pitchMove_aid;
+	
+	fp32 yawMove_aid_filtered_val;
+	fp32 pitchMove_aid_filtered_val;
+	first_order_filter_type_t yawMove_aid_filter;
+	first_order_filter_type_t pitchMove_aid_filter;
 	
 	fp32 yawMove_absolute;
 	fp32 pitchMove_absolute;
@@ -245,8 +253,8 @@ void pc_comm_data_solve(uint8_t *frame);
 void embed_send_data_to_pc_loop(void);
 
 //declear getter method
-fp32 get_yawMove_aid(void);
-fp32 get_pitchMove_aid(void);
+fp32 get_yawMove_aid(uint8_t enable_not_detect_set_zero);
+fp32 get_pitchMove_aid(uint8_t enable_not_detect_set_zero);
 fp32 get_yawMove_absolute(void);
 fp32 get_pitchMove_absolute(void);
 uint8_t get_enemy_detected(void);
