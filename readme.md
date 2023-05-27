@@ -1,5 +1,59 @@
 ## 概述
+```
+├── application
+│   └── protocol
+├── bsp
+│   └── boards
+├── components
+│   ├── algorithm
+│   │   └── Include
+│   ├── controller
+│   ├── devices
+│   └── support
+├── doc
+│   ├── en
+│   └── image
+├── Drivers
+│   ├── CMSIS
+│   │   ├── Device
+│   │   │   └── ST
+│   │   │       └── STM32F4xx
+│   │   │           └── Include
+│   │   └── Include
+│   └── STM32F4xx_HAL_Driver
+│       ├── Inc
+│       │   └── Legacy
+│       └── Src
+├── Inc
+├── Jflash_test
+├── MDK-ARM
+│   ├── DebugConfig
+│   ├── RTE
+│   │   └── _standard_tpye_c
+│   └── standard_tpye_c
+├── Middlewares
+│   ├── ST
+│   │   └── STM32_USB_Device_Library
+│   │       ├── Class
+│   │       │   └── CDC
+│   │       │       ├── Inc
+│   │       │       └── Src
+│   │       └── Core
+│   │           ├── Inc
+│   │           └── Src
+│   └── Third_Party
+│       └── FreeRTOS
+│           └── Source
+│               ├── CMSIS_RTOS
+│               ├── include
+│               └── portable
+│                   ├── MemMang
+│                   └── RVDS
+│                       └── ARM_CM4F
+├── Src
+└── User_Debug
 
+```
 - en doc   [readme](doc/en/readme.md)
 
 ### 软件环境
