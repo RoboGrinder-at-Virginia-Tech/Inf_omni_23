@@ -215,8 +215,8 @@ void MX_FREERTOS_Init(void) {
     embed_send_communication_task_handle = osThreadCreate(osThread(EMBEDTX), NULL);
 
 		//Created task is either usb_task or usb_ano_task; Never both at the same time
-    osThreadDef(USBTask, usb_task, osPriorityNormal, 0, 128);
-    usb_task_handle = osThreadCreate(osThread(USBTask), NULL);
+//    osThreadDef(USBTask, usb_task, osPriorityNormal, 0, 128);
+//    usb_task_handle = osThreadCreate(osThread(USBTask), NULL);
 		
 //		osThreadDef(USBANOTask, usb_ano_task, osPriorityHigh, 0, 512); //osPriorityNormal osPriorityHigh 128
 //    usb_ano_task_handle = osThreadCreate(osThread(USBANOTask), NULL);

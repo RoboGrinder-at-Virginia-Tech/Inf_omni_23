@@ -66,15 +66,15 @@
 
 //pitch speed close-loop PID params, max out and max iout
 //pitch 速度环 PID参数以及 PID最大输出，积分输出
-#define PITCH_SPEED_PID_KP        3600.0f
-#define PITCH_SPEED_PID_KI        20.0f
+#define PITCH_SPEED_PID_KP        2500.0f //3600.0f 6-2-2023调试调整
+#define PITCH_SPEED_PID_KI        8.0f //20.0f
 #define PITCH_SPEED_PID_KD        0.0f
 #define PITCH_SPEED_PID_MAX_OUT   30000.0f
 #define PITCH_SPEED_PID_MAX_IOUT  10000.0f
 
 //pitch gyro angle close-loop PID params, max out and max iout
 //pitch 角度环 角度由陀螺仪解算 PID参数以及 PID最大输出，积分输出
-#define PITCH_GYRO_ABSOLUTE_PID_KP 15.0f
+#define PITCH_GYRO_ABSOLUTE_PID_KP 14.0f //15.0f
 #define PITCH_GYRO_ABSOLUTE_PID_KI 4.0f
 #define PITCH_GYRO_ABSOLUTE_PID_KD 0.0f
 
@@ -83,7 +83,7 @@
 
 //pitch encode angle close-loop PID params, max out and max iout
 //pitch 角度环 角度由编码器 PID参数以及 PID最大输出，积分输出
-#define PITCH_ENCODE_RELATIVE_PID_KP 15.0f
+#define PITCH_ENCODE_RELATIVE_PID_KP 14.0f //15.0f
 #define PITCH_ENCODE_RELATIVE_PID_KI 0.00f
 #define PITCH_ENCODE_RELATIVE_PID_KD 0.0f
 

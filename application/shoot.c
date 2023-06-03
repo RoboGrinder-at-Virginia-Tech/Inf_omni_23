@@ -231,7 +231,10 @@ void shoot_init(void)
 		shoot_control.R_barrel_fric2_ramp.out = FRIC_OFF;
 }
 
-uint16_t new_fric_allms_debug = NEW_FRIC_15ms;
+uint16_t new_fric_allms_debug_L1 = NEW_FRIC_15ms;
+uint16_t new_fric_allms_debug_L2 = NEW_FRIC_15ms;
+uint16_t new_fric_allms_debug_R1 = NEW_FRIC_15ms;
+uint16_t new_fric_allms_debug_R2 = NEW_FRIC_15ms;
 /**
   * @brief          射击循环
   * @param[in]      void
@@ -296,10 +299,10 @@ int16_t shoot_control_loop(void)
 		  shoot_control.R_barrel_fric2_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 		  
 		  // 更新MD snail 摩擦轮的PWM上限
-		  shoot_control.L_barrel_fric1_ramp.max_value_constant = new_fric_allms_debug; //NEW_FRIC_15ms; //NEW_FRIC_15ms_higher
-		  shoot_control.L_barrel_fric2_ramp.max_value_constant = new_fric_allms_debug; //NEW_FRIC_15ms;
-		  shoot_control.R_barrel_fric1_ramp.max_value_constant = new_fric_allms_debug; //NEW_FRIC_15ms;
-		  shoot_control.R_barrel_fric2_ramp.max_value_constant = new_fric_allms_debug; //NEW_FRIC_15ms;
+		  shoot_control.L_barrel_fric1_ramp.max_value_constant = new_fric_allms_debug_L1; //NEW_FRIC_15ms; //NEW_FRIC_15ms_higher
+		  shoot_control.L_barrel_fric2_ramp.max_value_constant = new_fric_allms_debug_L2; //NEW_FRIC_15ms;
+		  shoot_control.R_barrel_fric1_ramp.max_value_constant = new_fric_allms_debug_R1; //NEW_FRIC_15ms;
+		  shoot_control.R_barrel_fric2_ramp.max_value_constant = new_fric_allms_debug_R2; //NEW_FRIC_15ms;
 	  }
 	  else if(shoot_control.referee_current_shooter_17mm_speed_limit == 18)
 	  { //6-15之前的自瞄一直是按这个测试的

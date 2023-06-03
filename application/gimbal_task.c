@@ -362,7 +362,7 @@ void gimbal_task(void const *pvParameters)
         pitch_can_set_current = gimbal_control.gimbal_pitch_motor.given_current;
 #endif
 
-				pitch_can_set_current_aid = (int16_t) ((-0.8f) * pitch_can_set_current); //助力电机 pitchR
+				pitch_can_set_current_aid = (int16_t) ((-0.9f) * pitch_can_set_current); //助力电机 pitchR
 			
         if (!(toe_is_error(YAW_GIMBAL_MOTOR_TOE) && toe_is_error(PITCH_GIMBAL_MOTOR_L_TOE) && toe_is_error(PITCH_GIMBAL_MOTOR_R_TOE) 
 					&& toe_is_error(TRIGGER_MOTOR17mm_L_TOE) && toe_is_error(TRIGGER_MOTOR17mm_R_TOE)))
