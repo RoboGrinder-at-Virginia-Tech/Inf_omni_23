@@ -231,10 +231,10 @@ void shoot_init(void)
 		shoot_control.R_barrel_fric2_ramp.out = FRIC_OFF;
 }
 
-uint16_t new_fric_allms_debug_L1 = NEW_FRIC_15ms;
-uint16_t new_fric_allms_debug_L2 = NEW_FRIC_15ms;
-uint16_t new_fric_allms_debug_R1 = NEW_FRIC_15ms;
-uint16_t new_fric_allms_debug_R2 = NEW_FRIC_15ms;
+uint16_t new_fric_allms_debug_L1 = 1189;//NEW_FRIC_15ms;
+uint16_t new_fric_allms_debug_L2 = 1189;//NEW_FRIC_15ms;
+uint16_t new_fric_allms_debug_R1 = 1200;//NEW_FRIC_15ms;
+uint16_t new_fric_allms_debug_R2 = 1200;//NEW_FRIC_15ms;
 /**
   * @brief          Éä»÷Ñ­»·
   * @param[in]      void
