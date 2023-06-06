@@ -3,7 +3,7 @@
 #include "stdio.h"
 #include "CRC8_CRC16.h"
 #include "protocol.h"
-
+#include "cmsis_os.h"
 
 frame_header_struct_t referee_receive_header;
 frame_header_struct_t referee_send_header;
@@ -29,7 +29,7 @@ ext_bullet_remaining_t bullet_remaining_t;
 ext_student_interactive_header_data_t student_interactive_data_t;
 
 
-
+uint32_t last_robot_state_rx_timestamp; //上一次收到robot_state信息的时间戳
 
 void init_referee_struct_data(void)
 {
@@ -119,6 +119,7 @@ void referee_data_solve(uint8_t *frame)
         case ROBOT_STATE_CMD_ID:
         {
             memcpy(&robot_state, frame + index, sizeof(robot_state));
+						last_robot_state_rx_timestamp = xTaskGetTickCount();
         }
         break;
         case POWER_HEAT_DATA_CMD_ID:
@@ -219,5 +220,18 @@ uint16_t get_shooter_id2_17mm_speed_limit(void)
 		return robot_state.shooter_id2_17mm_speed_limit;
 }
 
+uint16_t get_shooter_id1_17mm_cd_rate(void)
+{
+		return robot_state.shooter_id1_17mm_cooling_rate;
+}
 
+uint16_t get_shooter_id2_17mm_cd_rate(void)
+{
+		return robot_state.shooter_id2_17mm_cooling_rate;
+}
+
+uint32_t get_last_robot_state_rx_timestamp(void)
+{
+	return last_robot_state_rx_timestamp;
+}
 

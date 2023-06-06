@@ -32,6 +32,10 @@
 
 #include "prog_msg_utility.h"
 
+#if INCLUDE_uxTaskGetStackHighWaterMark
+uint32_t usb_task_high_water;
+#endif
+
 extern pc_cmd_gimbal_ctrl_t pc_cmd_gimbal_ctrl_aid;
 extern pc_cmd_gimbal_ctrl_t pc_cmd_gimbal_ctrl_full;
 
@@ -113,6 +117,9 @@ void usb_task(void const * argument)
 		/* ---------- RTOS tasks stats and info - prog_msg_utility ---------- */
 			  CPU_info_to_usb();
 		/* ---------- RTOS tasks stats and info - prog_msg_utility Ends ---------- */
+#if INCLUDE_uxTaskGetStackHighWaterMark
+    usb_task_high_water = uxTaskGetStackHighWaterMark(NULL);
+#endif	
     }
 
 }

@@ -33,6 +33,10 @@
 #include "referee_usart_task.h"
 
 #include "miniPC_msg.h"
+#include "prog_msg_utility.h"
+#include "odometer_task.h"
+
+#include "stdlib.h"
 
 // shootL: left barrel
 #define shootL_fric1_on(pwm) L_barrel_fric1_on((pwm)) //left barrel 摩擦轮1pwm宏定义
@@ -99,6 +103,7 @@ static void R_barrel_shoot_bullet_control_17mm(void);
 static void snail_fric_wheel_kalman_adjustment(ramp_function_source_t *fric1, ramp_function_source_t *fric2);
 
 
+uint32_t shoot_heat_update_calculate(shoot_control_t* shoot_heat);
 
 shoot_control_t shoot_control;          //射击数据
 
@@ -114,10 +119,14 @@ int16_t temp_rpm_right; // debug Jscope
 void shoot_init(void)
 {
 		// left barrel trig pid init
-    static const fp32 L_barrel_Trigger_speed_pid[3] = {TRIGGER_ANGLE_PID_KP, TRIGGER_ANGLE_PID_KI, TRIGGER_ANGLE_PID_KD};
+    static const fp32 L_barrel_Trigger_speed_pid[3] = {L_BARREL_TRIGGER_SPEED_IN_PID_KP, L_BARREL_TRIGGER_SPEED_IN_PID_KI, L_BARREL_TRIGGER_SPEED_IN_PID_KD};//速度环
+		//左侧枪管 外环 位置环PID
+		static const fp32 L_barrel_Trigger_position_pid_17mm_outerLoop[3] = {L_BARREL_TRIGGER_ANGLE_PID_OUTER_KP, L_BARREL_TRIGGER_ANGLE_PID_OUTER_KI, L_BARREL_TRIGGER_ANGLE_PID_OUTER_KD};//位置环
 		
 		//right barrel trig pid init
-		static const fp32 R_barrel_Trigger_speed_pid[3] = {TRIGGER_ANGLE_PID_KP, TRIGGER_ANGLE_PID_KI, TRIGGER_ANGLE_PID_KD};
+		static const fp32 R_barrel_Trigger_speed_pid[3] = {R_BARREL_TRIGGER_SPEED_IN_PID_KP, R_BARREL_TRIGGER_SPEED_IN_PID_KI, R_BARREL_TRIGGER_SPEED_IN_PID_KD};//速度环
+		//右侧枪管 外环 位置环PID
+		static const fp32 R_barrel_Trigger_position_pid_17mm_outerLoop[3] = {R_BARREL_TRIGGER_ANGLE_PID_OUTER_KP, R_BARREL_TRIGGER_ANGLE_PID_OUTER_KI, R_BARREL_TRIGGER_ANGLE_PID_OUTER_KD};//位置环
 		
     // shoot_control.shoot_mode = SHOOT_STOP;
 		shoot_control.shoot_mode_L = SHOOT_STOP;
@@ -132,9 +141,14 @@ void shoot_init(void)
 		shoot_control.shoot_motor_R_measure = get_trigger_motor_R_measure_point();
 		
     //初始化PID
-//    PID_init(&shoot_control.trigger_motor_pid, PID_POSITION, Trigger_speed_pid, TRIGGER_READY_PID_MAX_OUT, TRIGGER_READY_PID_MAX_IOUT);
-		PID_init(&shoot_control.L_barrel_trigger_motor_pid, PID_POSITION, L_barrel_Trigger_speed_pid, TRIGGER_READY_PID_MAX_OUT, TRIGGER_READY_PID_MAX_IOUT);
-		PID_init(&shoot_control.R_barrel_trigger_motor_pid, PID_POSITION, R_barrel_Trigger_speed_pid, TRIGGER_READY_PID_MAX_OUT, TRIGGER_READY_PID_MAX_IOUT);
+//		PID_init(&shoot_control.L_barrel_trigger_motor_pid, PID_POSITION, L_barrel_Trigger_speed_pid, L_BARREL_TRIGGER_READY_PID_MAX_OUT, L_BARREL_TRIGGER_READY_PID_MAX_IOUT);
+//		PID_init(&shoot_control.R_barrel_trigger_motor_pid, PID_POSITION, R_barrel_Trigger_speed_pid, R_BARREL_TRIGGER_READY_PID_MAX_OUT, R_BARREL_TRIGGER_READY_PID_MAX_IOUT);
+		shoot_PID_init(&shoot_control.L_barrel_trigger_motor_pid, SHOOT_PID_SEPARATED_INTEGRAL_IN_SPEED, L_barrel_Trigger_speed_pid, L_BARREL_TRIGGER_READY_PID_MAX_OUT, L_BARREL_TRIGGER_READY_PID_MAX_IOUT);
+		shoot_PID_init(&shoot_control.R_barrel_trigger_motor_pid, SHOOT_PID_SEPARATED_INTEGRAL_IN_SPEED, R_barrel_Trigger_speed_pid, R_BARREL_TRIGGER_READY_PID_MAX_OUT, R_BARREL_TRIGGER_READY_PID_MAX_IOUT);
+		
+		//17mm外环PID
+		shoot_PID_init(&shoot_control.L_barrel_trigger_motor_angle_pid, SHOOT_PID_SEPARATED_INTEGRAL_OUT_POS, L_barrel_Trigger_position_pid_17mm_outerLoop, L_BARREL_TRIGGER_BULLET_PID_OUTER_MAX_OUT, L_BARREL_TRIGGER_BULLET_PID_OUTER_MAX_IOUT);
+		shoot_PID_init(&shoot_control.R_barrel_trigger_motor_angle_pid, SHOOT_PID_SEPARATED_INTEGRAL_OUT_POS, R_barrel_Trigger_position_pid_17mm_outerLoop, R_BARREL_TRIGGER_BULLET_PID_OUTER_MAX_OUT, R_BARREL_TRIGGER_BULLET_PID_OUTER_MAX_IOUT);
 
     //更新数据
     shoot_feedback_update();
@@ -214,9 +228,9 @@ void shoot_init(void)
 		vTaskDelay(3000);
 		
 		//设置油门 斜坡开启行程
-		shoot_control.L_barrel_fric1_ramp.max_value = FRIC_OFF; //重复
-		shoot_control.L_barrel_fric1_ramp.min_value = FRIC_OFF; //重复
-		shoot_control.L_barrel_fric1_ramp.out = FRIC_OFF;//主要 覆盖掉out
+		shoot_control.L_barrel_fric1_ramp.max_value = FRIC_OFF; //重复-初始化max与min
+		shoot_control.L_barrel_fric1_ramp.min_value = FRIC_OFF; //重复-初始化max与min
+		shoot_control.L_barrel_fric1_ramp.out = FRIC_OFF;//主要-覆盖掉out
 		
 		shoot_control.L_barrel_fric2_ramp.max_value = FRIC_OFF;
 		shoot_control.L_barrel_fric2_ramp.min_value = FRIC_OFF;
@@ -229,6 +243,16 @@ void shoot_init(void)
 		shoot_control.R_barrel_fric2_ramp.max_value = FRIC_OFF;
 		shoot_control.R_barrel_fric2_ramp.min_value = FRIC_OFF;
 		shoot_control.R_barrel_fric2_ramp.out = FRIC_OFF;
+		
+		//本地热量 - 左枪管 ID1
+		get_shooter_id1_17mm_heat_limit_and_heat(&shoot_control.L_barrel_heat_limit, &shoot_control.L_barrel_heat);
+		shoot_control.L_barrel_local_heat_limit = shoot_control.L_barrel_heat_limit; //通用 数据
+		shoot_control.L_barrel_local_cd_rate = get_shooter_id1_17mm_cd_rate(); //通用 数据
+		
+		//本地热量 - 右枪管 ID2
+		get_shooter_id2_17mm_heat_limit_and_heat(&shoot_control.R_barrel_heat_limit, &shoot_control.R_barrel_heat);
+		shoot_control.R_barrel_local_heat_limit = shoot_control.R_barrel_heat_limit; //通用 数据
+		shoot_control.R_barrel_local_cd_rate = get_shooter_id2_17mm_cd_rate(); //通用 数据
 }
 
 uint16_t new_fric_allms_debug_L1 = 1189;//NEW_FRIC_15ms;
@@ -838,7 +862,11 @@ static void shoot_set_mode(void)
 					}
 				}
     }
-
+		
+		//以下开始热量环 --------------------------------------------------------------
+		shoot_heat_update_calculate(&shoot_control); //就这里执行一次
+		
+    //左枪管 ID1 ref热量限制
     get_shooter_id1_17mm_heat_limit_and_heat(&shoot_control.L_barrel_heat_limit, &shoot_control.L_barrel_heat); //.heat_limit .heat
     if(!toe_is_error(REFEREE_TOE) && (shoot_control.L_barrel_heat + SHOOT_HEAT_REMAIN_VALUE > shoot_control.L_barrel_heat_limit))
     {
@@ -890,8 +918,9 @@ static void shoot_set_mode(void)
 				}
     }
 
-    get_shooter_id1_17mm_heat_limit_and_heat(&shoot_control.L_barrel_heat_limit, &shoot_control.L_barrel_heat);
-    if(!toe_is_error(REFEREE_TOE) && (shoot_control.L_barrel_heat + SHOOT_HEAT_REMAIN_VALUE > shoot_control.L_barrel_heat_limit))
+		//右枪管 ID2 ref热量限制
+    get_shooter_id2_17mm_heat_limit_and_heat(&shoot_control.R_barrel_heat_limit, &shoot_control.R_barrel_heat);
+    if(!toe_is_error(REFEREE_TOE) && (shoot_control.R_barrel_heat + SHOOT_HEAT_REMAIN_VALUE > shoot_control.R_barrel_heat_limit))
     {
         if(shoot_control.shoot_mode_R == SHOOT_BULLET || shoot_control.shoot_mode_R == SHOOT_CONTINUE_BULLET)
         {
@@ -1261,3 +1290,260 @@ const shoot_control_t* get_robot_shoot_control()
 	return &shoot_control;
 }
 
+/* ---------- getter method 获取数据 ---------- */
+shoot_mode_e get_shoot_mode()
+{
+	return shoot_control.shoot_mode_L;
+}
+
+user_fire_ctrl_e get_user_fire_ctrl()
+{
+	return shoot_control.user_fire_ctrl;
+}
+
+uint8_t get_ammoBox_sts()
+{
+	return shoot_control.ammoBox_sts;
+}
+/* ---------- getter method end ---------- */
+
+/*
+发射机构 拨弹电机 自己的PID, 需要使用积分分离 阈值取决于设备本身
+*/
+void shoot_PID_init(shoot_pid_t *pid, uint8_t mode, const fp32 PID[3], fp32 max_out, fp32 max_iout)
+{
+    if (pid == NULL || PID == NULL)
+    {
+        return;
+    }
+    pid->mode = mode;
+    pid->Kp = PID[0];
+    pid->Ki = PID[1];
+    pid->Kd = PID[2];
+    pid->max_out = max_out;
+    pid->max_iout = max_iout;
+    pid->Dbuf[0] = pid->Dbuf[1] = pid->Dbuf[2] = 0.0f;
+    pid->error[0] = pid->error[1] = pid->error[2] = pid->Pout = pid->Iout = pid->Dout = pid->out = 0.0f;
+}
+
+fp32 shoot_PID_calc(shoot_pid_t *pid, fp32 ref, fp32 set)
+{
+    if (pid == NULL)
+    {
+        return 0.0f;
+    }
+		
+		pid->error[2] = pid->error[1];
+    pid->error[1] = pid->error[0];
+    pid->set = set;
+    pid->fdb = ref;
+    pid->error[0] = set - ref;
+
+		//积分分离算法
+    pid->Pout = pid->Kp * pid->error[0];
+		
+		if(pid->mode == SHOOT_PID_SEPARATED_INTEGRAL_OUT_POS)
+		{
+				if(fabs(pid->error[0]) < PID_TRIG_POSITION_INTEGRAL_THRESHOLD)
+				{//在范围内, 对此时的值进行积分
+					pid->Iout += pid->Ki * pid->error[0];
+				}
+				else
+				{//不在范围内, 此时不计分
+					pid->Iout = pid->Iout;
+				}
+
+				pid->Dbuf[2] = pid->Dbuf[1];
+				pid->Dbuf[1] = pid->Dbuf[0];
+				pid->Dbuf[0] = (pid->error[0] - pid->error[1]);
+				pid->Dout = pid->Kd * pid->Dbuf[0];
+				abs_limit(&pid->Iout, pid->max_iout);
+				pid->out = pid->Pout + pid->Iout + pid->Dout;
+				abs_limit(&pid->out, pid->max_out);
+		}
+		else
+		{
+				if(fabs(pid->error[0]) < PID_TRIG_SPEED_INTEGRAL_THRESHOLD)
+				{//在范围内, 对此时的值进行积分
+					pid->Iout += pid->Ki * pid->error[0];
+				}
+				else
+				{//不在范围内, 此时不计分
+					pid->Iout = pid->Iout;
+				}
+
+				pid->Dbuf[2] = pid->Dbuf[1];
+				pid->Dbuf[1] = pid->Dbuf[0];
+				pid->Dbuf[0] = (pid->error[0] - pid->error[1]);
+				pid->Dout = pid->Kd * pid->Dbuf[0];
+				abs_limit(&pid->Iout, pid->max_iout);
+				pid->out = pid->Pout + pid->Iout + pid->Dout;
+				abs_limit(&pid->out, pid->max_out);
+		}
+
+    return pid->out;
+}
+
+//重置PID
+void shoot_PID_clear(shoot_pid_t *pid)
+{
+    if (pid == NULL)
+    {
+        return;
+    }
+
+    pid->error[0] = pid->error[1] = pid->error[2] = 0.0f;
+    pid->Dbuf[0] = pid->Dbuf[1] = pid->Dbuf[2] = 0.0f;
+    pid->out = pid->Pout = pid->Iout = pid->Dout = 0.0f;
+    pid->fdb = pid->set = 0.0f;
+}
+
+uint32_t shoot_heat_update_calculate(shoot_control_t* shoot_heat)
+{
+	if(!toe_is_error(REFEREE_TOE))
+  {
+		 //ID1 的就是左枪管
+		 get_shooter_id1_17mm_heat_limit_and_heat(&shoot_heat->L_barrel_heat_limit, &shoot_heat->L_barrel_heat);
+		 shoot_heat->L_barrel_local_heat_limit = shoot_heat->L_barrel_heat_limit;
+		 shoot_heat->L_barrel_local_cd_rate = get_shooter_id1_17mm_cd_rate();
+		
+		 //ID2 的就是右枪管
+		 get_shooter_id2_17mm_heat_limit_and_heat(&shoot_heat->R_barrel_heat_limit, &shoot_heat->R_barrel_heat);
+		 shoot_heat->R_barrel_local_heat_limit = shoot_heat->R_barrel_heat_limit;
+		 shoot_heat->R_barrel_local_cd_rate = get_shooter_id2_17mm_cd_rate();
+  }
+	else
+	{
+		 //裁判系统离线时 hard code 一个默认的冷却和上限
+		 shoot_heat->L_barrel_local_heat_limit = LOCAL_HEAT_LIMIT_SAFE_VAL;
+		 shoot_heat->L_barrel_local_cd_rate = LOCAL_CD_RATE_SAFE_VAL;
+		 shoot_heat->R_barrel_local_heat_limit = LOCAL_HEAT_LIMIT_SAFE_VAL;
+		 shoot_heat->R_barrel_local_cd_rate = LOCAL_CD_RATE_SAFE_VAL;
+	}
+	
+	//用函数10Hz + 里程计信息算
+	//热量增加计算
+	if( get_para_hz_time_freq_signal_HAL(10) )
+	{
+		//左枪管 ID1枪管 开始 -------------------------------
+		/*当发射机构断电时, 也就是当拨弹电机断电时, 热量不会增加, 只考虑冷却*/
+		if(shoot_control.trigger_motor17mm_L_is_online)
+		{ //发射机构未断电
+#if TRIG_MOTOR_TURN_LEFT_BARREL
+			shoot_heat->L_barrel_rt_odom_angle = -(get_trig_modor_odom_count()) * MOTOR_ECD_TO_ANGLE;
+//		shoot_heat->L_barrel_rt_odom_angle = -(shoot_heat->L_barrel_angle);
+#else
+			shoot_heat->L_barrel_rt_odom_angle = (get_trig_modor_odom_count()) * MOTOR_ECD_TO_ANGLE; //TODO 里程计 初始值是负数 - 排除问题
+//		shoot_heat->L_barrel_rt_odom_angle = (shoot_heat->L_barrel_angle);
+#endif
+
+//		shoot_heat->rt_odom_local_heat = (fp32)(shoot_heat->rt_odom_angle - shoot_heat->last_rt_odom_angle) / ((fp32)RAD_ANGLE_FOR_EACH_HOLE_HEAT_CALC) * ONE17mm_BULLET_HEAT_AMOUNT; //不这样算
+	
+			//用当前发弹量来计算热量
+			shoot_heat->L_barrel_rt_odom_total_bullets_fired = ((fp32)shoot_heat->L_barrel_rt_odom_angle) / ((fp32)RAD_ANGLE_FOR_EACH_HOLE_HEAT_CALC);
+			shoot_heat->L_barrel_rt_odom_local_heat[0] += (fp32)abs( ((int32_t)shoot_heat->L_barrel_rt_odom_total_bullets_fired) - ((int32_t)shoot_heat->L_barrel_rt_odom_calculated_bullets_fired) ) * (fp32)ONE17mm_BULLET_HEAT_AMOUNT;
+			
+			//update last
+			shoot_heat->L_barrel_rt_odom_calculated_bullets_fired = shoot_heat->L_barrel_rt_odom_total_bullets_fired;
+			shoot_heat->L_barrel_last_rt_odom_angle = shoot_heat->L_barrel_rt_odom_angle;
+		}
+		else
+		{ //发射机构断电 - TODO 是否加一个时间上的缓冲
+			shoot_heat->L_barrel_rt_odom_calculated_bullets_fired = shoot_heat->L_barrel_rt_odom_total_bullets_fired;
+			shoot_heat->L_barrel_last_rt_odom_angle = shoot_heat->L_barrel_rt_odom_angle;
+		}
+		
+		//冷却
+		shoot_heat->L_barrel_rt_odom_local_heat[0] -= (fp32)((fp32)shoot_heat->L_barrel_local_cd_rate / 10.0f);
+		if(shoot_heat->L_barrel_rt_odom_local_heat[0] < 0.0f)
+		{
+			shoot_heat->L_barrel_rt_odom_local_heat[0] = 0.0f;
+		}
+			 
+		//更新时间戳
+		shoot_control.L_barrel_local_last_cd_timestamp = xTaskGetTickCount();
+		
+		//融合裁判系统的heat信息, 修正本地的计算 --TODO 测试中
+//		if( abs( ((int32_t)shoot_control.local_last_cd_timestamp) - ((int32_t)get_last_robot_state_rx_timestamp()) ) > 200 )
+//		{
+//			shoot_heat->rt_odom_local_heat = shoot_heat->heat;
+//		}
+//		 fp32 delta_heat = shoot_heat->rt_odom_local_heat[3] - ((fp32)shoot_heat->heat); // fabs(shoot_heat->rt_odom_local_heat[3] - ((fp32)shoot_heat->heat));
+//		 if(delta_heat > 12.0f) //差不多一发的热量 fabs(delta_heat) 
+//		 {
+//			 shoot_heat->rt_odom_local_heat[0] -= delta_heat;
+//		 }
+		
+		//local heat限度
+		shoot_heat->L_barrel_rt_odom_local_heat[0] = fp32_constrain(shoot_heat->L_barrel_rt_odom_local_heat[0], MIN_LOCAL_HEAT, (fp32)shoot_heat->L_barrel_local_heat_limit*2.0f); //MAX_LOCAL_HEAT); //(fp32)shoot_heat->local_heat_limit
+		
+		//存过去的
+		shoot_heat->L_barrel_rt_odom_local_heat[3] = shoot_heat->L_barrel_rt_odom_local_heat[2];
+		shoot_heat->L_barrel_rt_odom_local_heat[2] = shoot_heat->L_barrel_rt_odom_local_heat[1];
+		shoot_heat->L_barrel_rt_odom_local_heat[1] = shoot_heat->L_barrel_rt_odom_local_heat[0];
+		//----section end----
+		//左枪管 ID1枪管 结束 -------------------------------
+		
+		//右枪管 ID1枪管 开始 -------------------------------
+		/*当发射机构断电时, 也就是当拨弹电机断电时, 热量不会增加, 只考虑冷却*/
+		if(shoot_control.trigger_motor17mm_R_is_online)
+		{ //发射机构未断电
+#if TRIG_MOTOR_TURN_RIGHT_BARREL
+			shoot_heat->R_barrel_rt_odom_angle = -(get_trig_modor_odom_count()) * MOTOR_ECD_TO_ANGLE;
+//		shoot_heat->R_barrel_rt_odom_angle = -(shoot_heat->R_barrel_angle);
+#else
+			shoot_heat->R_barrel_rt_odom_angle = (get_trig_modor_odom_count()) * MOTOR_ECD_TO_ANGLE; //TODO 里程计 初始值是负数 - 排除问题
+//		shoot_heat->R_barrel_rt_odom_angle = (shoot_heat->R_barrel_angle);
+#endif
+
+//		shoot_heat->rt_odom_local_heat = (fp32)(shoot_heat->rt_odom_angle - shoot_heat->last_rt_odom_angle) / ((fp32)RAD_ANGLE_FOR_EACH_HOLE_HEAT_CALC) * ONE17mm_BULLET_HEAT_AMOUNT; //不这样算
+	
+			//用当前发弹量来计算热量
+			shoot_heat->R_barrel_rt_odom_total_bullets_fired = ((fp32)shoot_heat->R_barrel_rt_odom_angle) / ((fp32)RAD_ANGLE_FOR_EACH_HOLE_HEAT_CALC);
+			shoot_heat->R_barrel_rt_odom_local_heat[0] += (fp32)abs( ((int32_t)shoot_heat->R_barrel_rt_odom_total_bullets_fired) - ((int32_t)shoot_heat->R_barrel_rt_odom_calculated_bullets_fired) ) * (fp32)ONE17mm_BULLET_HEAT_AMOUNT;
+			
+			//update last
+			shoot_heat->R_barrel_rt_odom_calculated_bullets_fired = shoot_heat->R_barrel_rt_odom_total_bullets_fired;
+			shoot_heat->R_barrel_last_rt_odom_angle = shoot_heat->R_barrel_rt_odom_angle;
+		}
+		else
+		{ //发射机构断电 - TODO 是否加一个时间上的缓冲
+			shoot_heat->R_barrel_rt_odom_calculated_bullets_fired = shoot_heat->R_barrel_rt_odom_total_bullets_fired;
+			shoot_heat->R_barrel_last_rt_odom_angle = shoot_heat->R_barrel_rt_odom_angle;
+		}
+		
+		//冷却
+		shoot_heat->R_barrel_rt_odom_local_heat[0] -= (fp32)((fp32)shoot_heat->R_barrel_local_cd_rate / 10.0f);
+		if(shoot_heat->R_barrel_rt_odom_local_heat[0] < 0.0f)
+		{
+			shoot_heat->R_barrel_rt_odom_local_heat[0] = 0.0f;
+		}
+			 
+		//更新时间戳
+		shoot_control.R_barrel_local_last_cd_timestamp = xTaskGetTickCount();
+		
+		//融合裁判系统的heat信息, 修正本地的计算 --TODO 测试中
+//		if( abs( ((int32_t)shoot_control.local_last_cd_timestamp) - ((int32_t)get_last_robot_state_rx_timestamp()) ) > 200 )
+//		{
+//			shoot_heat->rt_odom_local_heat = shoot_heat->heat;
+//		}
+//		 fp32 delta_heat = shoot_heat->rt_odom_local_heat[3] - ((fp32)shoot_heat->heat); // fabs(shoot_heat->rt_odom_local_heat[3] - ((fp32)shoot_heat->heat));
+//		 if(delta_heat > 12.0f) //差不多一发的热量 fabs(delta_heat) 
+//		 {
+//			 shoot_heat->rt_odom_local_heat[0] -= delta_heat;
+//		 }
+		
+		//local heat限度
+		shoot_heat->R_barrel_rt_odom_local_heat[0] = fp32_constrain(shoot_heat->R_barrel_rt_odom_local_heat[0], MIN_LOCAL_HEAT, (fp32)shoot_heat->R_barrel_local_heat_limit*2.0f); //MAX_LOCAL_HEAT); //(fp32)shoot_heat->local_heat_limit
+		
+		//存过去的
+		shoot_heat->R_barrel_rt_odom_local_heat[3] = shoot_heat->R_barrel_rt_odom_local_heat[2];
+		shoot_heat->R_barrel_rt_odom_local_heat[2] = shoot_heat->R_barrel_rt_odom_local_heat[1];
+		shoot_heat->R_barrel_rt_odom_local_heat[1] = shoot_heat->R_barrel_rt_odom_local_heat[0];
+		//----section end----
+		//右枪管 ID1枪管 结束 -------------------------------
+		
+	}
+	
+	return 0;
+}

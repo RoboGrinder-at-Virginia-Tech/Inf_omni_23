@@ -748,6 +748,16 @@
               <FileType>5</FileType>
               <FilePath>..\application\usb_ano_task.h</FilePath>
             </File>
+            <File>
+              <FileName>odometer_task.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\application\odometer_task.c</FilePath>
+            </File>
+            <File>
+              <FileName>odometer_task.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\application\odometer_task.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

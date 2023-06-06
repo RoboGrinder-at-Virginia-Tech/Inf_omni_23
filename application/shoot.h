@@ -47,7 +47,7 @@
 #define PRESS_LONG_TIME_L						999
 
 //鼠标右键 长按 
-#define PRESS_LONG_TIME_R						50
+#define PRESS_LONG_TIME_R						999 //50
 
 //键盘v键长按
 #define PRESS_LONG_TIME_V						50
@@ -135,30 +135,64 @@ Original PID parameter
 #define TRIGGER_READY_PID_MAX_OUT   10000.0f
 #define TRIGGER_READY_PID_MAX_IOUT  7000.0f
 */
+/*6-5-2023 左右枪管 分为两套PID参数*/
+//左枪管----------------------------------------------------------------------
 //拨弹轮电机PID 外环PID
-#define TRIGGER_ANGLE_PID_OUTER_KP        10.0f
-#define TRIGGER_ANGLE_PID_OUTER_KI        0.0f
-#define TRIGGER_ANGLE_PID_OUTER_KD        0.0f
+#define L_BARREL_TRIGGER_ANGLE_PID_OUTER_KP        50.0f //40.0f //50.0 //30.0f //25.0f
+#define L_BARREL_TRIGGER_ANGLE_PID_OUTER_KI        0.0f
+#define L_BARREL_TRIGGER_ANGLE_PID_OUTER_KD        5.5f
 
-#define TRIGGER_BULLET_PID_OUTER_MAX_OUT  10.0f
-#define TRIGGER_BULLET_PID_OUTER_MAX_IOUT 1.0f
+#define L_BARREL_TRIGGER_BULLET_PID_OUTER_MAX_OUT  30.0f //10.0f
+#define L_BARREL_TRIGGER_BULLET_PID_OUTER_MAX_IOUT 2.0f//1.5f //1.0f
 /*
 外环的输出是内环的输入 内环输入单位是rad/s 
-只是写在这里 没有用
 */
-//拨弹轮电机PID  这个是速度环的PID
-#define TRIGGER_ANGLE_PID_KP        800.0f//100.0f//800.0f//600//800.0f
-#define TRIGGER_ANGLE_PID_KI        0.5f//1.0//0.5f
-#define TRIGGER_ANGLE_PID_KD        0.0f
+//拨弹轮电机PID  这个是速度环的PID - 600 or 800Kp
+#define L_BARREL_TRIGGER_SPEED_IN_PID_KP        650.0f //800.0f//100.0f//800.0f//600//800.0f TRIGGER_ANGLE_PID_KP
+#define L_BARREL_TRIGGER_SPEED_IN_PID_KI        0.25f //0.5f//1.0//0.5f TRIGGER_ANGLE_PID_KI
+#define L_BARREL_TRIGGER_SPEED_IN_PID_KD        0.1f //TRIGGER_ANGLE_PID_KD
 
-#define TRIGGER_BULLET_PID_MAX_OUT  10000.0f
-#define TRIGGER_BULLET_PID_MAX_IOUT 9000.0f//9000.0f 
+#define L_BARREL_TRIGGER_BULLET_PID_MAX_OUT  10000.0f
+#define L_BARREL_TRIGGER_BULLET_PID_MAX_IOUT 9000.0f//9000.0f 
 
-#define TRIGGER_READY_PID_MAX_OUT   10000.0f
-#define TRIGGER_READY_PID_MAX_IOUT  5000.0f//7000.0f
+#define L_BARREL_TRIGGER_READY_PID_MAX_OUT   10000.0f
+#define L_BARREL_TRIGGER_READY_PID_MAX_IOUT  5000.0f//7000.0f
+//右枪管-----------------------------------------------------------------------
+//拨弹轮电机PID 外环PID
+#define R_BARREL_TRIGGER_ANGLE_PID_OUTER_KP        50.0f //40.0f //50.0 //30.0f //25.0f
+#define R_BARREL_TRIGGER_ANGLE_PID_OUTER_KI        0.0f
+#define R_BARREL_TRIGGER_ANGLE_PID_OUTER_KD        5.5f
 
-/*原始值是#define SHOOT_HEAT_REMAIN_VALUE     30*/
+#define R_BARREL_TRIGGER_BULLET_PID_OUTER_MAX_OUT  30.0f //10.0f
+#define R_BARREL_TRIGGER_BULLET_PID_OUTER_MAX_IOUT 2.0f//1.5f //1.0f
+/*
+外环的输出是内环的输入 内环输入单位是rad/s 
+*/
+//拨弹轮电机PID  这个是速度环的PID - 600 or 800Kp
+#define R_BARREL_TRIGGER_SPEED_IN_PID_KP        650.0f //800.0f//100.0f//800.0f//600//800.0f TRIGGER_ANGLE_PID_KP
+#define R_BARREL_TRIGGER_SPEED_IN_PID_KI        0.25f //0.5f//1.0//0.5f TRIGGER_ANGLE_PID_KI
+#define R_BARREL_TRIGGER_SPEED_IN_PID_KD        0.1f //TRIGGER_ANGLE_PID_KD
+
+#define R_BARREL_TRIGGER_BULLET_PID_MAX_OUT  10000.0f
+#define R_BARREL_TRIGGER_BULLET_PID_MAX_IOUT 9000.0f//9000.0f 
+
+#define R_BARREL_TRIGGER_READY_PID_MAX_OUT   10000.0f
+#define R_BARREL_TRIGGER_READY_PID_MAX_IOUT  5000.0f//7000.0f
+//------------------------------------------------------------------------------
+
+/*直接 - 裁判系统 原始值是#define SHOOT_HEAT_REMAIN_VALUE     30*/
 #define SHOOT_HEAT_REMAIN_VALUE     40//60//5-24之前:40//30
+
+/* 其它热量相关宏定义 - 本地计算热量 - 不分左右枪管; 左右枪管共用这些值*/
+#define ONE17mm_BULLET_HEAT_AMOUNT 10
+#define MIN_LOCAL_HEAT 0
+#define MAX_LOCAL_HEAT 500
+#define LOCAL_SHOOT_HEAT_REMAIN_VALUE 20 //5
+/*2023 dual barrel infantry; 拨盘有9个洞, 2pi/9 = 0.698131701f; 为了保证不过冲发弹set 0.67f*/
+#define RAD_ANGLE_FOR_EACH_HOLE_HEAT_CALC 0.698131701f
+//Local heat安全值, 裁判系统离线时的安全值 - 2022步兵 冷却模式一级
+#define LOCAL_HEAT_LIMIT_SAFE_VAL 50
+#define LOCAL_CD_RATE_SAFE_VAL 40
 
 /*
 12-28-2021 SZL添加 PID M3508 屁股 shooter 电机 2个
@@ -193,6 +227,50 @@ M3508_RIGHT_FRICTION_PID_MAX_OUT = M3508_LEFT_FRICTION_PID_MAX_OUT = TRIGGER_REA
 
 //ICRA 子弹速度上线 为 18m/s
 #define ICRA_PROJECTILE_SPEED_LIMIT 18
+
+/*
+发射机构 拨弹电机 自己的PID, 需要使用积分分离 阈值取决于设备本身
+*/
+enum SHOOT_PID_MODE
+{
+    SHOOT_PID_SEPARATED_INTEGRAL_IN_SPEED = 0, // inner speed loop
+		SHOOT_PID_SEPARATED_INTEGRAL_OUT_POS, //outer position loop
+};
+
+typedef struct
+{
+    uint8_t mode;
+    //PID 三参数
+    fp32 Kp;
+    fp32 Ki;
+    fp32 Kd;
+
+    fp32 max_out;  //最大输出
+    fp32 max_iout; //最大积分输出
+
+    fp32 set;
+    fp32 fdb;
+
+    fp32 out;
+    fp32 Pout;
+    fp32 Iout;
+    fp32 Dout;
+    fp32 Dbuf[3];  //微分项 0最新 1上一次 2上上次
+    fp32 error[3]; //误差项 0最新 1上一次 2上上次
+	
+}shoot_pid_t;
+
+#define PID_TRIG_SPEED_INTEGRAL_THRESHOLD 3.0f //2.0f //速度 弧度制
+
+#define PID_TRIG_POSITION_INTEGRAL_THRESHOLD 3.0f //1.0f //角度 弧度制
+
+//PID_DIFFERENTIAL_THRESHOLD 在此积分分离PID中未使用
+
+void shoot_PID_init(shoot_pid_t *pid, uint8_t mode, const fp32 PID[3], fp32 max_out, fp32 max_iout);
+fp32 shoot_PID_calc(shoot_pid_t *pid, fp32 ref, fp32 set);
+void shoot_PID_clear(shoot_pid_t *pid);
+
+// --------------------- PID related END ---------------------
 
 typedef enum
 {
@@ -267,8 +345,10 @@ typedef struct
     uint16_t R_barrel_fric_pwm2;
 		
 		// 17mm left barrel TRIG 各种控制 逻辑相关 --------------
-    pid_type_def L_barrel_trigger_motor_pid;//内环PID
-		pid_type_def L_barrel_trigger_motor_angle_pid;//外环PID--只是写在这里 没用
+//    pid_type_def L_barrel_trigger_motor_pid;//内环PID
+//		pid_type_def L_barrel_trigger_motor_angle_pid;//外环PID--只是写在这里 没用
+		shoot_pid_t L_barrel_trigger_motor_pid;//17mm拨盘电机 内环PID
+		shoot_pid_t L_barrel_trigger_motor_angle_pid;//17mm拨盘电机 外环PID
     fp32 L_barrel_trigger_speed_set; // 需要用trigger_speed_set 来 update speed_set(PID 用)
     fp32 L_barrel_speed;
     fp32 L_barrel_speed_set;
@@ -278,8 +358,10 @@ typedef struct
     int8_t L_barrel_ecd_count; //未使用
 		
 		// 17mm right barrel TRIG 各种控制 逻辑相关 --------------
-		pid_type_def R_barrel_trigger_motor_pid;//内环PID
-		pid_type_def R_barrel_trigger_motor_angle_pid;//外环PID--只是写在这里 没用
+//		pid_type_def R_barrel_trigger_motor_pid;//内环PID
+//		pid_type_def R_barrel_trigger_motor_angle_pid;//外环PID--只是写在这里 没用
+		shoot_pid_t R_barrel_trigger_motor_pid;//17mm拨盘电机 内环PID
+		shoot_pid_t R_barrel_trigger_motor_angle_pid;//17mm拨盘电机 外环PID
     fp32 R_barrel_trigger_speed_set;
     fp32 R_barrel_speed;
     fp32 R_barrel_speed_set;
@@ -353,6 +435,36 @@ typedef struct
 		uint16_t referee_current_shooter_17mm_speed_limit;
 		
 		uint8_t ammoBox_sts;
+		
+		//左枪管 相关热量计算
+		uint16_t L_barrel_local_heat_limit; //用于当前 本地计算的热量上线
+		uint16_t L_barrel_local_cd_rate; //用于当前 本地计算的冷却数值 率
+		
+		uint32_t L_barrel_local_last_cd_timestamp; //上一次冷却的time stamp
+		
+		//实时里程计 - 6-1-2023再次尝试
+		fp32 L_barrel_rt_odom_angle; //当前时刻 里程计 角度
+		fp32 L_barrel_last_rt_odom_angle; //上一时刻里程计角度
+		
+		uint32_t L_barrel_rt_odom_total_bullets_fired; // 总的发弹量
+		uint32_t L_barrel_rt_odom_calculated_bullets_fired; // 已经计算过热量的子弹量
+
+		fp32 L_barrel_rt_odom_local_heat[4]; //本地热量 [0] 当前 [1]上一次 [2]上上次 受到射频影响		
+		
+		//右枪管 相关热量计算
+		uint16_t R_barrel_local_heat_limit; //用于当前 本地计算的热量上线
+		uint16_t R_barrel_local_cd_rate; //用于当前 本地计算的冷却数值 率
+		
+		uint32_t R_barrel_local_last_cd_timestamp; //上一次冷却的time stamp
+		
+		//实时里程计 - 6-1-2023再次尝试
+		fp32 R_barrel_rt_odom_angle; //当前时刻 里程计 角度
+		fp32 R_barrel_last_rt_odom_angle; //上一时刻里程计角度
+		
+		uint32_t R_barrel_rt_odom_total_bullets_fired; // 总的发弹量
+		uint32_t R_barrel_rt_odom_calculated_bullets_fired; // 已经计算过热量的子弹量
+
+		fp32 R_barrel_rt_odom_local_heat[4]; //本地热量 [0] 当前 [1]上一次 [2]上上次 受到射频影响		
 		
 } shoot_control_t;
 

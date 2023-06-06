@@ -61,7 +61,7 @@ volatile uint32_t util_1s_time_cnt = 0UL;
 
 //extern TIM_HandleTypeDef htim14; this is the timer for CPU runtime stat
 
-uint8_t CPU_RunInfo[400];           //保存任务运行时间信息
+uint8_t CPU_RunInfo[512];           //保存任务运行时间信息
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
@@ -108,7 +108,7 @@ void init_prog_msg_utility()
 	//启动定时器
   HAL_TIM_Base_Start_IT(&htim14);
 	
-	memset(CPU_RunInfo,0,400); //信息缓冲区清零
+	memset(CPU_RunInfo,0,sizeof(CPU_RunInfo)); //信息缓冲区清零
 }
 
 /*
@@ -125,7 +125,7 @@ void CPU_info_to_usb(void)
 // ---------------------------------------------\r\n",
 //  CPU_RunInfo);
 	
-	memset(CPU_RunInfo,0,400);//信息缓冲区清零 //
+	memset(CPU_RunInfo,0,sizeof(CPU_RunInfo)); //信息缓冲区清零
   vTaskGetRunTimeStats((char *)&CPU_RunInfo);
 	usb_printf(
 "---------------------------------------------\r\n\
@@ -133,4 +133,39 @@ void CPU_info_to_usb(void)
 %s\
 ---------------------------------------------\r\n",
   CPU_RunInfo);
+}
+
+/*
+对相关时间的封装 - 获取程序Tick运行时间
+*/
+uint32_t get_prog_system_time_HAL()
+{
+	return HAL_GetTick();
+}
+
+fp32 get_prog_system_time_HAL_1s()
+{
+	return (fp32)(HAL_GetTick() / Tick_INCREASE_FREQ_HAL_BASED);
+}
+
+bool_t get_para_hz_time_freq_signal_HAL(uint8_t freq)
+{
+	return ( HAL_GetTick() % (Tick_INCREASE_FREQ_HAL_BASED / freq) == 0 );
+}
+
+//-------
+
+uint32_t get_prog_system_time_FreeRTOS()
+{
+	return xTaskGetTickCount();
+}
+
+fp32 get_prog_system_time_FreeRTOS_1s()
+{
+	return (fp32)(xTaskGetTickCount() / Tick_INCREASE_FREQ_FREE_RTOS_BASED);
+}
+
+bool_t get_para_hz_time_freq_signal_FreeRTOS(uint8_t freq)
+{
+		return ( xTaskGetTickCount() % (Tick_INCREASE_FREQ_HAL_BASED / freq) == 0 );
 }
