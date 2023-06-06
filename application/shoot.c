@@ -864,7 +864,7 @@ static void shoot_set_mode(void)
     }
 		
 		//以下开始热量环 --------------------------------------------------------------
-		shoot_heat_update_calculate(&shoot_control); //就这里执行一次
+		shoot_heat_update_calculate(&shoot_control); //就这里执行一次 -------------------------------------------------
 		
     //左枪管 ID1 ref热量限制
     get_shooter_id1_17mm_heat_limit_and_heat(&shoot_control.L_barrel_heat_limit, &shoot_control.L_barrel_heat); //.heat_limit .heat
@@ -1121,64 +1121,149 @@ static void shoot_feedback_update(void)
 		
 }
 
+/* 6-6-2023 更改为新的绝对角度控制发弹 - 的退弹函数 */
 static void L_barrel_trigger_motor_turn_back_17mm(void)
 {
-    if( shoot_control.L_barrel_block_time < BLOCK_TIME_L) //block_time
-    {
-        shoot_control.L_barrel_speed_set = shoot_control.L_barrel_trigger_speed_set; //speed_set trigger_speed_set
+//		//老的 - 模糊控制发弹的退弹 - 不用了
+//    if( shoot_control.L_barrel_block_time < BLOCK_TIME_L) //block_time
+//    {
+//        shoot_control.L_barrel_speed_set = shoot_control.L_barrel_trigger_speed_set; //speed_set trigger_speed_set
+//    }
+//    else
+//    {
+//        shoot_control.L_barrel_speed_set = -shoot_control.L_barrel_trigger_speed_set; //speed_set trigger_speed_set
+//    }
+
+//    if(fabs(shoot_control.L_barrel_speed) < BLOCK_TRIGGER_SPEED_L && shoot_control.L_barrel_block_time < BLOCK_TIME_L) //speed block_time
+//    {
+//        shoot_control.L_barrel_block_time++; //block_time
+//        shoot_control.L_barrel_reverse_time = 0; //reverse_time
+//    }
+//    else if (shoot_control.L_barrel_block_time == BLOCK_TIME_L && shoot_control.L_barrel_reverse_time < REVERSE_TIME_L) //block_time reverse_time
+//    {
+//        shoot_control.L_barrel_reverse_time++; //reverse_time
+//    }
+//    else
+//    {
+//        shoot_control.L_barrel_block_time = 0; //block_time
+//    }
+
+		if( shoot_control.L_barrel_block_time < BLOCK_TIME_L)
+    {//未发生堵转
+        //shoot_control.speed_set = shoot_control.trigger_speed_set;
+				shoot_control.L_barrel_block_flag = 0;
     }
     else
-    {
-        shoot_control.L_barrel_speed_set = -shoot_control.L_barrel_trigger_speed_set; //speed_set trigger_speed_set
+    {		//发生堵转
+//				PID_clear(&shoot_control.trigger_motor_pid);
+				shoot_PID_clear(&shoot_control.L_barrel_trigger_motor_pid);
+				shoot_control.L_barrel_block_flag = 1;//block_flag=1表示发生堵转; block_flag=0表示未发生堵转或已完成堵转清除
+        shoot_control.L_barrel_speed_set = -shoot_control.L_barrel_trigger_speed_set;
     }
 
-    if(fabs(shoot_control.L_barrel_speed) < BLOCK_TRIGGER_SPEED_L && shoot_control.L_barrel_block_time < BLOCK_TIME_L) //speed block_time
+		//检测堵转时间
+    if(fabs(shoot_control.L_barrel_speed ) < BLOCK_TRIGGER_SPEED_L && shoot_control.L_barrel_block_time < BLOCK_TIME_L)
     {
-        shoot_control.L_barrel_block_time++; //block_time
-        shoot_control.L_barrel_reverse_time = 0; //reverse_time
+        shoot_control.L_barrel_block_time++;//发生堵转开始计时
+        shoot_control.L_barrel_reverse_time = 0;
     }
-    else if (shoot_control.L_barrel_block_time == BLOCK_TIME_L && shoot_control.L_barrel_reverse_time < REVERSE_TIME_L) //block_time reverse_time
+    else if (shoot_control.L_barrel_block_time == BLOCK_TIME_L && shoot_control.L_barrel_reverse_time < REVERSE_TIME_L)
     {
-        shoot_control.L_barrel_reverse_time++; //reverse_time
+        shoot_control.L_barrel_reverse_time++;//开始反转 开始计时反转时间
     }
     else
-    {
-        shoot_control.L_barrel_block_time = 0; //block_time
+    {//完成反转
+//				PID_clear(&shoot_control.trigger_motor_pid);
+				shoot_PID_clear(&shoot_control.L_barrel_trigger_motor_pid);
+				shoot_control.L_barrel_block_flag = 0;
+        shoot_control.L_barrel_block_time = 0;	
     }
+		
+		if(shoot_control.L_barrel_last_block_flag == 1 && shoot_control.L_barrel_block_flag == 0)
+		{//完成一次堵转清除
+			//放弃当前的打弹请求
+			shoot_control.L_barrel_set_angle = shoot_control.L_barrel_angle;
+		}
+		
+		shoot_control.L_barrel_last_block_flag = shoot_control.L_barrel_block_flag;
+		/*block_flag = 1发生堵转
+			block_flag = 0未发生堵转*/
 }
 
 static void R_barrel_trigger_motor_turn_back_17mm(void)
 {
-    if( shoot_control.R_barrel_block_time < BLOCK_TIME_R)
-    {
-        shoot_control.R_barrel_speed_set = shoot_control.R_barrel_trigger_speed_set;
+//		//老的 - 模糊控制发弹的退弹 - 不用了
+//    if( shoot_control.R_barrel_block_time < BLOCK_TIME_R)
+//    {
+//        shoot_control.R_barrel_speed_set = shoot_control.R_barrel_trigger_speed_set;
+//    }
+//    else
+//    {
+//        shoot_control.R_barrel_speed_set = -shoot_control.R_barrel_trigger_speed_set;
+//    }
+
+//    if(fabs(shoot_control.R_barrel_speed) < BLOCK_TRIGGER_SPEED_R && shoot_control.R_barrel_block_time < BLOCK_TIME_R)
+//    {
+//        shoot_control.R_barrel_block_time++;
+//        shoot_control.R_barrel_reverse_time = 0;
+//    }
+//    else if (shoot_control.R_barrel_block_time == BLOCK_TIME_R && shoot_control.R_barrel_reverse_time < REVERSE_TIME_R)
+//    {
+//        shoot_control.R_barrel_reverse_time++;
+//    }
+//    else
+//    {
+//        shoot_control.R_barrel_block_time = 0;
+//    }
+		
+		if( shoot_control.R_barrel_block_time < BLOCK_TIME_R)
+    {//未发生堵转
+        //shoot_control.speed_set = shoot_control.trigger_speed_set;
+				shoot_control.R_barrel_block_flag = 0;
     }
     else
-    {
+    {		//发生堵转
+//				PID_clear(&shoot_control.trigger_motor_pid);
+				shoot_PID_clear(&shoot_control.R_barrel_trigger_motor_pid);
+				shoot_control.R_barrel_block_flag = 1;//block_flag=1表示发生堵转; block_flag=0表示未发生堵转或已完成堵转清除
         shoot_control.R_barrel_speed_set = -shoot_control.R_barrel_trigger_speed_set;
     }
 
+		//检测堵转时间
     if(fabs(shoot_control.R_barrel_speed) < BLOCK_TRIGGER_SPEED_R && shoot_control.R_barrel_block_time < BLOCK_TIME_R)
     {
-        shoot_control.R_barrel_block_time++;
+        shoot_control.R_barrel_block_time++;//发生堵转开始计时
         shoot_control.R_barrel_reverse_time = 0;
     }
     else if (shoot_control.R_barrel_block_time == BLOCK_TIME_R && shoot_control.R_barrel_reverse_time < REVERSE_TIME_R)
     {
-        shoot_control.R_barrel_reverse_time++;
+        shoot_control.R_barrel_reverse_time++;//开始反转 开始计时反转时间
     }
     else
-    {
-        shoot_control.R_barrel_block_time = 0;
+    {//完成反转
+//				PID_clear(&shoot_control.trigger_motor_pid);
+				shoot_PID_clear(&shoot_control.R_barrel_trigger_motor_pid);
+				shoot_control.R_barrel_block_flag = 0;
+        shoot_control.R_barrel_block_time = 0;	
     }
+		
+		if(shoot_control.R_barrel_last_block_flag == 1 && shoot_control.R_barrel_block_flag == 0)
+		{//完成一次堵转清除
+			//放弃当前的打弹请求
+			shoot_control.R_barrel_set_angle = shoot_control.R_barrel_angle;
+		}
+		
+		shoot_control.R_barrel_last_block_flag = shoot_control.R_barrel_block_flag;
+		/*block_flag = 1发生堵转
+			block_flag = 0未发生堵转*/
 }
 
 /**
-  * @brief          左侧枪管 射击控制，控制拨弹电机角度，完成一次发射
+  * @brief          老的 - 模糊控制发弹的退弹 - 不用了 左侧枪管 射击控制，控制拨弹电机角度，完成一次发射
   * @param[in]      void
   * @retval         void
   */
-static void L_barrel_shoot_bullet_control_17mm(void)
+static void L_barrel_shoot_bullet_control_17mm(void)//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 {
     //每次拨动 1/4PI的角度
     if (shoot_control.L_barrel_move_flag == 0) //move_flag
@@ -1216,11 +1301,98 @@ static void L_barrel_shoot_bullet_control_17mm(void)
 }
 
 /**
-  * @brief          左侧枪管 射击控制，控制拨弹电机角度，完成一次发射
+  * @brief          左枪管 射击控制，控制拨弹电机角度，完成一次发射, 精确的角度环PID
   * @param[in]      void
   * @retval         void
   */
-static void R_barrel_shoot_bullet_control_17mm(void)
+static void L_barrel_shoot_bullet_control_absolute_17mm(void)
+{
+	  //每次拨动 120度 的角度
+    if (shoot_control.L_barrel_move_flag == 0)
+    {
+				/*一次只能执行一次发射任务, 第一次发射任务请求完成后, 还未完成时, 请求第二次->不会执行第二次发射
+				一次拨一个单位
+        */
+				shoot_control.L_barrel_set_angle = (shoot_control.L_barrel_angle + PI_TEN_L);//rad_format(shoot_control.angle + PI_TEN); shooter_rad_format
+        shoot_control.L_barrel_move_flag = 1;
+    }
+		
+		/*这段代码的测试是在NewINF v6.4.1 中测试的, 也就是不会出现:(发射机构断电时, shoot_mode状态机不会被置为发射相关状态)
+		整体的逻辑是: 如果发射机构断电, shoot_mode状态机不会被置为发射相关状态, 不会进入此函数; 这段代码只是在这里保险
+	  电机掉线, 即发射机构断电特征出现时, 放弃当前发射请求*/
+		if(shoot_control.trigger_motor17mm_L_is_online == 0x00)
+		{
+				shoot_control.L_barrel_set_angle = shoot_control.L_barrel_angle; //set_angle  angle
+				return;
+		}
+		
+		if(0)//shoot_control.key == SWITCH_TRIGGER_OFF)
+    {
+        shoot_control.shoot_mode_L = SHOOT_DONE;
+    }
+		//还剩余较小角度时, 算到达了
+		if(shoot_control.L_barrel_set_angle - shoot_control.L_barrel_angle > 0.05f) //(fabs(shoot_control.set_angle - shoot_control.angle) > 0.05f)
+		{
+				shoot_control.L_barrel_trigger_speed_set = TRIGGER_SPEED_L;
+				//用于需要直接速度控制时的控制速度这里是堵转后反转速度 TRIGGER_SPEED符号指明正常旋转方向
+				L_barrel_trigger_motor_turn_back_17mm();
+		}
+		else
+		{
+			
+				shoot_control.L_barrel_move_flag = 0;
+				shoot_control.shoot_mode_L = SHOOT_DONE; 
+		}
+		/*shoot_control.move_flag = 0当前帧发射机构 没有正在执行的发射请求
+			shoot_control.move_flag = 1当前帧发射机构 有正在执行的发射请求*/
+}
+
+//左枪 连续发弹控制 每秒多少颗; shoot_freq射频
+static void L_barrel_shoot_bullet_control_continuous_17mm(uint8_t shoot_freq)
+{
+		 //if(xTaskGetTickCount() % (1000 / shoot_freq) == 0) //1000为tick++的频率
+		 if( get_para_hz_time_freq_signal_FreeRTOS(shoot_freq) )
+		 {
+			 	shoot_control.L_barrel_set_angle = (shoot_control.L_barrel_angle + PI_TEN_L);//rad_format(shoot_control.angle + PI_TEN); shooter_rad_format
+        shoot_control.L_barrel_move_flag = 1;
+		 }
+		
+		/*这段代码的测试是在NewINF v6.4.1 中测试的, 也就是不会出现:(发射机构断电时, shoot_mode状态机不会被置为发射相关状态)
+		整体的逻辑是: 如果发射机构断电, shoot_mode状态机不会被置为发射相关状态, 不会进入此函数; 这段代码只是在这里保险
+	  电机掉线, 即发射机构断电特征出现时, 放弃当前发射请求*/
+		if(shoot_control.trigger_motor17mm_L_is_online == 0x00)
+		{
+				shoot_control.L_barrel_set_angle = shoot_control.L_barrel_angle;
+				return;
+		}
+		
+		if(0)//shoot_control.key == SWITCH_TRIGGER_OFF)
+    {
+        shoot_control.shoot_mode_L = SHOOT_DONE;
+    }
+		//还剩余较小角度时, 算到达了
+		if(shoot_control.L_barrel_set_angle - shoot_control.L_barrel_angle > 0.05f) //(fabs(shoot_control.set_angle - shoot_control.angle) > 0.05f)
+		{
+				shoot_control.L_barrel_trigger_speed_set = TRIGGER_SPEED_L;
+				//用于需要直接速度控制时的控制速度这里是堵转后反转速度 TRIGGER_SPEED符号指明正常旋转方向
+				L_barrel_trigger_motor_turn_back_17mm();
+		}
+		else
+		{
+			
+				shoot_control.L_barrel_move_flag = 0;
+				shoot_control.shoot_mode_L = SHOOT_DONE; 
+		}
+		/*shoot_control.move_flag = 0当前帧发射机构 没有正在执行的发射请求
+			shoot_control.move_flag = 1当前帧发射机构 有正在执行的发射请求*/
+}
+
+/**
+  * @brief          老的 - 模糊控制发弹的退弹 - 不用了 -右侧枪管 射击控制，控制拨弹电机角度，完成一次发射
+  * @param[in]      void
+  * @retval         void
+  */
+static void R_barrel_shoot_bullet_control_17mm(void)//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 {
     //每次拨动 1/4PI的角度
     if (shoot_control.R_barrel_move_flag == 0)
@@ -1255,6 +1427,95 @@ static void R_barrel_shoot_bullet_control_17mm(void)
 			  shoot_control.shoot_mode_R = SHOOT_DONE; //pr test
     }
    
+}
+
+/**
+  * @brief          射击控制，控制拨弹电机角度，完成一次发射, 精确的角度环PID
+  * @param[in]      void
+  * @retval         void
+  */
+static void R_barrel_shoot_bullet_control_absolute_17mm(void)
+{
+	  //每次拨动 120度 的角度
+    if (shoot_control.R_barrel_move_flag == 0)
+    {
+				/*一次只能执行一次发射任务, 第一次发射任务请求完成后, 还未完成时, 请求第二次->不会执行第二次发射
+				一次拨一个单位
+        */
+				shoot_control.R_barrel_set_angle = (shoot_control.R_barrel_angle + PI_TEN_L);//rad_format(shoot_control.angle + PI_TEN); shooter_rad_format
+        shoot_control.R_barrel_move_flag = 1;
+    }
+		
+		/*这段代码的测试是在NewINF v6.4.1 中测试的, 也就是不会出现:(发射机构断电时, shoot_mode状态机不会被置为发射相关状态)
+		整体的逻辑是: 如果发射机构断电, shoot_mode状态机不会被置为发射相关状态, 不会进入此函数; 这段代码只是在这里保险
+	  电机掉线, 即发射机构断电特征出现时, 放弃当前发射请求*/
+		if(shoot_control.trigger_motor17mm_R_is_online == 0x00)
+		{
+				shoot_control.R_barrel_set_angle = shoot_control.R_barrel_angle;
+				return;
+		}
+		
+		if(0)//shoot_control.key == SWITCH_TRIGGER_OFF)
+    {
+        shoot_control.shoot_mode_R = SHOOT_DONE;
+    }
+		//还剩余较小角度时, 算到达了
+		if(shoot_control.R_barrel_set_angle - shoot_control.R_barrel_angle > 0.05f) //(fabs(shoot_control.set_angle - shoot_control.angle) > 0.05f)
+		{
+				shoot_control.R_barrel_trigger_speed_set = TRIGGER_SPEED_R;
+				//用于需要直接速度控制时的控制速度这里是堵转后反转速度 TRIGGER_SPEED符号指明正常旋转方向
+				R_barrel_trigger_motor_turn_back_17mm();
+		}
+		else
+		{
+			
+				shoot_control.R_barrel_move_flag = 0;
+				shoot_control.shoot_mode_R = SHOOT_DONE; 
+		}
+		/*shoot_control.move_flag = 0当前帧发射机构 没有正在执行的发射请求
+			shoot_control.move_flag = 1当前帧发射机构 有正在执行的发射请求*/
+}
+
+//连续发弹控制 每秒多少颗; shoot_freq射频 6-6-2023
+static void shoot_bullet_control_continuous_17mm(uint8_t shoot_freq)
+{
+		 //if(xTaskGetTickCount() % (1000 / shoot_freq) == 0) //1000为tick++的频率
+		 if( get_para_hz_time_freq_signal_FreeRTOS(shoot_freq) )
+		 {
+			 	shoot_control.set_angle = (shoot_control.angle + PI_TEN);//rad_format(shoot_control.angle + PI_TEN); shooter_rad_format
+        shoot_control.move_flag = 1;
+			  shoot_control.total_bullets_fired++; //
+			  shoot_control.local_heat += ONE17mm_BULLET_HEAT_AMOUNT;
+		 }
+		
+		/*这段代码的测试是在NewINF v6.4.1 中测试的, 也就是不会出现:(发射机构断电时, shoot_mode状态机不会被置为发射相关状态)
+		整体的逻辑是: 如果发射机构断电, shoot_mode状态机不会被置为发射相关状态, 不会进入此函数; 这段代码只是在这里保险
+	  电机掉线, 即发射机构断电特征出现时, 放弃当前发射请求*/
+		if(shoot_control.trigger_motor_17mm_is_online == 0x00)
+		{
+				shoot_control.set_angle = shoot_control.angle;
+				return;
+		}
+		
+		if(0)//shoot_control.key == SWITCH_TRIGGER_OFF)
+    {
+        shoot_control.shoot_mode = SHOOT_DONE;
+    }
+		//还剩余较小角度时, 算到达了
+		if(shoot_control.set_angle - shoot_control.angle > 0.05f) //(fabs(shoot_control.set_angle - shoot_control.angle) > 0.05f)
+		{
+				shoot_control.trigger_speed_set = TRIGGER_SPEED;
+				//用于需要直接速度控制时的控制速度这里是堵转后反转速度 TRIGGER_SPEED符号指明正常旋转方向
+				trigger_motor_turn_back_17mm();
+		}
+		else
+		{
+			
+				shoot_control.move_flag = 0;
+				shoot_control.shoot_mode = SHOOT_DONE; 
+		}
+		/*shoot_control.move_flag = 0当前帧发射机构 没有正在执行的发射请求
+			shoot_control.move_flag = 1当前帧发射机构 有正在执行的发射请求*/
 }
 
 /*

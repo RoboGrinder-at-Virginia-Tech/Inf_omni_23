@@ -382,6 +382,8 @@ typedef struct
     uint16_t L_barrel_block_time;
     uint16_t L_barrel_reverse_time;
     bool_t L_barrel_move_flag;
+		uint8_t L_barrel_block_flag;//左枪管 17mm堵转标志位
+		uint8_t L_barrel_last_block_flag;
 
     bool_t L_barrel_key; //微动开关 PR 屏蔽掉了
     uint8_t L_barrel_key_time;
@@ -393,6 +395,8 @@ typedef struct
 		uint16_t R_barrel_block_time;
     uint16_t R_barrel_reverse_time;
     bool_t R_barrel_move_flag;
+		uint8_t R_barrel_block_flag;//右枪管 17mm堵转标志位
+		uint8_t R_barrel_last_block_flag;
 
     bool_t R_barrel_key; //微动开关 PR 屏蔽掉了
     uint8_t R_barrel_key_time;
