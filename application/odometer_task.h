@@ -19,6 +19,7 @@ typedef struct
 extern void odometer_init(void);
 //extern void odometer_task(void);
 extern void odometer_loop(void);
-extern fp32 get_trig_modor_odom_count(void);
+extern fp32 get_L_barrel_trig_modor_odom_count(void);
+extern fp32 get_R_barrel_trig_modor_odom_count(void);
 
 #endif

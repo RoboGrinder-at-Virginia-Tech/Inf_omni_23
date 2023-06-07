@@ -88,14 +88,21 @@ static void R_barrel_trigger_motor_turn_back_17mm(void);
   * @param[in]      void
   * @retval         void
   */
-static void L_barrel_shoot_bullet_control_17mm(void);
+//static void L_barrel_shoot_bullet_control_17mm(void);
 
+//新的绝对角度控制 -左枪管
+static void L_barrel_shoot_bullet_control_absolute_17mm(void); //单发
+static void L_barrel_shoot_bullet_control_continuous_17mm(uint8_t shoot_freq); //连发
 /**
   * @brief          Right barrel 射击控制，控制拨弹电机角度，完成一次发射
   * @param[in]      void
   * @retval         void
   */
-static void R_barrel_shoot_bullet_control_17mm(void);
+//static void R_barrel_shoot_bullet_control_17mm(void);
+
+//新的绝对角度控制 -右枪管
+static void R_barrel_shoot_bullet_control_absolute_17mm(void); //单发
+static void R_barrel_shoot_bullet_control_continuous_17mm(uint8_t shoot_freq); //连发
 
 /*
 尝试卡尔曼滤波
@@ -225,24 +232,24 @@ void shoot_init(void)
 //		vTaskDelay(1000);
 		L_barrel_fric_off();
 		R_barrel_fric_off();
-		vTaskDelay(3000);
+		vTaskDelay(3000); //注意这个地方会影响 云台启动时间
 		
 		//设置油门 斜坡开启行程
 		shoot_control.L_barrel_fric1_ramp.max_value = FRIC_OFF; //重复-初始化max与min
 		shoot_control.L_barrel_fric1_ramp.min_value = FRIC_OFF; //重复-初始化max与min
-		shoot_control.L_barrel_fric1_ramp.out = FRIC_OFF;//主要-覆盖掉out
+		shoot_control.L_barrel_fric1_ramp.out = 0; //FRIC_OFF;//主要-覆盖掉out
 		
 		shoot_control.L_barrel_fric2_ramp.max_value = FRIC_OFF;
 		shoot_control.L_barrel_fric2_ramp.min_value = FRIC_OFF;
-		shoot_control.L_barrel_fric2_ramp.out = FRIC_OFF;
+		shoot_control.L_barrel_fric2_ramp.out = 0; //FRIC_OFF;
 		
 		shoot_control.R_barrel_fric1_ramp.max_value = FRIC_OFF;
 		shoot_control.R_barrel_fric1_ramp.min_value = FRIC_OFF;
-		shoot_control.R_barrel_fric1_ramp.out = FRIC_OFF;
+		shoot_control.R_barrel_fric1_ramp.out = 0; //FRIC_OFF;
 		
 		shoot_control.R_barrel_fric2_ramp.max_value = FRIC_OFF;
 		shoot_control.R_barrel_fric2_ramp.min_value = FRIC_OFF;
-		shoot_control.R_barrel_fric2_ramp.out = FRIC_OFF;
+		shoot_control.R_barrel_fric2_ramp.out = 0; //FRIC_OFF;
 		
 		//本地热量 - 左枪管 ID1
 		get_shooter_id1_17mm_heat_limit_and_heat(&shoot_control.L_barrel_heat_limit, &shoot_control.L_barrel_heat);
@@ -308,7 +315,7 @@ int16_t shoot_control_loop(void)
 	  }
 		
 	  //17mm 的两档
-	  shoot_control.referee_current_shooter_17mm_speed_limit = 15;//强制使其=18 用于调试-----------------------------------------------------------------------------------------------
+	  shoot_control.referee_current_shooter_17mm_speed_limit = 15;//强制使其=.. 用于调试-----------------------------------------------------------------------------------------------
 	  if(shoot_control.referee_current_shooter_17mm_speed_limit == 15)
 	  {
 		  shoot_control.currentLIM_shoot_speed_17mm = (fp32)(15 - 3.0);//待定----------------------------
@@ -371,19 +378,34 @@ int16_t shoot_control_loop(void)
     {
         //设置拨弹轮的速度
         shoot_control.L_barrel_speed_set = 0; // .speed_set = 0;
+				
+			  //一直重置PID - 防止累计误差
+				shoot_PID_clear(&shoot_control.L_barrel_trigger_motor_pid);
+				shoot_PID_clear(&shoot_control.L_barrel_trigger_motor_angle_pid);
+			
+				//初始化第一次PID帧的计算
+				shoot_control.L_barrel_set_angle = shoot_control.L_barrel_angle;
+				shoot_control.L_barrel_speed_set = shoot_control.L_barrel_speed;
     }
     else if (shoot_control.shoot_mode_L == SHOOT_READY_FRIC)
     {
         //设置拨弹轮的速度
         shoot_control.L_barrel_speed_set = 0; // .speed_set = 0;
+				//第一次重置PID
+				shoot_PID_clear(&shoot_control.L_barrel_trigger_motor_pid);
+				shoot_PID_clear(&shoot_control.L_barrel_trigger_motor_angle_pid);
+			
+				//初始化第一次PID帧的计算
+				shoot_control.L_barrel_set_angle = shoot_control.L_barrel_angle;
+				shoot_control.L_barrel_speed_set = shoot_control.L_barrel_speed;
     }
     else if(shoot_control.shoot_mode_L ==SHOOT_READY_BULLET)
     {
         shoot_control.L_barrel_trigger_speed_set = 0.0f; //.trigger_speed_set
         shoot_control.L_barrel_speed_set = 0.0f; //.speed_set
         //这个if 并不是 基本没啥用
-        shoot_control.L_barrel_trigger_motor_pid.max_out = TRIGGER_READY_PID_MAX_OUT; //.trigger_motor_pid
-        shoot_control.L_barrel_trigger_motor_pid.max_iout = TRIGGER_READY_PID_MAX_IOUT; //.trigger_motor_pid
+        shoot_control.L_barrel_trigger_motor_pid.max_out = L_BARREL_TRIGGER_READY_PID_MAX_OUT;
+        shoot_control.L_barrel_trigger_motor_pid.max_iout = L_BARREL_TRIGGER_READY_PID_MAX_IOUT;
     }
     else if (shoot_control.shoot_mode_L == SHOOT_READY)
     {
@@ -393,15 +415,19 @@ int16_t shoot_control_loop(void)
     }
     else if (shoot_control.shoot_mode_L == SHOOT_BULLET)
     {
-        shoot_control.L_barrel_trigger_motor_pid.max_out = TRIGGER_BULLET_PID_MAX_OUT;
-        shoot_control.L_barrel_trigger_motor_pid.max_iout = TRIGGER_BULLET_PID_MAX_IOUT;
-        L_barrel_shoot_bullet_control_17mm();
+        shoot_control.L_barrel_trigger_motor_pid.max_out = L_BARREL_TRIGGER_BULLET_PID_MAX_OUT;
+        shoot_control.L_barrel_trigger_motor_pid.max_iout = L_BARREL_TRIGGER_BULLET_PID_MAX_IOUT;
+//        L_barrel_shoot_bullet_control_17mm();
+				L_barrel_shoot_bullet_control_absolute_17mm();
     }
     else if (shoot_control.shoot_mode_L == SHOOT_CONTINUE_BULLET)
     {
-        //设置拨弹轮的拨动速度,并开启堵转反转处理
-        shoot_control.L_barrel_trigger_speed_set = CONTINUE_TRIGGER_SPEED_L;
-        L_barrel_trigger_motor_turn_back_17mm();
+//        //设置拨弹轮的拨动速度,并开启堵转反转处理 5-31-2023前老代码
+//        shoot_control.L_barrel_trigger_speed_set = CONTINUE_TRIGGER_SPEED_L;
+//        L_barrel_trigger_motor_turn_back_17mm();
+			  shoot_control.L_barrel_trigger_motor_pid.max_out = L_BARREL_TRIGGER_BULLET_PID_MAX_OUT;
+        shoot_control.L_barrel_trigger_motor_pid.max_iout = L_BARREL_TRIGGER_BULLET_PID_MAX_IOUT;
+				L_barrel_shoot_bullet_control_continuous_17mm(10); //10 4
     }
     else if(shoot_control.shoot_mode_L == SHOOT_DONE)
     {
@@ -439,10 +465,16 @@ int16_t shoot_control_loop(void)
         shoot_laser_on(); //激光开启
 			
 				
-				//6-17未来可能增加串级PID----
+				//6-6-2023增加串级PID----
+			  if(shoot_control.L_barrel_block_flag == 0)
+				{ //退弹不用串级PID
+//					shoot_control.speed_set = PID_calc(&shoot_control.trigger_motor_angle_pid, shoot_control.angle, shoot_control.set_angle);
+					shoot_control.L_barrel_speed_set = shoot_PID_calc(&shoot_control.L_barrel_trigger_motor_angle_pid, shoot_control.L_barrel_angle, shoot_control.L_barrel_set_angle);
+        }
 				
         //计算拨弹轮电机PID
-        PID_calc(&shoot_control.L_barrel_trigger_motor_pid, shoot_control.L_barrel_speed, shoot_control.L_barrel_speed_set);
+//				PID_calc(&shoot_control.L_barrel_trigger_motor_pid, shoot_control.L_barrel_speed, shoot_control.L_barrel_speed_set);
+        shoot_PID_calc(&shoot_control.L_barrel_trigger_motor_pid, shoot_control.L_barrel_speed, shoot_control.L_barrel_speed_set);
         
 #if TRIG_MOTOR_TURN_LEFT_BARREL
 				shoot_control.L_barrel_given_current = -(int16_t)(shoot_control.L_barrel_trigger_motor_pid.out);
@@ -474,19 +506,35 @@ int16_t shoot_control_loop(void)
     {
         //设置拨弹轮的速度
         shoot_control.R_barrel_speed_set = 0; //.speed_set
+			
+			  //一直重置PID - 防止累计误差
+				shoot_PID_clear(&shoot_control.R_barrel_trigger_motor_pid);
+				shoot_PID_clear(&shoot_control.R_barrel_trigger_motor_angle_pid);
+			
+				//初始化第一次PID帧的计算
+				shoot_control.R_barrel_set_angle = shoot_control.R_barrel_angle;
+				shoot_control.R_barrel_speed_set = shoot_control.R_barrel_speed;
     }
     else if (shoot_control.shoot_mode_R == SHOOT_READY_FRIC)
     {
         //设置拨弹轮的速度
         shoot_control.R_barrel_speed_set = 0; //.speed_set
+			
+				//第一次重置PID
+				shoot_PID_clear(&shoot_control.R_barrel_trigger_motor_pid);
+				shoot_PID_clear(&shoot_control.R_barrel_trigger_motor_angle_pid);
+			
+				//初始化第一次PID帧的计算
+				shoot_control.R_barrel_set_angle = shoot_control.R_barrel_angle;
+				shoot_control.R_barrel_speed_set = shoot_control.R_barrel_speed;
     }
     else if(shoot_control.shoot_mode_R ==SHOOT_READY_BULLET)
     {
         shoot_control.R_barrel_trigger_speed_set = 0.0f; //.trigger_speed_set
         shoot_control.R_barrel_speed_set = 0.0f; //.speed_set
         //这个if 并不是 基本没啥用
-        shoot_control.R_barrel_trigger_motor_pid.max_out = TRIGGER_READY_PID_MAX_OUT;
-        shoot_control.R_barrel_trigger_motor_pid.max_iout = TRIGGER_READY_PID_MAX_IOUT;
+        shoot_control.R_barrel_trigger_motor_pid.max_out = R_BARREL_TRIGGER_READY_PID_MAX_OUT;
+        shoot_control.R_barrel_trigger_motor_pid.max_iout = R_BARREL_TRIGGER_READY_PID_MAX_IOUT;
     }
     else if (shoot_control.shoot_mode_R == SHOOT_READY)
     {
@@ -496,15 +544,18 @@ int16_t shoot_control_loop(void)
     }
     else if (shoot_control.shoot_mode_R == SHOOT_BULLET)
     {
-        shoot_control.R_barrel_trigger_motor_pid.max_out = TRIGGER_BULLET_PID_MAX_OUT;//-----------------------------------------
-        shoot_control.R_barrel_trigger_motor_pid.max_iout = TRIGGER_BULLET_PID_MAX_IOUT;
-        R_barrel_shoot_bullet_control_17mm();
+        shoot_control.R_barrel_trigger_motor_pid.max_out = R_BARREL_TRIGGER_BULLET_PID_MAX_OUT;
+        shoot_control.R_barrel_trigger_motor_pid.max_iout = R_BARREL_TRIGGER_BULLET_PID_MAX_IOUT;
+        R_barrel_shoot_bullet_control_absolute_17mm();
     }
     else if (shoot_control.shoot_mode_R == SHOOT_CONTINUE_BULLET)
     {
-        //设置拨弹轮的拨动速度,并开启堵转反转处理
-        shoot_control.R_barrel_trigger_speed_set = CONTINUE_TRIGGER_SPEED_R; //.trigger_speed_set
-        R_barrel_trigger_motor_turn_back_17mm();
+//        //设置拨弹轮的拨动速度,并开启堵转反转处理 5-31-2023前老代码
+//        shoot_control.R_barrel_trigger_speed_set = CONTINUE_TRIGGER_SPEED_R; //.trigger_speed_set
+//        R_barrel_trigger_motor_turn_back_17mm();
+			  shoot_control.R_barrel_trigger_motor_pid.max_out = R_BARREL_TRIGGER_BULLET_PID_MAX_OUT;
+        shoot_control.R_barrel_trigger_motor_pid.max_iout = R_BARREL_TRIGGER_BULLET_PID_MAX_IOUT;
+			  R_barrel_shoot_bullet_control_continuous_17mm(4);
     }
     else if(shoot_control.shoot_mode_R == SHOOT_DONE)
     {
@@ -540,11 +591,16 @@ int16_t shoot_control_loop(void)
     {
         shoot_laser_on(); //激光开启
 			
-				
-				//6-17未来可能增加串级PID----
+				//6-6-2023增加串级PID
+			  if(shoot_control.R_barrel_block_flag == 0)
+				{ //退弹不用串级PID
+//					shoot_control.speed_set = PID_calc(&shoot_control.trigger_motor_angle_pid, shoot_control.angle, shoot_control.set_angle);
+					shoot_control.R_barrel_speed_set = shoot_PID_calc(&shoot_control.R_barrel_trigger_motor_angle_pid, shoot_control.R_barrel_angle, shoot_control.R_barrel_set_angle);
+        }
 				
         //计算拨弹轮电机PID
-        PID_calc(&shoot_control.R_barrel_trigger_motor_pid, shoot_control.R_barrel_speed, shoot_control.R_barrel_speed_set);
+//        PID_calc(&shoot_control.R_barrel_trigger_motor_pid, shoot_control.R_barrel_speed, shoot_control.R_barrel_speed_set);
+				shoot_PID_calc(&shoot_control.R_barrel_trigger_motor_pid, shoot_control.R_barrel_speed, shoot_control.R_barrel_speed_set);
         
 #if TRIG_MOTOR_TURN_RIGHT_BARREL
 				shoot_control.R_barrel_given_current = -(int16_t)(shoot_control.R_barrel_trigger_motor_pid.out);
@@ -1477,42 +1533,40 @@ static void R_barrel_shoot_bullet_control_absolute_17mm(void)
 }
 
 //连续发弹控制 每秒多少颗; shoot_freq射频 6-6-2023
-static void shoot_bullet_control_continuous_17mm(uint8_t shoot_freq)
+static void R_barrel_shoot_bullet_control_continuous_17mm(uint8_t shoot_freq)
 {
 		 //if(xTaskGetTickCount() % (1000 / shoot_freq) == 0) //1000为tick++的频率
 		 if( get_para_hz_time_freq_signal_FreeRTOS(shoot_freq) )
 		 {
-			 	shoot_control.set_angle = (shoot_control.angle + PI_TEN);//rad_format(shoot_control.angle + PI_TEN); shooter_rad_format
-        shoot_control.move_flag = 1;
-			  shoot_control.total_bullets_fired++; //
-			  shoot_control.local_heat += ONE17mm_BULLET_HEAT_AMOUNT;
+			 	shoot_control.R_barrel_set_angle = (shoot_control.R_barrel_angle + PI_TEN_R);//rad_format(shoot_control.angle + PI_TEN); shooter_rad_format
+        shoot_control.R_barrel_move_flag = 1;
 		 }
 		
 		/*这段代码的测试是在NewINF v6.4.1 中测试的, 也就是不会出现:(发射机构断电时, shoot_mode状态机不会被置为发射相关状态)
 		整体的逻辑是: 如果发射机构断电, shoot_mode状态机不会被置为发射相关状态, 不会进入此函数; 这段代码只是在这里保险
 	  电机掉线, 即发射机构断电特征出现时, 放弃当前发射请求*/
-		if(shoot_control.trigger_motor_17mm_is_online == 0x00)
+		if(shoot_control.trigger_motor17mm_R_is_online == 0x00)
 		{
-				shoot_control.set_angle = shoot_control.angle;
+				shoot_control.R_barrel_set_angle = shoot_control.R_barrel_angle;
 				return;
 		}
 		
 		if(0)//shoot_control.key == SWITCH_TRIGGER_OFF)
     {
-        shoot_control.shoot_mode = SHOOT_DONE;
+        shoot_control.shoot_mode_R = SHOOT_DONE;
     }
 		//还剩余较小角度时, 算到达了
-		if(shoot_control.set_angle - shoot_control.angle > 0.05f) //(fabs(shoot_control.set_angle - shoot_control.angle) > 0.05f)
+		if(shoot_control.R_barrel_set_angle - shoot_control.R_barrel_angle > 0.05f) //(fabs(shoot_control.set_angle - shoot_control.angle) > 0.05f)
 		{
-				shoot_control.trigger_speed_set = TRIGGER_SPEED;
+				shoot_control.R_barrel_trigger_speed_set = TRIGGER_SPEED_R;
 				//用于需要直接速度控制时的控制速度这里是堵转后反转速度 TRIGGER_SPEED符号指明正常旋转方向
-				trigger_motor_turn_back_17mm();
+				R_barrel_trigger_motor_turn_back_17mm();
 		}
 		else
 		{
 			
-				shoot_control.move_flag = 0;
-				shoot_control.shoot_mode = SHOOT_DONE; 
+				shoot_control.R_barrel_move_flag = 0;
+				shoot_control.shoot_mode_R = SHOOT_DONE; 
 		}
 		/*shoot_control.move_flag = 0当前帧发射机构 没有正在执行的发射请求
 			shoot_control.move_flag = 1当前帧发射机构 有正在执行的发射请求*/
@@ -1691,10 +1745,10 @@ uint32_t shoot_heat_update_calculate(shoot_control_t* shoot_heat)
 		if(shoot_control.trigger_motor17mm_L_is_online)
 		{ //发射机构未断电
 #if TRIG_MOTOR_TURN_LEFT_BARREL
-			shoot_heat->L_barrel_rt_odom_angle = -(get_trig_modor_odom_count()) * MOTOR_ECD_TO_ANGLE;
+			shoot_heat->L_barrel_rt_odom_angle = -(get_L_barrel_trig_modor_odom_count()) * MOTOR_ECD_TO_ANGLE;
 //		shoot_heat->L_barrel_rt_odom_angle = -(shoot_heat->L_barrel_angle);
 #else
-			shoot_heat->L_barrel_rt_odom_angle = (get_trig_modor_odom_count()) * MOTOR_ECD_TO_ANGLE; //TODO 里程计 初始值是负数 - 排除问题
+			shoot_heat->L_barrel_rt_odom_angle = (get_L_barrel_trig_modor_odom_count()) * MOTOR_ECD_TO_ANGLE; //TODO 里程计 初始值是负数 - 排除问题
 //		shoot_heat->L_barrel_rt_odom_angle = (shoot_heat->L_barrel_angle);
 #endif
 
@@ -1750,10 +1804,10 @@ uint32_t shoot_heat_update_calculate(shoot_control_t* shoot_heat)
 		if(shoot_control.trigger_motor17mm_R_is_online)
 		{ //发射机构未断电
 #if TRIG_MOTOR_TURN_RIGHT_BARREL
-			shoot_heat->R_barrel_rt_odom_angle = -(get_trig_modor_odom_count()) * MOTOR_ECD_TO_ANGLE;
+			shoot_heat->R_barrel_rt_odom_angle = -(get_R_barrel_trig_modor_odom_count()) * MOTOR_ECD_TO_ANGLE;
 //		shoot_heat->R_barrel_rt_odom_angle = -(shoot_heat->R_barrel_angle);
 #else
-			shoot_heat->R_barrel_rt_odom_angle = (get_trig_modor_odom_count()) * MOTOR_ECD_TO_ANGLE; //TODO 里程计 初始值是负数 - 排除问题
+			shoot_heat->R_barrel_rt_odom_angle = (get_R_barrel_trig_modor_odom_count()) * MOTOR_ECD_TO_ANGLE; //TODO 里程计 初始值是负数 - 排除问题
 //		shoot_heat->R_barrel_rt_odom_angle = (shoot_heat->R_barrel_angle);
 #endif
 
