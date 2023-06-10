@@ -30,5 +30,6 @@ void init_prog_msg_utility(void);
 uint32_t get_util_1s_time_cnt(void);
 const char* util_1s_time_cnt_toString(void);
 bool_t get_time_based_freq_signal(uint32_t current_tick, uint32_t* last_tick, uint8_t freq);
+bool_t generate_signal_pwm(uint32_t time, uint32_t period, fp32 dutyCycle);
 
 #endif

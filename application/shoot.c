@@ -104,6 +104,10 @@ static void L_barrel_shoot_bullet_control_continuous_17mm(uint8_t shoot_freq); /
 static void R_barrel_shoot_bullet_control_absolute_17mm(void); //单发
 static void R_barrel_shoot_bullet_control_continuous_17mm(uint8_t shoot_freq); //连发
 
+//连发交替开火
+static void L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(uint8_t shoot_freq, uint32_t phase_diff_ms);
+static void L_R_barrel_alternate_shoot_bullet_control_17mm_timer_reset(uint32_t phase_diff_ms);
+
 /*
 尝试卡尔曼滤波
 */
@@ -264,6 +268,8 @@ void shoot_init(void)
 		//射频时间初始化
 		shoot_control.L_barrel_last_tick = xTaskGetTickCount(); //使用RTOS时间源
 		shoot_control.R_barrel_last_tick = xTaskGetTickCount(); //使用RTOS时间源
+		shoot_control.L_barrel_alternate_shoot_last_tick = xTaskGetTickCount(); //使用RTOS时间源
+		shoot_control.R_barrel_alternate_shoot_last_tick = xTaskGetTickCount(); //使用RTOS时间源
 }
 
 uint16_t new_fric_allms_debug_L1 = 1189;//NEW_FRIC_15ms;
@@ -377,6 +383,12 @@ int16_t shoot_control_loop(void)
 		  shoot_control.R_barrel_fric2_ramp.max_value_constant = NEW_FRIC_15ms;
 	  }
 		
+		// 交替发射时 初始化定时器
+		if( (shoot_control.shoot_mode_L != SHOOT_CONTINUE_BULLET) && (shoot_control.shoot_mode_R != SHOOT_CONTINUE_BULLET) )
+		{
+			L_R_barrel_alternate_shoot_bullet_control_17mm_timer_reset(100);
+		}
+		
 		// 先处理 left barrel的 FSM
     if (shoot_control.shoot_mode_L == SHOOT_STOP)
     {
@@ -431,7 +443,10 @@ int16_t shoot_control_loop(void)
 //        L_barrel_trigger_motor_turn_back_17mm();
 			  shoot_control.L_barrel_trigger_motor_pid.max_out = L_BARREL_TRIGGER_BULLET_PID_MAX_OUT;
         shoot_control.L_barrel_trigger_motor_pid.max_iout = L_BARREL_TRIGGER_BULLET_PID_MAX_IOUT;
-				L_barrel_shoot_bullet_control_continuous_17mm(10); //10 4
+//				L_barrel_shoot_bullet_control_continuous_17mm(10); //10 4
+			
+			  //测试 交替发射
+			  L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(4, 100);
     }
     else if(shoot_control.shoot_mode_L == SHOOT_DONE)
     {
@@ -1540,7 +1555,7 @@ static void R_barrel_shoot_bullet_control_absolute_17mm(void)
 static void R_barrel_shoot_bullet_control_continuous_17mm(uint8_t shoot_freq)
 {
 		 //if(xTaskGetTickCount() % (1000 / shoot_freq) == 0) //1000为tick++的频率
-		 if( get_time_based_freq_signal(xTaskGetTickCount(), &(shoot_control.L_barrel_last_tick), shoot_freq) )//get_para_hz_time_freq_signal_FreeRTOS(shoot_freq) )
+		 if( get_time_based_freq_signal(xTaskGetTickCount(), &(shoot_control.R_barrel_last_tick), shoot_freq) )//get_para_hz_time_freq_signal_FreeRTOS(shoot_freq) )
 		 {
 			 	shoot_control.R_barrel_set_angle = (shoot_control.R_barrel_angle + PI_TEN_R);//rad_format(shoot_control.angle + PI_TEN); shooter_rad_format
         shoot_control.R_barrel_move_flag = 1;
@@ -1575,6 +1590,115 @@ static void R_barrel_shoot_bullet_control_continuous_17mm(uint8_t shoot_freq)
 		/*shoot_control.move_flag = 0当前帧发射机构 没有正在执行的发射请求
 			shoot_control.move_flag = 1当前帧发射机构 有正在执行的发射请求*/
 }
+
+static void L_R_barrel_alternate_shoot_bullet_control_17mm_timer_reset(uint32_t phase_diff_ms)
+{
+	//shoot_control.R_barrel_alternate_shoot_last_tick = shoot_control.L_barrel_alternate_shoot_last_tick + phase_diff_ms;// = xTaskGetTickCount();
+	xTaskGetTickCount();
+}
+
+/*
+左右交替发射, 一边打一颗子弹, 绝对位置控制的角度环
+uint8_t shoot_freq -> 发射频率
+uint16_t phase_diff_ms -> 交替相位差
+
+uint32_t lastTick1 = 0;
+uint32_t lastTick2 = 100;  // 使得huart2与huart1有100ms的相位差
+
+while(1) {
+  if(HAL_GetTick() - lastTick1 >= 1000) {
+    lastTick1 = HAL_GetTick();
+    HAL_UART_Transmit(&huart1, (uint8_t*)"One second passed\n", 17, 100);
+  }
+  if(HAL_GetTick() - lastTick2 >= 1000) {
+    lastTick2 = HAL_GetTick();
+    HAL_UART_Transmit(&huart2, (uint8_t*)"One second passed\n", 17, 100);
+  }
+}
+
+*/
+static void L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(uint8_t shoot_freq, uint32_t phase_diff_ms)
+{
+		if( get_time_based_freq_signal(xTaskGetTickCount(), &(shoot_control.L_barrel_alternate_shoot_last_tick), shoot_freq) )//get_para_hz_time_freq_signal_FreeRTOS(shoot_freq) )
+		{
+//			shoot_control.L_barrel_set_angle = (shoot_control.L_barrel_angle + PI_TEN_L);//rad_format(shoot_control.angle + PI_TEN); shooter_rad_format
+//			shoot_control.L_barrel_move_flag = 1;
+			
+//			shoot_control.R_barrel_alternate_shoot_last_tick = shoot_control.L_barrel_alternate_shoot_last_tick + phase_diff_ms;
+//		}
+			 
+//		if( get_time_based_freq_signal(xTaskGetTickCount(), &(shoot_control.R_barrel_alternate_shoot_last_tick), shoot_freq) ) //( xTaskGetTickCount() - shoot_control.R_barrel_alternate_shoot_last_tick >= phase_diff_ms)
+		if( generate_signal_pwm(shoot_control.L_barrel_alternate_shoot_last_tick, phase_diff_ms, 0.5f) )
+		{
+			shoot_control.L_barrel_set_angle = (shoot_control.L_barrel_angle + PI_TEN_L);//rad_format(shoot_control.angle + PI_TEN); shooter_rad_format
+			shoot_control.L_barrel_move_flag = 1;
+		}
+		else
+		{
+//			shoot_control.R_barrel_alternate_shoot_last_tick = xTaskGetTickCount();
+			shoot_control.R_barrel_set_angle = (shoot_control.R_barrel_angle + PI_TEN_R);//rad_format(shoot_control.angle + PI_TEN); shooter_rad_format
+			shoot_control.R_barrel_move_flag = 1;
+		}
+		
+		/*不会进入此函数; 这段代码只是在这里保险; 电机掉线, 即发射机构断电特征出现时, 放弃当前发射请求*/
+		if(shoot_control.trigger_motor17mm_R_is_online == 0x00)
+		{
+				shoot_control.R_barrel_set_angle = shoot_control.R_barrel_angle;
+				return;
+		}
+		if(shoot_control.trigger_motor17mm_L_is_online == 0x00)
+		{
+				shoot_control.L_barrel_set_angle = shoot_control.L_barrel_angle;
+				return;
+		}
+		
+		//左枪管 发射控制
+		if(0)//shoot_control.key == SWITCH_TRIGGER_OFF)
+		{
+				shoot_control.shoot_mode_L = SHOOT_DONE;
+		}
+		//还剩余较小角度时, 算到达了
+		if(shoot_control.L_barrel_set_angle - shoot_control.L_barrel_angle > 0.05f) //(fabs(shoot_control.set_angle - shoot_control.angle) > 0.05f)
+		{
+				shoot_control.L_barrel_trigger_speed_set = TRIGGER_SPEED_L;
+				//用于需要直接速度控制时的控制速度这里是堵转后反转速度 TRIGGER_SPEED符号指明正常旋转方向
+				L_barrel_trigger_motor_turn_back_17mm();
+		}
+		else
+		{
+			
+				shoot_control.L_barrel_move_flag = 0;
+				shoot_control.shoot_mode_L = SHOOT_DONE; 
+		}
+		
+		//右枪管 发射控制
+		if(0)//shoot_control.key == SWITCH_TRIGGER_OFF)
+		{
+				shoot_control.shoot_mode_R = SHOOT_DONE;
+		}
+		//还剩余较小角度时, 算到达了
+		if(shoot_control.R_barrel_set_angle - shoot_control.R_barrel_angle > 0.05f) //(fabs(shoot_control.set_angle - shoot_control.angle) > 0.05f)
+		{
+				shoot_control.R_barrel_trigger_speed_set = TRIGGER_SPEED_R;
+				//用于需要直接速度控制时的控制速度这里是堵转后反转速度 TRIGGER_SPEED符号指明正常旋转方向
+				R_barrel_trigger_motor_turn_back_17mm();
+		}
+		else
+		{
+			
+				shoot_control.R_barrel_move_flag = 0;
+				shoot_control.shoot_mode_R = SHOOT_DONE; 
+		}
+		/*shoot_control.move_flag = 0当前帧发射机构 没有正在执行的发射请求
+			shoot_control.move_flag = 1当前帧发射机构 有正在执行的发射请求*/
+		
+	}
+
+}
+//static void L_R_barrel_alternate_shoot_bullet_control_absolute_17mm()
+//{
+//	
+//}
 
 /*
 4-16-2023 目前未使用 卡尔曼滤波 这个函数是直接赋值 也就是调整ramp.max_value 

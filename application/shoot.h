@@ -373,6 +373,10 @@ typedef struct
 		uint32_t R_barrel_last_tick;//
     int16_t R_barrel_given_current;
     int8_t R_barrel_ecd_count; //未使用
+		
+		//交替发射 时钟 发射时间 - 用于控制射频
+		uint32_t L_barrel_alternate_shoot_last_tick;
+		uint32_t R_barrel_alternate_shoot_last_tick;
 
     bool_t press_l;
     bool_t press_r;

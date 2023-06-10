@@ -196,3 +196,19 @@ bool_t get_time_based_freq_signal(uint32_t current_tick, uint32_t* last_tick, ui
 		return 0; //返回false
 	}
 }
+
+/*
+生成PWM类型的信号 - 当前时间, 周期, 占空比
+*/
+bool_t generate_signal_pwm(uint32_t time, uint32_t period, fp32 dutyCycle)
+{
+    uint32_t currentTime = time; //HAL_GetTick();
+    uint32_t timeInPeriod = currentTime % period; // 当前时刻在一个周期中的时间
+    uint32_t onTime = period * dutyCycle; // 占空比对应的时间
+
+    if (timeInPeriod < onTime) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
