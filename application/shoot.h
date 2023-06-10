@@ -354,6 +354,8 @@ typedef struct
     fp32 L_barrel_speed_set;
     fp32 L_barrel_angle;
     fp32 L_barrel_set_angle;
+		//发射时间 - 用于控制射频
+		uint32_t L_barrel_last_tick;//
     int16_t L_barrel_given_current;
     int8_t L_barrel_ecd_count; //未使用
 		
@@ -367,6 +369,8 @@ typedef struct
     fp32 R_barrel_speed_set;
     fp32 R_barrel_angle;
     fp32 R_barrel_set_angle;
+		//发射时间 - 用于控制射频
+		uint32_t R_barrel_last_tick;//
     int16_t R_barrel_given_current;
     int8_t R_barrel_ecd_count; //未使用
 

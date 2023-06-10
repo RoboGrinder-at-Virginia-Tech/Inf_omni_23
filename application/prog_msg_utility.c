@@ -169,3 +169,30 @@ bool_t get_para_hz_time_freq_signal_FreeRTOS(uint8_t freq)
 {
 		return ( xTaskGetTickCount() % (Tick_INCREASE_FREQ_HAL_BASED / freq) == 0 );
 }
+
+/*
+需要更加复杂的一种方法: 对于shoot函数, 按键刚按下时就进, 已这个时间为准, 之后固定频率(固定时间间隔) 产生true信号
+
+uint32_t lastTick = 0;
+
+while(1) {
+  if(HAL_GetTick() - lastTick >= 1000) {
+    lastTick = HAL_GetTick();
+    HAL_UART_Transmit(&huart1, (uint8_t*)"One second passed\n", 17, 100);
+  }
+}
+
+使用: last_tick需由caller准备好, 并初始化好; current_tick=xTaskGetTickCount() or HAL_GetTick(); freq为频率
+*/
+bool_t get_time_based_freq_signal(uint32_t current_tick, uint32_t* last_tick, uint8_t freq)
+{
+	if( current_tick - *last_tick >= (uint32_t)(1.0f / ((fp32)freq) * ((fp32)Tick_INCREASE_FREQ_HAL_BASED)) )
+	{
+		*last_tick = current_tick;
+		return 1; //返回true
+	}
+	else
+	{
+		return 0; //返回false
+	}
+}

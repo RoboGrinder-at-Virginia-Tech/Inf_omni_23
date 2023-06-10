@@ -260,6 +260,10 @@ void shoot_init(void)
 		get_shooter_id2_17mm_heat_limit_and_heat(&shoot_control.R_barrel_heat_limit, &shoot_control.R_barrel_heat);
 		shoot_control.R_barrel_local_heat_limit = shoot_control.R_barrel_heat_limit; //通用 数据
 		shoot_control.R_barrel_local_cd_rate = get_shooter_id2_17mm_cd_rate(); //通用 数据
+		
+		//射频时间初始化
+		shoot_control.L_barrel_last_tick = xTaskGetTickCount(); //使用RTOS时间源
+		shoot_control.R_barrel_last_tick = xTaskGetTickCount(); //使用RTOS时间源
 }
 
 uint16_t new_fric_allms_debug_L1 = 1189;//NEW_FRIC_15ms;
@@ -1406,8 +1410,8 @@ static void L_barrel_shoot_bullet_control_absolute_17mm(void)
 //左枪 连续发弹控制 每秒多少颗; shoot_freq射频
 static void L_barrel_shoot_bullet_control_continuous_17mm(uint8_t shoot_freq)
 {
-		 //if(xTaskGetTickCount() % (1000 / shoot_freq) == 0) //1000为tick++的频率
-		 if( get_para_hz_time_freq_signal_FreeRTOS(shoot_freq) )
+		 //if(xTaskGetTickCount() % (1000 / shoot_freq) == 0) //1000为tick++的频率	
+		 if( get_time_based_freq_signal(xTaskGetTickCount(), &(shoot_control.L_barrel_last_tick), shoot_freq) )//get_para_hz_time_freq_signal_FreeRTOS(shoot_freq) )
 		 {
 			 	shoot_control.L_barrel_set_angle = (shoot_control.L_barrel_angle + PI_TEN_L);//rad_format(shoot_control.angle + PI_TEN); shooter_rad_format
         shoot_control.L_barrel_move_flag = 1;
@@ -1536,7 +1540,7 @@ static void R_barrel_shoot_bullet_control_absolute_17mm(void)
 static void R_barrel_shoot_bullet_control_continuous_17mm(uint8_t shoot_freq)
 {
 		 //if(xTaskGetTickCount() % (1000 / shoot_freq) == 0) //1000为tick++的频率
-		 if( get_para_hz_time_freq_signal_FreeRTOS(shoot_freq) )
+		 if( get_time_based_freq_signal(xTaskGetTickCount(), &(shoot_control.L_barrel_last_tick), shoot_freq) )//get_para_hz_time_freq_signal_FreeRTOS(shoot_freq) )
 		 {
 			 	shoot_control.R_barrel_set_angle = (shoot_control.R_barrel_angle + PI_TEN_R);//rad_format(shoot_control.angle + PI_TEN); shooter_rad_format
         shoot_control.R_barrel_move_flag = 1;
