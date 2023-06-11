@@ -300,8 +300,10 @@ typedef struct
 typedef enum
 {
 	user_SHOOT_OFF=0,
-	user_SHOOT_AUTO, //1
-	user_SHOOT_SEMI, //2
+	user_SHOOT_AUTO, //1-交替开火
+	user_SHOOT_L_CONT, //2-左侧连续开火
+	user_SHOOT_R_CONT, //3-右侧连续开火
+	user_SHOOT_BOTH, //4-同时单发开火
 }user_fire_ctrl_e;
 
 typedef struct

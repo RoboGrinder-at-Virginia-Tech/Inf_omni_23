@@ -383,11 +383,11 @@ int16_t shoot_control_loop(void)
 		  shoot_control.R_barrel_fric2_ramp.max_value_constant = NEW_FRIC_15ms;
 	  }
 		
-		// 交替发射时 初始化定时器
-		if( (shoot_control.shoot_mode_L != SHOOT_CONTINUE_BULLET) && (shoot_control.shoot_mode_R != SHOOT_CONTINUE_BULLET) )
-		{
-			L_R_barrel_alternate_shoot_bullet_control_17mm_timer_reset(100);
-		}
+//		// 交替发射时 初始化定时器
+//		if( (shoot_control.shoot_mode_L != SHOOT_CONTINUE_BULLET) && (shoot_control.shoot_mode_R != SHOOT_CONTINUE_BULLET) )
+//		{
+//			L_R_barrel_alternate_shoot_bullet_control_17mm_timer_reset(100);
+//		}
 		
 		// 先处理 left barrel的 FSM
     if (shoot_control.shoot_mode_L == SHOOT_STOP)
@@ -446,7 +446,7 @@ int16_t shoot_control_loop(void)
 //				L_barrel_shoot_bullet_control_continuous_17mm(10); //10 4
 			
 			  //测试 交替发射
-			  L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(4, 100);
+			  L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(4, 100); //8, 100);
     }
     else if(shoot_control.shoot_mode_L == SHOOT_DONE)
     {
@@ -572,9 +572,9 @@ int16_t shoot_control_loop(void)
 //        //设置拨弹轮的拨动速度,并开启堵转反转处理 5-31-2023前老代码
 //        shoot_control.R_barrel_trigger_speed_set = CONTINUE_TRIGGER_SPEED_R; //.trigger_speed_set
 //        R_barrel_trigger_motor_turn_back_17mm();
-			  shoot_control.R_barrel_trigger_motor_pid.max_out = R_BARREL_TRIGGER_BULLET_PID_MAX_OUT;
-        shoot_control.R_barrel_trigger_motor_pid.max_iout = R_BARREL_TRIGGER_BULLET_PID_MAX_IOUT;
-			  R_barrel_shoot_bullet_control_continuous_17mm(4);
+//			  shoot_control.R_barrel_trigger_motor_pid.max_out = R_BARREL_TRIGGER_BULLET_PID_MAX_OUT;
+//        shoot_control.R_barrel_trigger_motor_pid.max_iout = R_BARREL_TRIGGER_BULLET_PID_MAX_IOUT;
+//			  R_barrel_shoot_bullet_control_continuous_17mm(4);
     }
     else if(shoot_control.shoot_mode_R == SHOOT_DONE)
     {
@@ -737,7 +737,7 @@ static void shoot_set_mode(void)
 			 shoot_control.last_key_Q_sts = 0;
 		}
 		
-		if(shoot_control.key_Q_cnt > 2)
+		if(shoot_control.key_Q_cnt > 4)
 		{
 			shoot_control.key_Q_cnt = 1;//实现 周期性
 		}
@@ -748,7 +748,15 @@ static void shoot_set_mode(void)
 		}
 		else if(shoot_control.key_Q_cnt == 2)
 		{
-			shoot_control.user_fire_ctrl = user_SHOOT_SEMI;
+			shoot_control.user_fire_ctrl = user_SHOOT_L_CONT;
+		}
+		else if(shoot_control.key_Q_cnt == 3)
+		{
+			shoot_control.user_fire_ctrl = user_SHOOT_R_CONT;
+		}
+		else if(shoot_control.key_Q_cnt == 4)
+		{
+			shoot_control.user_fire_ctrl = user_SHOOT_BOTH;
 		}
 		else if(shoot_control.key_Q_cnt == 0)
 		{
@@ -810,7 +818,7 @@ static void shoot_set_mode(void)
 			if(shoot_control.trigger_motor17mm_R_is_online)//发射机构断电时, shoot_mode状态机不会被置为发射相关状态
 			{
         //下拨一次或者鼠标按下一次，进入射击状态
-        if ((switch_is_down(shoot_control.shoot_rc->rc.s[SHOOT_RC_MODE_CHANNEL]) && !switch_is_down(last_s)) || (shoot_control.press_r && shoot_control.last_press_r == 0))
+        if ((switch_is_down(shoot_control.shoot_rc->rc.s[SHOOT_RC_MODE_CHANNEL]) && !switch_is_down(last_s)) || (shoot_control.press_l && shoot_control.last_press_l == 0))
         {
             shoot_control.shoot_mode_R = SHOOT_BULLET;
         }
@@ -960,7 +968,7 @@ static void shoot_set_mode(void)
 			
 				if(shoot_control.user_fire_ctrl==user_SHOOT_SEMI)
 				{
-					if (( (get_shootCommand() == 0xff) && (get_autoAimFlag() > 0))|| (shoot_control.press_r_time == PRESS_LONG_TIME_R ) || (shoot_control.rc_s_time == RC_S_LONG_TIME))
+					if (( (get_shootCommand() == 0xff) && (get_autoAimFlag() > 0))|| (shoot_control.press_l_time == PRESS_LONG_TIME_L ) || (shoot_control.rc_s_time == RC_S_LONG_TIME))
 					{
 							shoot_control.shoot_mode_R = SHOOT_CONTINUE_BULLET;
 					}
@@ -971,7 +979,7 @@ static void shoot_set_mode(void)
 				}
 				else if(shoot_control.user_fire_ctrl==user_SHOOT_AUTO)
 				{
-					if (( (get_shootCommand() == 0xff) && (get_autoAimFlag() > 0)) || (shoot_control.press_r ))
+					if (( (get_shootCommand() == 0xff) && (get_autoAimFlag() > 0)) || (shoot_control.press_l ))
 					{
 							shoot_control.shoot_mode_R = SHOOT_CONTINUE_BULLET;
 					}
@@ -1429,7 +1437,7 @@ static void L_barrel_shoot_bullet_control_continuous_17mm(uint8_t shoot_freq)
 		 if( get_time_based_freq_signal(xTaskGetTickCount(), &(shoot_control.L_barrel_last_tick), shoot_freq) )//get_para_hz_time_freq_signal_FreeRTOS(shoot_freq) )
 		 {
 			 	shoot_control.L_barrel_set_angle = (shoot_control.L_barrel_angle + PI_TEN_L);//rad_format(shoot_control.angle + PI_TEN); shooter_rad_format
-        shoot_control.L_barrel_move_flag = 1;
+        shoot_control.L_barrel_move_flag = 1; //固定频率连续发射时, move_flag并没有使用, 依靠时间进行角度增加
 		 }
 		
 		/*这段代码的测试是在NewINF v6.4.1 中测试的, 也就是不会出现:(发射机构断电时, shoot_mode状态机不会被置为发射相关状态)
@@ -1555,11 +1563,11 @@ static void R_barrel_shoot_bullet_control_absolute_17mm(void)
 static void R_barrel_shoot_bullet_control_continuous_17mm(uint8_t shoot_freq)
 {
 		 //if(xTaskGetTickCount() % (1000 / shoot_freq) == 0) //1000为tick++的频率
-		 if( get_time_based_freq_signal(xTaskGetTickCount(), &(shoot_control.R_barrel_last_tick), shoot_freq) )//get_para_hz_time_freq_signal_FreeRTOS(shoot_freq) )
-		 {
-			 	shoot_control.R_barrel_set_angle = (shoot_control.R_barrel_angle + PI_TEN_R);//rad_format(shoot_control.angle + PI_TEN); shooter_rad_format
-        shoot_control.R_barrel_move_flag = 1;
-		 }
+		if( get_time_based_freq_signal(xTaskGetTickCount(), &(shoot_control.R_barrel_last_tick), shoot_freq) )//get_para_hz_time_freq_signal_FreeRTOS(shoot_freq) )
+		{
+			shoot_control.R_barrel_set_angle = (shoot_control.R_barrel_angle + PI_TEN_R);//rad_format(shoot_control.angle + PI_TEN); shooter_rad_format
+			shoot_control.R_barrel_move_flag = 1; //固定频率连续发射时, move_flag并没有使用, 依靠时间进行角度增加
+		}
 		
 		/*这段代码的测试是在NewINF v6.4.1 中测试的, 也就是不会出现:(发射机构断电时, shoot_mode状态机不会被置为发射相关状态)
 		整体的逻辑是: 如果发射机构断电, shoot_mode状态机不会被置为发射相关状态, 不会进入此函数; 这段代码只是在这里保险
@@ -1628,31 +1636,30 @@ static void L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(uint8_t sh
 //		}
 			 
 //		if( get_time_based_freq_signal(xTaskGetTickCount(), &(shoot_control.R_barrel_alternate_shoot_last_tick), shoot_freq) ) //( xTaskGetTickCount() - shoot_control.R_barrel_alternate_shoot_last_tick >= phase_diff_ms)
-		if( generate_signal_pwm(shoot_control.L_barrel_alternate_shoot_last_tick, phase_diff_ms, 0.5f) )
-		{
-			shoot_control.L_barrel_set_angle = (shoot_control.L_barrel_angle + PI_TEN_L);//rad_format(shoot_control.angle + PI_TEN); shooter_rad_format
-			shoot_control.L_barrel_move_flag = 1;
-		}
-		else
-		{
-//			shoot_control.R_barrel_alternate_shoot_last_tick = xTaskGetTickCount();
-			shoot_control.R_barrel_set_angle = (shoot_control.R_barrel_angle + PI_TEN_R);//rad_format(shoot_control.angle + PI_TEN); shooter_rad_format
-			shoot_control.R_barrel_move_flag = 1;
+			if( generate_signal_pwm(shoot_control.L_barrel_alternate_shoot_last_tick, phase_diff_ms, 0.5f) )
+			{
+				//左枪管 发射控制
+				shoot_control.L_barrel_set_angle = (shoot_control.L_barrel_angle + PI_TEN_L);//rad_format(shoot_control.angle + PI_TEN); shooter_rad_format
+				shoot_control.L_barrel_move_flag = 1;
+			}
+			else
+			{
+	//			shoot_control.R_barrel_alternate_shoot_last_tick = xTaskGetTickCount();
+				//右枪管 发射控制
+				shoot_control.R_barrel_set_angle = (shoot_control.R_barrel_angle + PI_TEN_R);//rad_format(shoot_control.angle + PI_TEN); shooter_rad_format
+				shoot_control.R_barrel_move_flag = 1;
+			}
+		
 		}
 		
+		//左枪管 发射控制-------------------------------------------------------------------------------
 		/*不会进入此函数; 这段代码只是在这里保险; 电机掉线, 即发射机构断电特征出现时, 放弃当前发射请求*/
-		if(shoot_control.trigger_motor17mm_R_is_online == 0x00)
-		{
-				shoot_control.R_barrel_set_angle = shoot_control.R_barrel_angle;
-				return;
-		}
 		if(shoot_control.trigger_motor17mm_L_is_online == 0x00)
 		{
 				shoot_control.L_barrel_set_angle = shoot_control.L_barrel_angle;
 				return;
 		}
 		
-		//左枪管 发射控制
 		if(0)//shoot_control.key == SWITCH_TRIGGER_OFF)
 		{
 				shoot_control.shoot_mode_L = SHOOT_DONE;
@@ -1671,7 +1678,14 @@ static void L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(uint8_t sh
 				shoot_control.shoot_mode_L = SHOOT_DONE; 
 		}
 		
-		//右枪管 发射控制
+		//右枪管 发射控制-------------------------------------------------------------------------------
+		/*不会进入此函数; 这段代码只是在这里保险; 电机掉线, 即发射机构断电特征出现时, 放弃当前发射请求*/
+		if(shoot_control.trigger_motor17mm_R_is_online == 0x00)
+		{
+				shoot_control.R_barrel_set_angle = shoot_control.R_barrel_angle;
+				return;
+		}
+		
 		if(0)//shoot_control.key == SWITCH_TRIGGER_OFF)
 		{
 				shoot_control.shoot_mode_R = SHOOT_DONE;
@@ -1691,8 +1705,6 @@ static void L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(uint8_t sh
 		}
 		/*shoot_control.move_flag = 0当前帧发射机构 没有正在执行的发射请求
 			shoot_control.move_flag = 1当前帧发射机构 有正在执行的发射请求*/
-		
-	}
 
 }
 //static void L_R_barrel_alternate_shoot_bullet_control_absolute_17mm()
