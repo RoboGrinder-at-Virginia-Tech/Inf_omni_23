@@ -44,7 +44,7 @@
 #define PRESS_LONG_TIME             999
 
 //SZL添加 给鼠标左键用的 鼠标左键长按
-#define PRESS_LONG_TIME_L						999
+#define PRESS_LONG_TIME_L						200 //999
 
 //鼠标右键 长按 
 #define PRESS_LONG_TIME_R						999 //50

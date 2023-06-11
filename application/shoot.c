@@ -383,11 +383,11 @@ int16_t shoot_control_loop(void)
 		  shoot_control.R_barrel_fric2_ramp.max_value_constant = NEW_FRIC_15ms;
 	  }
 		
-//		// 交替发射时 初始化定时器
-//		if( (shoot_control.shoot_mode_L != SHOOT_CONTINUE_BULLET) && (shoot_control.shoot_mode_R != SHOOT_CONTINUE_BULLET) )
-//		{
-//			L_R_barrel_alternate_shoot_bullet_control_17mm_timer_reset(100);
-//		}
+		// 先判断是 交替发射
+		if( (shoot_control.shoot_mode_L == SHOOT_ALTERNATE_CONTINUE_BULLET) && (shoot_control.shoot_mode_R == SHOOT_ALTERNATE_CONTINUE_BULLET) )
+		{
+			  L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(4, 100); //8, 100);
+		}
 		
 		// 先处理 left barrel的 FSM
     if (shoot_control.shoot_mode_L == SHOOT_STOP)
@@ -443,10 +443,7 @@ int16_t shoot_control_loop(void)
 //        L_barrel_trigger_motor_turn_back_17mm();
 			  shoot_control.L_barrel_trigger_motor_pid.max_out = L_BARREL_TRIGGER_BULLET_PID_MAX_OUT;
         shoot_control.L_barrel_trigger_motor_pid.max_iout = L_BARREL_TRIGGER_BULLET_PID_MAX_IOUT;
-//				L_barrel_shoot_bullet_control_continuous_17mm(10); //10 4
-			
-			  //测试 交替发射
-			  L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(4, 100); //8, 100);
+				L_barrel_shoot_bullet_control_continuous_17mm(5); //10 4
     }
     else if(shoot_control.shoot_mode_L == SHOOT_DONE)
     {
@@ -572,9 +569,9 @@ int16_t shoot_control_loop(void)
 //        //设置拨弹轮的拨动速度,并开启堵转反转处理 5-31-2023前老代码
 //        shoot_control.R_barrel_trigger_speed_set = CONTINUE_TRIGGER_SPEED_R; //.trigger_speed_set
 //        R_barrel_trigger_motor_turn_back_17mm();
-//			  shoot_control.R_barrel_trigger_motor_pid.max_out = R_BARREL_TRIGGER_BULLET_PID_MAX_OUT;
-//        shoot_control.R_barrel_trigger_motor_pid.max_iout = R_BARREL_TRIGGER_BULLET_PID_MAX_IOUT;
-//			  R_barrel_shoot_bullet_control_continuous_17mm(4);
+			  shoot_control.R_barrel_trigger_motor_pid.max_out = R_BARREL_TRIGGER_BULLET_PID_MAX_OUT;
+        shoot_control.R_barrel_trigger_motor_pid.max_iout = R_BARREL_TRIGGER_BULLET_PID_MAX_IOUT;
+			  R_barrel_shoot_bullet_control_continuous_17mm(5);
     }
     else if(shoot_control.shoot_mode_R == SHOOT_DONE)
     {
@@ -763,7 +760,9 @@ static void shoot_set_mode(void)
 			shoot_control.user_fire_ctrl = user_SHOOT_OFF;
 		}
 		//---------Q按键计数以及相关检测结束---------
-		
+		/*这里是对老DJI开源代码的兼容 - 通过按键 低通滤波值 之前的shoot_mode, 前面有(按键<-map->user_fire_ctrl);
+			先对当前 shoot_mode 赋值一次(按键其它<-map->shoot_mode), 后面根据user_fire_ctrl会给shoot_mode赋值第二次(user_fire_mode<-map->shoot_mode) - 是因为shoot_mode切换很快, 控制会直接用这个状态机
+			实现多个user_fire_ctrl映射到有限个shoot_mode - 按键扫描还可以优化*/
 		// left barrel related FSM, 先处理
     if(shoot_control.shoot_mode_L == SHOOT_READY_FRIC && shoot_control.L_barrel_fric1_ramp.out == shoot_control.L_barrel_fric1_ramp.max_value && shoot_control.L_barrel_fric2_ramp.out == shoot_control.L_barrel_fric2_ramp.max_value)
     {
@@ -912,10 +911,14 @@ static void shoot_set_mode(void)
 				if(shoot_control.user_fire_ctrl==user_SHOOT_R_CONT)
 				{
 					//排除项, user_SHOOT_R_CONT是处理右枪管, 和这里无关
+					if(shoot_control.shoot_mode_L == SHOOT_BULLET || shoot_control.shoot_mode_L == SHOOT_CONTINUE_BULLET || shoot_control.shoot_mode_L == SHOOT_ALTERNATE_CONTINUE_BULLET) //--------注意这里的
+					{
+							shoot_control.shoot_mode_L =SHOOT_READY_BULLET;
+					}
 				}
 				else if(shoot_control.user_fire_ctrl==user_SHOOT_BOTH)
 				{
-					//什么都不干, shoot_control.shoot_mode_L = SHOOT_BULLET 由前序逻辑处理
+					//当shoot_control.shoot_mode_L = SHOOT_BULLET 由前序逻辑处理
 					if (((get_shootCommand() == 0xff) && (get_autoAimFlag() > 0))|| (shoot_control.press_l_time == PRESS_LONG_TIME_L ) || (shoot_control.rc_s_time == RC_S_LONG_TIME))
 					{
 							shoot_control.shoot_mode_L = SHOOT_CONTINUE_BULLET;
@@ -948,7 +951,7 @@ static void shoot_set_mode(void)
 					}
 				}
 				else
-				{
+				{	//默认的模式
 					if (((get_shootCommand() == 0xff) && (get_autoAimFlag() > 0)) || (shoot_control.rc_s_time == RC_S_LONG_TIME))
 					{
 							shoot_control.shoot_mode_L = SHOOT_ALTERNATE_CONTINUE_BULLET;
@@ -981,10 +984,14 @@ static void shoot_set_mode(void)
 			  if(shoot_control.user_fire_ctrl==user_SHOOT_L_CONT)
 				{
 					 //排除项, user_SHOOT_L_CONT是处理有枪管, 和这里无关
+					if(shoot_control.shoot_mode_R == SHOOT_BULLET || shoot_control.shoot_mode_R == SHOOT_CONTINUE_BULLET || shoot_control.shoot_mode_R == SHOOT_ALTERNATE_CONTINUE_BULLET) //--------注意这里的>
+					{
+							shoot_control.shoot_mode_R =SHOOT_READY_BULLET;
+					}
 				}
 				else if(shoot_control.user_fire_ctrl==user_SHOOT_BOTH)
 				{
-					//什么都不干, shoot_control.shoot_mode_R = SHOOT_BULLET 由前序逻辑处理
+					//当shoot_control.shoot_mode_R = SHOOT_BULLET 由前序逻辑处理
 					if (( (get_shootCommand() == 0xff) && (get_autoAimFlag() > 0))|| (shoot_control.press_l_time == PRESS_LONG_TIME_L ) || (shoot_control.rc_s_time == RC_S_LONG_TIME))
 					{
 							shoot_control.shoot_mode_R = SHOOT_CONTINUE_BULLET;
@@ -994,7 +1001,7 @@ static void shoot_set_mode(void)
 							shoot_control.shoot_mode_R =SHOOT_READY_BULLET;
 					}
 				}
-				if(shoot_control.user_fire_ctrl==user_SHOOT_R_CONT)
+				else if(shoot_control.user_fire_ctrl==user_SHOOT_R_CONT)
 				{
 					if (( (get_shootCommand() == 0xff) && (get_autoAimFlag() > 0)) || (shoot_control.press_l ))
 					{
@@ -1017,7 +1024,7 @@ static void shoot_set_mode(void)
 					}
 				}
 				else
-				{
+				{ //默认的模式
 					if (( (get_shootCommand() == 0xff) && (get_autoAimFlag() > 0)) || (shoot_control.rc_s_time == RC_S_LONG_TIME))
 					{
 							shoot_control.shoot_mode_R = SHOOT_ALTERNATE_CONTINUE_BULLET;
