@@ -51,6 +51,8 @@ In file FreeRTOS.h the following changes will be made by CubeMX
 which enabled RTOS to help us do run time stats
 
 Then implement the following functions:
+
+--需要在main中调用此初始化函数init_prog_msg_utility()
 */
 
 //volatile unsigned long util_CPU_RunTime = 0UL;

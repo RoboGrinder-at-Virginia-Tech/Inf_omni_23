@@ -55,6 +55,8 @@
 #include "usb_task.h"
 #include "usb_device.h"
 #include "usbd_cdc_if.h"
+#include "prog_msg_utility.h"
+#include "odometer_task.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -155,6 +157,9 @@ int main(void)
 		
 	//SZL 3-27-2022
 	superCap_comm_bothway_init();
+	
+	//init CPU stats
+	init_prog_msg_utility();
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */
