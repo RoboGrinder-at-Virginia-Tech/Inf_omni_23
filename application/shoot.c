@@ -692,7 +692,7 @@ static void shoot_set_mode(void)
         shoot_control.shoot_mode_L = SHOOT_READY_FRIC;//上拨一次开启摩擦轮
 			  shoot_control.shoot_mode_R = SHOOT_READY_FRIC;
 			  
-			  shoot_control.user_fire_ctrl = user_SHOOT_SEMI;//开启摩擦轮 默认auto
+			  shoot_control.user_fire_ctrl = user_SHOOT_BOTH;//开启摩擦轮 默认auto
 			  shoot_control.key_Q_cnt = 2;
     }
     else if ((switch_is_up(shoot_control.shoot_rc->rc.s[SHOOT_RC_MODE_CHANNEL]) && !switch_is_up(last_s) && shoot_control.shoot_mode_L != SHOOT_STOP))
@@ -748,15 +748,15 @@ static void shoot_set_mode(void)
 		}
 		else if(shoot_control.key_Q_cnt == 2)
 		{
-			shoot_control.user_fire_ctrl = user_SHOOT_L_CONT;
+			shoot_control.user_fire_ctrl = user_SHOOT_BOTH;
 		}
 		else if(shoot_control.key_Q_cnt == 3)
 		{
-			shoot_control.user_fire_ctrl = user_SHOOT_R_CONT;
+			shoot_control.user_fire_ctrl = user_SHOOT_L_CONT;
 		}
 		else if(shoot_control.key_Q_cnt == 4)
 		{
-			shoot_control.user_fire_ctrl = user_SHOOT_BOTH;
+			shoot_control.user_fire_ctrl = user_SHOOT_R_CONT;
 		}
 		else if(shoot_control.key_Q_cnt == 0)
 		{
@@ -909,11 +909,25 @@ static void shoot_set_mode(void)
     if(shoot_control.shoot_mode_L > SHOOT_READY_FRIC && shoot_control.trigger_motor17mm_L_is_online)
     {
         //鼠标长按一直进入射击状态 保持连发
-				//(shoot_control.user_fire_ctrl==user_SHOOT_AUTO && shoot_control.press_l)
-			
-				if(shoot_control.user_fire_ctrl==user_SHOOT_SEMI)
+				if(shoot_control.user_fire_ctrl==user_SHOOT_R_CONT)
 				{
+					//排除项, user_SHOOT_R_CONT是处理右枪管, 和这里无关
+				}
+				else if(shoot_control.user_fire_ctrl==user_SHOOT_BOTH)
+				{
+					//什么都不干, shoot_control.shoot_mode_L = SHOOT_BULLET 由前序逻辑处理
 					if (((get_shootCommand() == 0xff) && (get_autoAimFlag() > 0))|| (shoot_control.press_l_time == PRESS_LONG_TIME_L ) || (shoot_control.rc_s_time == RC_S_LONG_TIME))
+					{
+							shoot_control.shoot_mode_L = SHOOT_CONTINUE_BULLET;
+					}
+					else if(shoot_control.shoot_mode_L == SHOOT_CONTINUE_BULLET)
+					{
+							shoot_control.shoot_mode_L =SHOOT_READY_BULLET;
+					}
+				}
+				else if(shoot_control.user_fire_ctrl==user_SHOOT_L_CONT)
+				{
+					if (( (get_shootCommand() == 0xff) && (get_autoAimFlag() > 0)) || (shoot_control.press_l ))
 					{
 							shoot_control.shoot_mode_L = SHOOT_CONTINUE_BULLET;
 					}
@@ -926,9 +940,9 @@ static void shoot_set_mode(void)
 				{
 					if (( (get_shootCommand() == 0xff) && (get_autoAimFlag() > 0)) || (shoot_control.press_l ))
 					{
-							shoot_control.shoot_mode_L = SHOOT_CONTINUE_BULLET;
+							shoot_control.shoot_mode_L = SHOOT_ALTERNATE_CONTINUE_BULLET;
 					}
-					else if(shoot_control.shoot_mode_L == SHOOT_CONTINUE_BULLET)
+					else if(shoot_control.shoot_mode_L == SHOOT_ALTERNATE_CONTINUE_BULLET)
 					{
 							shoot_control.shoot_mode_L =SHOOT_READY_BULLET;
 					}
@@ -937,9 +951,9 @@ static void shoot_set_mode(void)
 				{
 					if (((get_shootCommand() == 0xff) && (get_autoAimFlag() > 0)) || (shoot_control.rc_s_time == RC_S_LONG_TIME))
 					{
-							shoot_control.shoot_mode_L = SHOOT_CONTINUE_BULLET;
+							shoot_control.shoot_mode_L = SHOOT_ALTERNATE_CONTINUE_BULLET;
 					}
-					else if(shoot_control.shoot_mode_L == SHOOT_CONTINUE_BULLET)
+					else if(shoot_control.shoot_mode_L == SHOOT_ALTERNATE_CONTINUE_BULLET)
 					{
 							shoot_control.shoot_mode_L =SHOOT_READY_BULLET;
 					}
@@ -953,7 +967,7 @@ static void shoot_set_mode(void)
     get_shooter_id1_17mm_heat_limit_and_heat(&shoot_control.L_barrel_heat_limit, &shoot_control.L_barrel_heat); //.heat_limit .heat
     if(!toe_is_error(REFEREE_TOE) && (shoot_control.L_barrel_heat + SHOOT_HEAT_REMAIN_VALUE > shoot_control.L_barrel_heat_limit))
     {
-        if(shoot_control.shoot_mode_L == SHOOT_BULLET || shoot_control.shoot_mode_L == SHOOT_CONTINUE_BULLET)
+        if(shoot_control.shoot_mode_L == SHOOT_BULLET || shoot_control.shoot_mode_L == SHOOT_CONTINUE_BULLET || shoot_control.shoot_mode_L == SHOOT_ALTERNATE_CONTINUE_BULLET) //--------注意这里的
         {
             shoot_control.shoot_mode_L =SHOOT_READY_BULLET;
         }
@@ -964,11 +978,25 @@ static void shoot_set_mode(void)
     if(shoot_control.shoot_mode_R > SHOOT_READY_FRIC && shoot_control.trigger_motor17mm_R_is_online)
     {
         //鼠标长按一直进入射击状态 保持连发
-				//(shoot_control.user_fire_ctrl==user_SHOOT_AUTO && shoot_control.press_l)
-			
-				if(shoot_control.user_fire_ctrl==user_SHOOT_SEMI)
+			  if(shoot_control.user_fire_ctrl==user_SHOOT_L_CONT)
 				{
+					 //排除项, user_SHOOT_L_CONT是处理有枪管, 和这里无关
+				}
+				else if(shoot_control.user_fire_ctrl==user_SHOOT_BOTH)
+				{
+					//什么都不干, shoot_control.shoot_mode_R = SHOOT_BULLET 由前序逻辑处理
 					if (( (get_shootCommand() == 0xff) && (get_autoAimFlag() > 0))|| (shoot_control.press_l_time == PRESS_LONG_TIME_L ) || (shoot_control.rc_s_time == RC_S_LONG_TIME))
+					{
+							shoot_control.shoot_mode_R = SHOOT_CONTINUE_BULLET;
+					}
+					else if(shoot_control.shoot_mode_R == SHOOT_CONTINUE_BULLET)
+					{
+							shoot_control.shoot_mode_R =SHOOT_READY_BULLET;
+					}
+				}
+				if(shoot_control.user_fire_ctrl==user_SHOOT_R_CONT)
+				{
+					if (( (get_shootCommand() == 0xff) && (get_autoAimFlag() > 0)) || (shoot_control.press_l ))
 					{
 							shoot_control.shoot_mode_R = SHOOT_CONTINUE_BULLET;
 					}
@@ -981,9 +1009,9 @@ static void shoot_set_mode(void)
 				{
 					if (( (get_shootCommand() == 0xff) && (get_autoAimFlag() > 0)) || (shoot_control.press_l ))
 					{
-							shoot_control.shoot_mode_R = SHOOT_CONTINUE_BULLET;
+							shoot_control.shoot_mode_R = SHOOT_ALTERNATE_CONTINUE_BULLET;
 					}
-					else if(shoot_control.shoot_mode_R == SHOOT_CONTINUE_BULLET)
+					else if(shoot_control.shoot_mode_R == SHOOT_ALTERNATE_CONTINUE_BULLET)
 					{
 							shoot_control.shoot_mode_R =SHOOT_READY_BULLET;
 					}
@@ -992,11 +1020,11 @@ static void shoot_set_mode(void)
 				{
 					if (( (get_shootCommand() == 0xff) && (get_autoAimFlag() > 0)) || (shoot_control.rc_s_time == RC_S_LONG_TIME))
 					{
-							shoot_control.shoot_mode_R = SHOOT_CONTINUE_BULLET;
+							shoot_control.shoot_mode_R = SHOOT_ALTERNATE_CONTINUE_BULLET;
 					}
 					else if(shoot_control.shoot_mode_R == SHOOT_CONTINUE_BULLET)
 					{
-							shoot_control.shoot_mode_R =SHOOT_READY_BULLET;
+							shoot_control.shoot_mode_R =SHOOT_ALTERNATE_CONTINUE_BULLET;
 					}
 				}
     }
@@ -1005,7 +1033,7 @@ static void shoot_set_mode(void)
     get_shooter_id2_17mm_heat_limit_and_heat(&shoot_control.R_barrel_heat_limit, &shoot_control.R_barrel_heat);
     if(!toe_is_error(REFEREE_TOE) && (shoot_control.R_barrel_heat + SHOOT_HEAT_REMAIN_VALUE > shoot_control.R_barrel_heat_limit))
     {
-        if(shoot_control.shoot_mode_R == SHOOT_BULLET || shoot_control.shoot_mode_R == SHOOT_CONTINUE_BULLET)
+        if(shoot_control.shoot_mode_R == SHOOT_BULLET || shoot_control.shoot_mode_R == SHOOT_CONTINUE_BULLET || shoot_control.shoot_mode_R == SHOOT_ALTERNATE_CONTINUE_BULLET) //--------注意这里的>
         {
             shoot_control.shoot_mode_R =SHOOT_READY_BULLET;
         }

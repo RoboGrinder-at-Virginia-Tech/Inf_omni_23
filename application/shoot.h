@@ -280,7 +280,8 @@ typedef enum
     SHOOT_READY,         //3
     SHOOT_BULLET,        //4
     SHOOT_CONTINUE_BULLET,  //5
-    SHOOT_DONE,          //6
+		SHOOT_ALTERNATE_CONTINUE_BULLET, //6
+    SHOOT_DONE,          //7
 } shoot_mode_e;
 
 //SZL 12-30-2021 添加 fric 电机 M3508 数据解包 待打包发送数据 结构体
@@ -301,9 +302,9 @@ typedef enum
 {
 	user_SHOOT_OFF=0,
 	user_SHOOT_AUTO, //1-交替开火
-	user_SHOOT_L_CONT, //2-左侧连续开火
-	user_SHOOT_R_CONT, //3-右侧连续开火
-	user_SHOOT_BOTH, //4-同时单发开火
+	user_SHOOT_BOTH, //2-同时单发开火
+	user_SHOOT_L_CONT, //3-左侧连续开火
+	user_SHOOT_R_CONT, //4-右侧连续开火
 }user_fire_ctrl_e;
 
 typedef struct

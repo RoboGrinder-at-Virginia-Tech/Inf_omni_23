@@ -391,7 +391,7 @@ void ui_coord_update()
 		 ui_info.box_gun_sts_coord[2] = TopLeft_REC_on_gun_AUTO_END_X;
 		 ui_info.box_gun_sts_coord[3] = TopLeft_REC_on_gun_AUTO_END_Y;
 	 }
-	 else if(shoot_control.user_fire_ctrl == user_SHOOT_SEMI)
+	 else if(shoot_control.user_fire_ctrl > user_SHOOT_AUTO)// == user_SHOOT_SEMI)
 	 {
 		 ui_info.ui_gun_sts = gunSEMI;
 		 ui_info.box_gun_sts_coord[0] = TopLeft_REC_on_gun_SEMI_START_X;
