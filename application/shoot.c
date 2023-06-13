@@ -1051,6 +1051,60 @@ static void shoot_set_mode(void)
 //    {
 //        shoot_control.shoot_mode = SHOOT_STOP;
 //    }
+		
+		/*2022 - 2023 RMUL 经济体系 检测并进行发射机构断电+上电后的重启工作 自动重启 功能开始---------------------------------------------------------------
+			当且仅当 不在线时 把auto_restart_needed=1 与其他功能没有耦合*/
+		if(shoot_control.shoot_mode_L == SHOOT_READY_BULLET && shoot_control.shoot_mode_R == SHOOT_READY_BULLET)
+		{
+			shoot_control.auto_rst_signal = 0;//重置rst指令
+		}
+		
+		//shoot_control.auto_restart_needed = (shoot_control.trigger_motor17mm_L_is_online)?(0):(1);
+		//检测离线 并计算离线时间
+		if(shoot_control.trigger_motor17mm_L_is_online || shoot_control.trigger_motor17mm_R_is_online)
+		{
+			shoot_control.rst_m_off_time = 0;
+		}
+		else
+		{
+			shoot_control.rst_m_off_time++;//两个拨弹电机都不在线
+		}
+		
+		//离线时间到, 主动关闭摩擦轮
+		if(shoot_control.rst_m_off_time > 999)
+		{
+			shoot_control.auto_rst_signal = 1;
+			//shoot_control.auto_rst_signal = 0时机为摩擦轮完成预热 - 不受电机online offline的频繁切换影响
+      
+			shoot_control.shoot_mode_L = SHOOT_STOP;
+			shoot_control.shoot_mode_R = SHOOT_STOP;
+			shoot_control.key_Q_cnt = 0;
+		}
+		else
+		{
+//			shoot_control.auto_rst_signal = 0;
+		}
+		
+		//重新启动计时 - 条件为两电机均在线 且由重启信号
+		if(shoot_control.auto_rst_signal == 1 && shoot_control.trigger_motor17mm_L_is_online && shoot_control.trigger_motor17mm_R_is_online)
+		{
+			shoot_control.rst_on_wait_time++;
+		}
+		else
+		{
+			shoot_control.rst_on_wait_time = 0;
+		}
+		
+		//电机上线 时间到 开启摩擦轮
+		if(shoot_control.rst_on_wait_time > 400)
+		{
+			shoot_control.shoot_mode_L = SHOOT_READY_FRIC; 
+			shoot_control.shoot_mode_R = SHOOT_READY_FRIC; 
+			shoot_control.user_fire_ctrl = user_SHOOT_AUTO;//开启摩擦轮 默认auto
+			//设置按键
+			shoot_control.key_Q_cnt = 1;
+		}
+		//自动重启 功能结束 ----------------------------------------------------------------------------------------------------------------
 
     last_s = shoot_control.shoot_rc->rc.s[SHOOT_RC_MODE_CHANNEL];
 }

@@ -479,7 +479,12 @@ typedef struct
 		uint32_t R_barrel_rt_odom_total_bullets_fired; // 总的发弹量
 		uint32_t R_barrel_rt_odom_calculated_bullets_fired; // 已经计算过热量的子弹量
 
-		fp32 R_barrel_rt_odom_local_heat[4]; //本地热量 [0] 当前 [1]上一次 [2]上上次 受到射频影响		
+		fp32 R_barrel_rt_odom_local_heat[4]; //本地热量 [0] 当前 [1]上一次 [2]上上次 受到射频影响	
+
+		//断电+上电 自动重启
+		bool_t auto_rst_signal;
+		uint32_t rst_m_off_time; //拨弹电机离线时间
+		uint32_t rst_on_wait_time; //拨弹电机 -新上线时间
 		
 } shoot_control_t;
 
