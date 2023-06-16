@@ -272,10 +272,10 @@ void shoot_init(void)
 		shoot_control.R_barrel_alternate_shoot_last_tick = xTaskGetTickCount(); //使用RTOS时间源
 }
 
-uint16_t new_fric_allms_debug_L1 = 1189;//NEW_FRIC_15ms;
-uint16_t new_fric_allms_debug_L2 = 1189;//NEW_FRIC_15ms;
-uint16_t new_fric_allms_debug_R1 = 1200;//NEW_FRIC_15ms;
-uint16_t new_fric_allms_debug_R2 = 1200;//NEW_FRIC_15ms;
+uint16_t new_fric_allms_debug_L1 = 1189; //1186;//NEW_FRIC_15ms;
+uint16_t new_fric_allms_debug_L2 = 1189; //1186;//NEW_FRIC_15ms;
+uint16_t new_fric_allms_debug_R1 = 1214; //1200;//NEW_FRIC_15ms;
+uint16_t new_fric_allms_debug_R2 = 1214; //1200;//NEW_FRIC_15ms;
 /**
   * @brief          射击循环
   * @param[in]      void
@@ -386,7 +386,9 @@ int16_t shoot_control_loop(void)
 		// 先判断是 交替发射
 		if( (shoot_control.shoot_mode_L == SHOOT_ALTERNATE_CONTINUE_BULLET) && (shoot_control.shoot_mode_R == SHOOT_ALTERNATE_CONTINUE_BULLET) )
 		{
-			  L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(4, 100); //8, 100);
+				/* 6-16-2023注释: 射频4使用(4, 100); 射频8使用(8, 50)
+				*/
+			  L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(8, 50); //100); //4, 100); //8, 100);
 		}
 		
 		// 先处理 left barrel的 FSM
