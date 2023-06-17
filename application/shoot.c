@@ -274,8 +274,8 @@ void shoot_init(void)
 
 uint16_t new_fric_allms_debug_L1 = 1189; //1186;//NEW_FRIC_15ms;
 uint16_t new_fric_allms_debug_L2 = 1189; //1186;//NEW_FRIC_15ms;
-uint16_t new_fric_allms_debug_R1 = 1214; //1200;//NEW_FRIC_15ms;
-uint16_t new_fric_allms_debug_R2 = 1214; //1200;//NEW_FRIC_15ms;
+uint16_t new_fric_allms_debug_R1 = 1200; //1214; //1200;//NEW_FRIC_15ms;
+uint16_t new_fric_allms_debug_R2 = 1200; //1214; //1200;//NEW_FRIC_15ms;
 /**
   * @brief          Éä»÷Ñ­»·
   * @param[in]      void
