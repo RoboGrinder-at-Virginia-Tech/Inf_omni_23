@@ -62,9 +62,12 @@
 //rocker value deadline
 //摇杆死区
 #define CHASSIS_RC_DEADLINE 10
-
-#define MOTOR_SPEED_TO_CHASSIS_SPEED_VX 0.25f
-#define MOTOR_SPEED_TO_CHASSIS_SPEED_VY 0.25f
+/* sin cos各个象限的45度 绝对值等于 omni wheel angle inverse kinematics coefficient-> / 0.707106781f
+	 还需要*1/4 -> = 0.25f / 0.707106781f *  = 0.176776695f
+							-> = 1.0f * 0.25f = 0.25f
+*/
+#define MOTOR_SPEED_TO_CHASSIS_SPEED_VX 0.25f //0.176776695f //0.25f
+#define MOTOR_SPEED_TO_CHASSIS_SPEED_VY 0.25f //0.176776695f //0.25f
 #define MOTOR_SPEED_TO_CHASSIS_SPEED_WZ 0.25f
 
 /*
@@ -88,8 +91,14 @@ Omni Drive: 轮到中心250mm = 0.25m, 45度夹角
 长=轴距: 0.25m * sqrt(2) = 0.353553391
 宽=轮距: 0.25m * sqrt(2) = 0.353553391
 0.353553391/2 + 0.353553391/2 = 0.353553391
+
+6-18 Omni不是上面这样算的:
+MOTOR_DISTANCE_TO_CENTER是车轮到旋转中心的距离 = 0.258093975f
 */
-#define MOTOR_DISTANCE_TO_CENTER 0.353553391f //0.358f //0.3525f
+#define MOTOR_DISTANCE_TO_CENTER 0.258093975f //0.353553391f //0.358f //0.3525f
+#define OMNI_WHEEL_RADIUS 0.076f
+//sin cos各个象限的45度 绝对值等于 omni wheel angle inverse kinematics coefficient
+#define OWHE_ANG_INVK_COEF 0.707106781f
 
 //chassis task control time  2ms
 //底盘任务控制间隔 2ms

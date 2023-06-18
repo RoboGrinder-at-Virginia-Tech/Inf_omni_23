@@ -392,10 +392,17 @@ static void chassis_feedback_update(chassis_move_t *chassis_move_update)
 
     //calculate vertical speed, horizontal speed ,rotation speed, left hand rule 
     //更新底盘纵向速度 x， 平移速度y，旋转速度wz，坐标系为右手系
-    chassis_move_update->vx = (-chassis_move_update->motor_chassis[0].speed + chassis_move_update->motor_chassis[1].speed + chassis_move_update->motor_chassis[2].speed - chassis_move_update->motor_chassis[3].speed) * MOTOR_SPEED_TO_CHASSIS_SPEED_VX;
-    chassis_move_update->vy = (-chassis_move_update->motor_chassis[0].speed - chassis_move_update->motor_chassis[1].speed + chassis_move_update->motor_chassis[2].speed + chassis_move_update->motor_chassis[3].speed) * MOTOR_SPEED_TO_CHASSIS_SPEED_VY;
+//    chassis_move_update->vx = (-chassis_move_update->motor_chassis[0].speed + chassis_move_update->motor_chassis[1].speed + chassis_move_update->motor_chassis[2].speed - chassis_move_update->motor_chassis[3].speed) * MOTOR_SPEED_TO_CHASSIS_SPEED_VX;
+//    chassis_move_update->vy = (-chassis_move_update->motor_chassis[0].speed - chassis_move_update->motor_chassis[1].speed + chassis_move_update->motor_chassis[2].speed + chassis_move_update->motor_chassis[3].speed) * MOTOR_SPEED_TO_CHASSIS_SPEED_VY;
+//    chassis_move_update->wz = (-chassis_move_update->motor_chassis[0].speed - chassis_move_update->motor_chassis[1].speed - chassis_move_update->motor_chassis[2].speed - chassis_move_update->motor_chassis[3].speed) * MOTOR_SPEED_TO_CHASSIS_SPEED_WZ / MOTOR_DISTANCE_TO_CENTER;
+		// 2023 全向轮底盘 正运动学
+//		chassis_move_update->vx = (-OWHE_ANG_INVK_COEF*chassis_move_update->motor_chassis[0].speed + OWHE_ANG_INVK_COEF*chassis_move_update->motor_chassis[1].speed + OWHE_ANG_INVK_COEF*chassis_move_update->motor_chassis[2].speed - OWHE_ANG_INVK_COEF*chassis_move_update->motor_chassis[3].speed) * MOTOR_SPEED_TO_CHASSIS_SPEED_VX;
+//    chassis_move_update->vy = (-OWHE_ANG_INVK_COEF*chassis_move_update->motor_chassis[0].speed - OWHE_ANG_INVK_COEF*chassis_move_update->motor_chassis[1].speed + OWHE_ANG_INVK_COEF*chassis_move_update->motor_chassis[2].speed + OWHE_ANG_INVK_COEF*chassis_move_update->motor_chassis[3].speed) * MOTOR_SPEED_TO_CHASSIS_SPEED_VY;
+//    chassis_move_update->wz = (-chassis_move_update->motor_chassis[0].speed - chassis_move_update->motor_chassis[1].speed - chassis_move_update->motor_chassis[2].speed - chassis_move_update->motor_chassis[3].speed) * MOTOR_SPEED_TO_CHASSIS_SPEED_WZ / MOTOR_DISTANCE_TO_CENTER;
+		chassis_move_update->vx = (-chassis_move_update->motor_chassis[0].speed + chassis_move_update->motor_chassis[1].speed + chassis_move_update->motor_chassis[2].speed - chassis_move_update->motor_chassis[3].speed) * MOTOR_SPEED_TO_CHASSIS_SPEED_VX / OWHE_ANG_INVK_COEF;
+    chassis_move_update->vy = (-chassis_move_update->motor_chassis[0].speed - chassis_move_update->motor_chassis[1].speed + chassis_move_update->motor_chassis[2].speed + chassis_move_update->motor_chassis[3].speed) * MOTOR_SPEED_TO_CHASSIS_SPEED_VY / OWHE_ANG_INVK_COEF;
     chassis_move_update->wz = (-chassis_move_update->motor_chassis[0].speed - chassis_move_update->motor_chassis[1].speed - chassis_move_update->motor_chassis[2].speed - chassis_move_update->motor_chassis[3].speed) * MOTOR_SPEED_TO_CHASSIS_SPEED_WZ / MOTOR_DISTANCE_TO_CENTER;
-
+		
     //calculate chassis euler angle, if chassis add a new gyro sensor,please change this code
     //计算底盘姿态角度, 如果底盘上有陀螺仪请更改这部分代码
 		//SZL 2-3-2022更改
@@ -651,11 +658,17 @@ static void chassis_vector_to_mecanum_wheel_speed(const fp32 vx_set, const fp32 
 //    wheel_speed[2] = vx_set + vy_set + (-CHASSIS_WZ_SET_SCALE - 1.0f) * MOTOR_DISTANCE_TO_CENTER * wz_set;
 //    wheel_speed[3] = -vx_set + vy_set + (-CHASSIS_WZ_SET_SCALE - 1.0f) * MOTOR_DISTANCE_TO_CENTER * wz_set;
 	
-		//新的解算Matrix
-	  wheel_speed[0] = -vx_set - vy_set - (MOTOR_DISTANCE_TO_CENTER * wz_set);
-    wheel_speed[1] = vx_set - vy_set - (MOTOR_DISTANCE_TO_CENTER * wz_set);
-    wheel_speed[2] = vx_set + vy_set - (MOTOR_DISTANCE_TO_CENTER * wz_set);
-    wheel_speed[3] = -vx_set + vy_set - (MOTOR_DISTANCE_TO_CENTER * wz_set);
+//		//新的解算Matrix
+//	  wheel_speed[0] = -vx_set - vy_set - (MOTOR_DISTANCE_TO_CENTER * wz_set);
+//    wheel_speed[1] = vx_set - vy_set - (MOTOR_DISTANCE_TO_CENTER * wz_set);
+//    wheel_speed[2] = vx_set + vy_set - (MOTOR_DISTANCE_TO_CENTER * wz_set);
+//    wheel_speed[3] = -vx_set + vy_set - (MOTOR_DISTANCE_TO_CENTER * wz_set);
+	
+		//全向轮 运动学结算矩阵
+		wheel_speed[0] = ((-OWHE_ANG_INVK_COEF) * vx_set) - (OWHE_ANG_INVK_COEF * vy_set) - (MOTOR_DISTANCE_TO_CENTER * wz_set);
+    wheel_speed[1] = (OWHE_ANG_INVK_COEF * vx_set)    - (OWHE_ANG_INVK_COEF * vy_set) - (MOTOR_DISTANCE_TO_CENTER * wz_set);
+    wheel_speed[2] = (OWHE_ANG_INVK_COEF * vx_set)    + (OWHE_ANG_INVK_COEF * vy_set) - (MOTOR_DISTANCE_TO_CENTER * wz_set);
+    wheel_speed[3] = ((-OWHE_ANG_INVK_COEF) * vx_set) + (OWHE_ANG_INVK_COEF * vy_set) - (MOTOR_DISTANCE_TO_CENTER * wz_set);
 }
 
 
