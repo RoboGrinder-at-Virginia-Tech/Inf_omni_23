@@ -335,17 +335,17 @@ typedef struct
     const motor_measure_t *shoot_motor_L_measure; // left trigger
 		const motor_measure_t *shoot_motor_R_measure; // right trigger
 		
-		// left barrel; fric1 对应 从上往下看 看向电机定子 看向测速R标的左侧电机 --------------
+		// 1号对应: 看向前进方向, 左侧发射机构, 上面那个枪管
     ramp_function_source_t L_barrel_fric1_ramp;
     uint16_t L_barrel_fric_pwm1;
-    ramp_function_source_t L_barrel_fric2_ramp;
+    ramp_function_source_t L_barrel_fric2_ramp; // 2号对应: 看向前进方向, 左侧发射机构, 下面那个枪管
     uint16_t L_barrel_fric_pwm2;
 		
-		// right barrel; fric1 对应 从上往下看 看向电机定子 看向测速R标的左侧电机 --------------
-    ramp_function_source_t R_barrel_fric1_ramp;
-    uint16_t R_barrel_fric_pwm1;
-    ramp_function_source_t R_barrel_fric2_ramp;
-    uint16_t R_barrel_fric_pwm2;
+		// 3号对应: 看向前进方向, 右侧发射机构, 上面那个枪管
+    ramp_function_source_t R_barrel_fric3_ramp;
+    uint16_t R_barrel_fric_pwm3;
+    ramp_function_source_t R_barrel_fric4_ramp; // 4号对应: 看向前进方向, 右侧发射机构, 下面那个枪管
+    uint16_t R_barrel_fric_pwm4;
 		
 		// 17mm left barrel TRIG 各种控制 逻辑相关 --------------
 //    pid_type_def L_barrel_trigger_motor_pid;//内环PID
@@ -432,14 +432,16 @@ typedef struct
 //		fp32 currentRight_speed_set; //NOT USED for MD
 
 		// Left barrel speed related value for each fric
-		// fric1 对应 从上往下看 看向电机定子 看向测速R标的左侧电机 --------------
+		// 1号对应: 看向前进方向, 左侧发射机构, 上面那个枪管
 		fp32 L_barrel_fric1_speed_set; // 对应老的 currentLeft_speed_set
+		// 2号对应: 看向前进方向, 左侧发射机构, 下面那个枪管
 		fp32 L_barrel_fric2_speed_set;
 		
 		// Right barrel speed related value for each fric
-		// fric1 对应 从上往下看 看向电机定子 看向测速R标的左侧电机 --------------
-		fp32 R_barrel_fric1_speed_set;
-		fp32 R_barrel_fric2_speed_set;
+		// 3号对应: 看向前进方向, 右侧发射机构, 上面那个枪管
+		fp32 R_barrel_fric3_speed_set;
+		// 4号对应: 看向前进方向, 右侧发射机构, 下面那个枪管
+		fp32 R_barrel_fric4_speed_set;
 		
 		fp32 currentLIM_shoot_speed_17mm; // 左右炮塔各自速度上限 应一样
 		//当前 摩擦轮PID速度环 输入; 当前规则允许 速度上限 - offset 后 = 这个数

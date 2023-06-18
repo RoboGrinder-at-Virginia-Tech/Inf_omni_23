@@ -82,8 +82,8 @@ extern void L_barrel_fric1_on(uint16_t cmd);
 extern void L_barrel_fric2_on(uint16_t cmd);
 
 extern void R_barrel_fric_off(void);
-extern void R_barrel_fric1_on(uint16_t cmd);
-extern void R_barrel_fric2_on(uint16_t cmd);
+extern void R_barrel_fric3_on(uint16_t cmd);
+extern void R_barrel_fric4_on(uint16_t cmd);
 
 extern void M3508_fric_wheel_spin_control(fp32 left_fric_speed, fp32 right_fric_speed);
 #endif

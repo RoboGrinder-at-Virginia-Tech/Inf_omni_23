@@ -31,11 +31,11 @@ void R_barrel_fric_off(void)
     __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_3, FRIC_OFF);
     __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_4, FRIC_OFF);
 }
-void R_barrel_fric1_on(uint16_t cmd)
+void R_barrel_fric3_on(uint16_t cmd)
 {
     __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_3, cmd);
 }
-void R_barrel_fric2_on(uint16_t cmd)
+void R_barrel_fric4_on(uint16_t cmd)
 {
     __HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_4, cmd);
 }

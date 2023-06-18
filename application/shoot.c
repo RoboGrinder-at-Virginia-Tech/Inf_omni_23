@@ -44,8 +44,8 @@
 #define shootL_fric_off()    L_barrel_fric_off()      //关闭两个摩擦轮
 
 // shootR: right barrel
-#define shootR_fric1_on(pwm) R_barrel_fric1_on((pwm)) //left barrel 摩擦轮1pwm宏定义
-#define shootR_fric2_on(pwm) R_barrel_fric2_on((pwm)) //left barrel 摩擦轮2pwm宏定义
+#define shootR_fric3_on(pwm) R_barrel_fric3_on((pwm)) //left barrel 摩擦轮1pwm宏定义
+#define shootR_fric4_on(pwm) R_barrel_fric4_on((pwm)) //left barrel 摩擦轮2pwm宏定义
 #define shootR_fric_off()    R_barrel_fric_off()      //关闭两个摩擦轮
 
 #define shoot_laser_on()    laser_on()      //激光开启宏定义
@@ -167,8 +167,8 @@ void shoot_init(void)
     ramp_init(&shoot_control.L_barrel_fric1_ramp, SHOOT_CONTROL_TIME * 0.001f, FRIC_OFF, FRIC_OFF); //FRIC_DOWN, FRIC_OFF
     ramp_init(&shoot_control.L_barrel_fric2_ramp, SHOOT_CONTROL_TIME * 0.001f, FRIC_OFF, FRIC_OFF);
 		// right barrel ramp
-		ramp_init(&shoot_control.R_barrel_fric1_ramp, SHOOT_CONTROL_TIME * 0.001f, FRIC_OFF, FRIC_OFF);
-    ramp_init(&shoot_control.R_barrel_fric2_ramp, SHOOT_CONTROL_TIME * 0.001f, FRIC_OFF, FRIC_OFF);
+		ramp_init(&shoot_control.R_barrel_fric3_ramp, SHOOT_CONTROL_TIME * 0.001f, FRIC_OFF, FRIC_OFF);
+    ramp_init(&shoot_control.R_barrel_fric4_ramp, SHOOT_CONTROL_TIME * 0.001f, FRIC_OFF, FRIC_OFF);
 		
 		// left barrel - control
 		shoot_control.L_barrel_fric_pwm1 = FRIC_OFF;
@@ -183,8 +183,8 @@ void shoot_init(void)
     shoot_control.L_barrel_key_time = 0;
 		
 		// right barrel - control
-		shoot_control.R_barrel_fric_pwm1 = FRIC_OFF;
-		shoot_control.R_barrel_fric_pwm2 = FRIC_OFF;
+		shoot_control.R_barrel_fric_pwm3 = FRIC_OFF;
+		shoot_control.R_barrel_fric_pwm4 = FRIC_OFF;
 		shoot_control.R_barrel_ecd_count = 0;
     shoot_control.R_barrel_angle = shoot_control.shoot_motor_R_measure->ecd * MOTOR_ECD_TO_ANGLE;
     shoot_control.R_barrel_given_current = 0;
@@ -206,8 +206,8 @@ void shoot_init(void)
 		shoot_control.L_barrel_fric1_speed_set = 0;
 		shoot_control.L_barrel_fric2_speed_set = 0;
 		// right barrel speed
-		shoot_control.R_barrel_fric1_speed_set = 0;
-		shoot_control.R_barrel_fric2_speed_set = 0;
+		shoot_control.R_barrel_fric3_speed_set = 0;
+		shoot_control.R_barrel_fric4_speed_set = 0;
 		
 		shoot_control.currentLIM_shoot_speed_17mm = 0;
 		
@@ -247,13 +247,13 @@ void shoot_init(void)
 		shoot_control.L_barrel_fric2_ramp.min_value = FRIC_OFF;
 		shoot_control.L_barrel_fric2_ramp.out = 0; //FRIC_OFF;
 		
-		shoot_control.R_barrel_fric1_ramp.max_value = FRIC_OFF;
-		shoot_control.R_barrel_fric1_ramp.min_value = FRIC_OFF;
-		shoot_control.R_barrel_fric1_ramp.out = 0; //FRIC_OFF;
+		shoot_control.R_barrel_fric3_ramp.max_value = FRIC_OFF;
+		shoot_control.R_barrel_fric3_ramp.min_value = FRIC_OFF;
+		shoot_control.R_barrel_fric3_ramp.out = 0; //FRIC_OFF;
 		
-		shoot_control.R_barrel_fric2_ramp.max_value = FRIC_OFF;
-		shoot_control.R_barrel_fric2_ramp.min_value = FRIC_OFF;
-		shoot_control.R_barrel_fric2_ramp.out = 0; //FRIC_OFF;
+		shoot_control.R_barrel_fric4_ramp.max_value = FRIC_OFF;
+		shoot_control.R_barrel_fric4_ramp.min_value = FRIC_OFF;
+		shoot_control.R_barrel_fric4_ramp.out = 0; //FRIC_OFF;
 		
 		//本地热量 - 左枪管 ID1
 		get_shooter_id1_17mm_heat_limit_and_heat(&shoot_control.L_barrel_heat_limit, &shoot_control.L_barrel_heat);
@@ -272,10 +272,10 @@ void shoot_init(void)
 		shoot_control.R_barrel_alternate_shoot_last_tick = xTaskGetTickCount(); //使用RTOS时间源
 }
 
-uint16_t new_fric_allms_debug_L1 = 1189; //1186;//NEW_FRIC_15ms;
-uint16_t new_fric_allms_debug_L2 = 1189; //1186;//NEW_FRIC_15ms;
-uint16_t new_fric_allms_debug_R1 = 1200; //1214; //1200;//NEW_FRIC_15ms;
-uint16_t new_fric_allms_debug_R2 = 1200; //1214; //1200;//NEW_FRIC_15ms;
+uint16_t new_fric_allms_debug_L1 = 1189; //1186;//NEW_FRIC_15ms;-1号对应: 看向前进方向, 左侧发射机构, 上面那个枪管
+uint16_t new_fric_allms_debug_L2 = 1189; //1186;//NEW_FRIC_15ms;-2号对应: 看向前进方向, 左侧发射机构, 下面那个枪管
+uint16_t new_fric_allms_debug_R3 = 1200; //1214; //1200;//NEW_FRIC_15ms;-3号对应: 看向前进方向, 右侧发射机构, 上面那个枪管
+uint16_t new_fric_allms_debug_R4 = 1200; //1214; //1200;//NEW_FRIC_15ms;-4号对应: 看向前进方向, 右侧发射机构, 下面那个枪管
 /**
   * @brief          射击循环
   * @param[in]      void
@@ -336,14 +336,14 @@ int16_t shoot_control_loop(void)
 		  // snail 摩擦轮 预期速度 只作为目标数值参考
 		  shoot_control.L_barrel_fric1_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 		  shoot_control.L_barrel_fric2_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
-		  shoot_control.R_barrel_fric1_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
-		  shoot_control.R_barrel_fric2_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
+		  shoot_control.R_barrel_fric3_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
+		  shoot_control.R_barrel_fric4_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 		  
 		  // 更新MD snail 摩擦轮的PWM上限
 		  shoot_control.L_barrel_fric1_ramp.max_value_constant = new_fric_allms_debug_L1; //NEW_FRIC_15ms; //NEW_FRIC_15ms_higher
 		  shoot_control.L_barrel_fric2_ramp.max_value_constant = new_fric_allms_debug_L2; //NEW_FRIC_15ms;
-		  shoot_control.R_barrel_fric1_ramp.max_value_constant = new_fric_allms_debug_R1; //NEW_FRIC_15ms;
-		  shoot_control.R_barrel_fric2_ramp.max_value_constant = new_fric_allms_debug_R2; //NEW_FRIC_15ms;
+		  shoot_control.R_barrel_fric3_ramp.max_value_constant = new_fric_allms_debug_R3; //NEW_FRIC_15ms;
+		  shoot_control.R_barrel_fric4_ramp.max_value_constant = new_fric_allms_debug_R4; //NEW_FRIC_15ms;
 	  }
 	  else if(shoot_control.referee_current_shooter_17mm_speed_limit == 18)
 	  { //6-15之前的自瞄一直是按这个测试的
@@ -356,14 +356,14 @@ int16_t shoot_control_loop(void)
 		  // snail 摩擦轮 预期速度 只作为目标数值参考
 		  shoot_control.L_barrel_fric1_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 		  shoot_control.L_barrel_fric2_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
-		  shoot_control.R_barrel_fric1_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
-		  shoot_control.R_barrel_fric2_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
+		  shoot_control.R_barrel_fric3_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
+		  shoot_control.R_barrel_fric4_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 		  
 		  // 更新MD snail 摩擦轮的PWM上限
 		  shoot_control.L_barrel_fric1_ramp.max_value_constant = NEW_FRIC_18ms; //NEW_FRIC_15ms_higher
 		  shoot_control.L_barrel_fric2_ramp.max_value_constant = NEW_FRIC_18ms;
-		  shoot_control.R_barrel_fric1_ramp.max_value_constant = NEW_FRIC_18ms;
-		  shoot_control.R_barrel_fric2_ramp.max_value_constant = NEW_FRIC_18ms;
+		  shoot_control.R_barrel_fric3_ramp.max_value_constant = NEW_FRIC_18ms;
+		  shoot_control.R_barrel_fric4_ramp.max_value_constant = NEW_FRIC_18ms;
 	  }
 	  else
 	  {//默认射速15
@@ -373,14 +373,14 @@ int16_t shoot_control_loop(void)
 		  // snail 摩擦轮 预期速度 只作为目标数值参考
 		  shoot_control.L_barrel_fric1_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 		  shoot_control.L_barrel_fric2_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
-		  shoot_control.R_barrel_fric1_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
-		  shoot_control.R_barrel_fric2_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
+		  shoot_control.R_barrel_fric3_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
+		  shoot_control.R_barrel_fric4_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 		  
 		  // 更新MD snail 摩擦轮的PWM上限
 		  shoot_control.L_barrel_fric1_ramp.max_value_constant = NEW_FRIC_15ms; //NEW_FRIC_15ms_higher
 		  shoot_control.L_barrel_fric2_ramp.max_value_constant = NEW_FRIC_15ms;
-		  shoot_control.R_barrel_fric1_ramp.max_value_constant = NEW_FRIC_15ms;
-		  shoot_control.R_barrel_fric2_ramp.max_value_constant = NEW_FRIC_15ms;
+		  shoot_control.R_barrel_fric3_ramp.max_value_constant = NEW_FRIC_15ms;
+		  shoot_control.R_barrel_fric4_ramp.max_value_constant = NEW_FRIC_15ms;
 	  }
 		
 		// 先判断是 交替发射
@@ -588,8 +588,8 @@ int16_t shoot_control_loop(void)
 //        ramp_calc(&shoot_control.fric1_ramp, -SHOOT_FRIC_PWM_ADD_VALUE);
 //        ramp_calc(&shoot_control.fric2_ramp, -SHOOT_FRIC_PWM_ADD_VALUE);
 			
-				shoot_control.R_barrel_fric_pwm1 = FRIC_OFF; //.fric_pwm1
-				shoot_control.R_barrel_fric_pwm2 = FRIC_OFF; //.fric_pwm2
+				shoot_control.R_barrel_fric_pwm3 = FRIC_OFF; //.fric_pwm1
+				shoot_control.R_barrel_fric_pwm4 = FRIC_OFF; //.fric_pwm2
 				//关闭不需要斜坡关闭
 			
 //				//更改斜坡数据 挪到初始化中
@@ -630,14 +630,14 @@ int16_t shoot_control_loop(void)
             shoot_control.R_barrel_given_current = 0;
         }
 				// TODO: 卡尔曼滤波 结合裁判系统返回子弹速度 调整摩擦轮速度 也就是调整ramp.max_value
-				snail_fric_wheel_kalman_adjustment(&shoot_control.R_barrel_fric1_ramp, &shoot_control.R_barrel_fric2_ramp);
+				snail_fric_wheel_kalman_adjustment(&shoot_control.R_barrel_fric3_ramp, &shoot_control.R_barrel_fric4_ramp);
 				
         //摩擦轮需要一个个斜波开启，不能同时直接开启，否则可能电机不转
-        ramp_calc(&shoot_control.R_barrel_fric1_ramp, SHOOT_FRIC_PWM_ADD_VALUE);
-        ramp_calc(&shoot_control.R_barrel_fric2_ramp, SHOOT_FRIC_PWM_ADD_VALUE);
+        ramp_calc(&shoot_control.R_barrel_fric3_ramp, SHOOT_FRIC_PWM_ADD_VALUE);
+        ramp_calc(&shoot_control.R_barrel_fric4_ramp, SHOOT_FRIC_PWM_ADD_VALUE);
 				// Update fric PWM
-				shoot_control.R_barrel_fric_pwm1 = (uint16_t)(shoot_control.R_barrel_fric1_ramp.out);
-				shoot_control.R_barrel_fric_pwm2 = (uint16_t)(shoot_control.R_barrel_fric2_ramp.out);
+				shoot_control.R_barrel_fric_pwm3 = (uint16_t)(shoot_control.R_barrel_fric3_ramp.out);
+				shoot_control.R_barrel_fric_pwm4 = (uint16_t)(shoot_control.R_barrel_fric4_ramp.out);
 				
 //				//SZL添加, 也可以使用斜波开启 低通滤波 //NOT USED for MD
 //				shoot_control.currentLeft_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
@@ -659,8 +659,8 @@ int16_t shoot_control_loop(void)
 		// set the calculated final pwm to TIM, actually control the motor
 		L_barrel_fric1_on(shoot_control.L_barrel_fric_pwm1);
 		L_barrel_fric2_on(shoot_control.L_barrel_fric_pwm2);
-		R_barrel_fric1_on(shoot_control.R_barrel_fric_pwm1);
-		R_barrel_fric2_on(shoot_control.R_barrel_fric_pwm2);
+		R_barrel_fric3_on(shoot_control.R_barrel_fric_pwm3);
+		R_barrel_fric4_on(shoot_control.R_barrel_fric_pwm4);
 		
 //		//NOT USED for MD
 //		M3508_fric_wheel_spin_control(-shoot_control.currentLeft_speed_set, shoot_control.currentRight_speed_set);
@@ -802,7 +802,7 @@ static void shoot_set_mode(void)
     }
 		
 		// right barrel related FSM, 后处理
-		if(shoot_control.shoot_mode_R == SHOOT_READY_FRIC && shoot_control.R_barrel_fric1_ramp.out == shoot_control.R_barrel_fric1_ramp.max_value && shoot_control.R_barrel_fric2_ramp.out == shoot_control.R_barrel_fric2_ramp.max_value)
+		if(shoot_control.shoot_mode_R == SHOOT_READY_FRIC && shoot_control.R_barrel_fric3_ramp.out == shoot_control.R_barrel_fric3_ramp.max_value && shoot_control.R_barrel_fric4_ramp.out == shoot_control.R_barrel_fric4_ramp.max_value)
     {
         shoot_control.shoot_mode_R = SHOOT_READY_BULLET; //当摩擦轮完成预热 //A
     }
@@ -1819,7 +1819,7 @@ static void snail_fric_wheel_kalman_adjustment(ramp_function_source_t *fric1, ra
 		fric1->max_value = fric1->max_value_constant;
 		fric2->max_value = fric2->max_value_constant;
 	}
-	else if(fric1 == &shoot_control.R_barrel_fric1_ramp && fric2 == &shoot_control.R_barrel_fric2_ramp)
+	else if(fric1 == &shoot_control.R_barrel_fric3_ramp && fric2 == &shoot_control.R_barrel_fric4_ramp)
 	{ //处理右枪管
 		fric1->max_value = fric1->max_value_constant;
 		fric2->max_value = fric2->max_value_constant;
