@@ -96,7 +96,7 @@ Omni Drive: 轮到中心250mm = 0.25m, 45度夹角
 MOTOR_DISTANCE_TO_CENTER是车轮到旋转中心的距离 = 0.258093975f
 */
 #define MOTOR_DISTANCE_TO_CENTER 0.258093975f //0.353553391f //0.358f //0.3525f
-#define OMNI_WHEEL_RADIUS 0.076f
+#define OMNI_WHEEL_RADIUS 0.0762f
 //sin cos各个象限的45度 绝对值等于 omni wheel angle inverse kinematics coefficient
 #define OWHE_ANG_INVK_COEF 0.707106781f
 
