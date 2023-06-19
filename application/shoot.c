@@ -1064,7 +1064,7 @@ static void shoot_set_mode(void)
 		//shoot_control.auto_restart_needed = (shoot_control.trigger_motor17mm_L_is_online)?(0):(1);
 		//检测离线 并计算离线时间
 //		if(shoot_control.trigger_motor17mm_L_is_online || shoot_control.trigger_motor17mm_R_is_online) //6-18修改 STOP时不启动 自动重启功能
-		if( (shoot_control.trigger_motor17mm_L_is_online || shoot_control.trigger_motor17mm_R_is_online) && (shoot_control.shoot_mode_L != SHOOT_STOP && shoot_control.shoot_mode_R != SHOOT_STOP) )
+		if( (shoot_control.trigger_motor17mm_L_is_online || shoot_control.trigger_motor17mm_R_is_online) || (shoot_control.shoot_mode_L == SHOOT_STOP && shoot_control.shoot_mode_R == SHOOT_STOP) )
 		{
 			shoot_control.rst_m_off_time = 0;
 		}
