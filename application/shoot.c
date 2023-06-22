@@ -290,10 +290,10 @@ uint16_t new_fric_allms_debug_R3 = 1630;//-3号对应: 看向前进方向, 右侧发射机构, 
 uint16_t new_fric_allms_debug_R4 = 1630; //-4号对应: 看向前进方向, 右侧发射机构, 下面那个枪管
 
 */
-uint16_t new_fric_allms_debug_L1 = 1400; //-1号对应: 看向前进方向, 左侧发射机构, 上面那个枪管
-uint16_t new_fric_allms_debug_L2 = 1400; //-2号对应: 看向前进方向, 左侧发射机构, 下面那个枪管
-uint16_t new_fric_allms_debug_R3 = 1630;//-3号对应: 看向前进方向, 右侧发射机构, 上面那个枪管
-uint16_t new_fric_allms_debug_R4 = 1630; //-4号对应: 看向前进方向, 右侧发射机构, 下面那个枪管
+uint16_t new_fric_allms_debug_L1 = 1340; //-1号对应: 看向前进方向, 左侧发射机构, 上面那个枪管
+uint16_t new_fric_allms_debug_L2 = 1340; //-2号对应: 看向前进方向, 左侧发射机构, 下面那个枪管
+uint16_t new_fric_allms_debug_R3 = 1558;//-3号对应: 看向前进方向, 右侧发射机构, 上面那个枪管
+uint16_t new_fric_allms_debug_R4 = 1558; //-4号对应: 看向前进方向, 右侧发射机构, 下面那个枪管
 /**
   * @brief          射击循环
   * @param[in]      void
