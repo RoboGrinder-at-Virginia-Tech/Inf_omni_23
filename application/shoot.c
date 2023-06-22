@@ -38,6 +38,8 @@
 
 #include "stdlib.h"
 
+#include "bsp_buzzer.h"
+
 // shootL: left barrel
 #define shootL_fric1_on(pwm) L_barrel_fric1_on((pwm)) //left barrel 摩擦轮1pwm宏定义
 #define shootL_fric2_on(pwm) L_barrel_fric2_on((pwm)) //left barrel 摩擦轮2pwm宏定义
@@ -55,6 +57,8 @@
 
 
 //extern miniPC_info_t miniPC_info; //3-26-2023 update never use this again
+extern osThreadId gimbalTaskHandle; //声明 用于挂起和恢复
+extern osThreadId chassisTaskHandle; //声明 用于挂起和恢复
 
 /**
   * @brief          射击状态机设置，遥控器上拨一次开启，再上拨关闭，下拨1次发射1颗，一直处在下，则持续发射，用于3min准备时间清理子弹
@@ -272,10 +276,24 @@ void shoot_init(void)
 		shoot_control.R_barrel_alternate_shoot_last_tick = xTaskGetTickCount(); //使用RTOS时间源
 }
 
-uint16_t new_fric_allms_debug_L1 = 1189; //1186;//NEW_FRIC_15ms;-1号对应: 看向前进方向, 左侧发射机构, 上面那个枪管
-uint16_t new_fric_allms_debug_L2 = 1189; //1186;//NEW_FRIC_15ms;-2号对应: 看向前进方向, 左侧发射机构, 下面那个枪管
-uint16_t new_fric_allms_debug_R3 = 1200; //1214; //1200;//NEW_FRIC_15ms;-3号对应: 看向前进方向, 右侧发射机构, 上面那个枪管
-uint16_t new_fric_allms_debug_R4 = 1200; //1214; //1200;//NEW_FRIC_15ms;-4号对应: 看向前进方向, 右侧发射机构, 下面那个枪管
+/*6-22-2023 12v稳压后 标定
+15m/s:
+uint16_t new_fric_allms_debug_L1 = 1340; //1189; //NEW_FRIC_15ms;-1号对应: 看向前进方向, 左侧发射机构, 上面那个枪管
+uint16_t new_fric_allms_debug_L2 = 1340; //1189; //NEW_FRIC_15ms;-2号对应: 看向前进方向, 左侧发射机构, 下面那个枪管
+uint16_t new_fric_allms_debug_R3 = 1558;//1200; //1200;//NEW_FRIC_15ms;-3号对应: 看向前进方向, 右侧发射机构, 上面那个枪管
+uint16_t new_fric_allms_debug_R4 = 1558; //1214; //1200;//NEW_FRIC_15ms;-4号对应: 看向前进方向, 右侧发射机构, 下面那个枪管
+
+18m/s:
+uint16_t new_fric_allms_debug_L1 = 1400; //-1号对应: 看向前进方向, 左侧发射机构, 上面那个枪管
+uint16_t new_fric_allms_debug_L2 = 1400; //-2号对应: 看向前进方向, 左侧发射机构, 下面那个枪管
+uint16_t new_fric_allms_debug_R3 = 1630;//-3号对应: 看向前进方向, 右侧发射机构, 上面那个枪管
+uint16_t new_fric_allms_debug_R4 = 1630; //-4号对应: 看向前进方向, 右侧发射机构, 下面那个枪管
+
+*/
+uint16_t new_fric_allms_debug_L1 = 1400; //-1号对应: 看向前进方向, 左侧发射机构, 上面那个枪管
+uint16_t new_fric_allms_debug_L2 = 1400; //-2号对应: 看向前进方向, 左侧发射机构, 下面那个枪管
+uint16_t new_fric_allms_debug_R3 = 1630;//-3号对应: 看向前进方向, 右侧发射机构, 上面那个枪管
+uint16_t new_fric_allms_debug_R4 = 1630; //-4号对应: 看向前进方向, 右侧发射机构, 下面那个枪管
 /**
   * @brief          射击循环
   * @param[in]      void
@@ -885,7 +903,7 @@ static void shoot_set_mode(void)
 			set_autoAimFlag(1); //miniPC_info.autoAimFlag = 1;
 		}
 		
-		if(shoot_control.press_key_V_time == PRESS_LONG_TIME_V) //shoot_control.press_r_time == PRESS_LONG_TIME_R || r开枪用
+		if(shoot_control.press_r_time == PRESS_LONG_TIME_R || shoot_control.press_key_V_time == PRESS_LONG_TIME_V)
 		{
 			set_autoAimFlag(2); //miniPC_info.autoAimFlag = 2;
 			//shoot_control.key_X_cnt = 2;
@@ -969,14 +987,14 @@ static void shoot_set_mode(void)
 		shoot_heat_update_calculate(&shoot_control); //就这里执行一次 -------------------------------------------------
 		
     //左枪管 ID1 ref热量限制
-    get_shooter_id1_17mm_heat_limit_and_heat(&shoot_control.L_barrel_heat_limit, &shoot_control.L_barrel_heat); //.heat_limit .heat
-    if(!toe_is_error(REFEREE_TOE) && (shoot_control.L_barrel_heat + SHOOT_HEAT_REMAIN_VALUE > shoot_control.L_barrel_heat_limit))
-    {
-        if(shoot_control.shoot_mode_L == SHOOT_BULLET || shoot_control.shoot_mode_L == SHOOT_CONTINUE_BULLET || shoot_control.shoot_mode_L == SHOOT_ALTERNATE_CONTINUE_BULLET) //--------注意这里的
-        {
-            shoot_control.shoot_mode_L =SHOOT_READY_BULLET;
-        }
-    }//调试: 难道referee uart掉线后 就没有热量保护了?
+//    get_shooter_id1_17mm_heat_limit_and_heat(&shoot_control.L_barrel_heat_limit, &shoot_control.L_barrel_heat); //.heat_limit .heat
+//    if(!toe_is_error(REFEREE_TOE) && (shoot_control.L_barrel_heat + SHOOT_HEAT_REMAIN_VALUE > shoot_control.L_barrel_heat_limit))
+//    {
+//        if(shoot_control.shoot_mode_L == SHOOT_BULLET || shoot_control.shoot_mode_L == SHOOT_CONTINUE_BULLET || shoot_control.shoot_mode_L == SHOOT_ALTERNATE_CONTINUE_BULLET) //--------注意这里的
+//        {
+//            shoot_control.shoot_mode_L =SHOOT_READY_BULLET;
+//        }
+//    }//调试: 难道referee uart掉线后 就没有热量保护了?
 		
 		
 		//right barrel 连续发弹判断; 发射机构断电时, shoot_mode状态机不会被置为发射相关状态
@@ -1039,14 +1057,14 @@ static void shoot_set_mode(void)
     }
 
 		//右枪管 ID2 ref热量限制
-    get_shooter_id2_17mm_heat_limit_and_heat(&shoot_control.R_barrel_heat_limit, &shoot_control.R_barrel_heat);
-    if(!toe_is_error(REFEREE_TOE) && (shoot_control.R_barrel_heat + SHOOT_HEAT_REMAIN_VALUE > shoot_control.R_barrel_heat_limit))
-    {
-        if(shoot_control.shoot_mode_R == SHOOT_BULLET || shoot_control.shoot_mode_R == SHOOT_CONTINUE_BULLET || shoot_control.shoot_mode_R == SHOOT_ALTERNATE_CONTINUE_BULLET) //--------注意这里的>
-        {
-            shoot_control.shoot_mode_R =SHOOT_READY_BULLET;
-        }
-    }//调试: 难道referee uart掉线后 就没有热量保护了?
+//    get_shooter_id2_17mm_heat_limit_and_heat(&shoot_control.R_barrel_heat_limit, &shoot_control.R_barrel_heat);
+//    if(!toe_is_error(REFEREE_TOE) && (shoot_control.R_barrel_heat + SHOOT_HEAT_REMAIN_VALUE > shoot_control.R_barrel_heat_limit))
+//    {
+//        if(shoot_control.shoot_mode_R == SHOOT_BULLET || shoot_control.shoot_mode_R == SHOOT_CONTINUE_BULLET || shoot_control.shoot_mode_R == SHOOT_ALTERNATE_CONTINUE_BULLET) //--------注意这里的>
+//        {
+//            shoot_control.shoot_mode_R =SHOOT_READY_BULLET;
+//        }
+//    }//调试: 难道referee uart掉线后 就没有热量保护了?
 		
 //    //如果云台状态是 无力状态，就关闭射击
 //    if (gimbal_cmd_to_shoot_stop())
@@ -2093,4 +2111,58 @@ uint32_t shoot_heat_update_calculate(shoot_control_t* shoot_heat)
 	}
 	
 	return 0;
+}
+
+/* 此函数会阻塞
+替换原来calibrate task中, CAN_cmd_chassis_reset_ID()函数 依靠摇杆值的输入, 校准PWM
+左侧遥感 竖直方向 ch[3]拨到最下面(摇杆最小值 -660.0f)为 pwm max90%, 拨到最上面(摇杆最大值 660.0f)为pwm min 10%
+FRIC_OFF 1000 对应 5% pwm
+*/
+void L_R_barrel_all_fric_esc_pwm_calibration()
+{
+//	//挂起其它所有可能产生影响的任务
+	osThreadSuspend(gimbalTaskHandle); //文件 最前面 声明 用于挂起和恢复
+	osThreadSuspend(chassisTaskHandle);
+	
+	//初始化为最大值
+	L_barrel_fric1_on(17999);
+	L_barrel_fric2_on(17999);
+	R_barrel_fric3_on(17999);
+	R_barrel_fric4_on(17999);
+	vTaskDelay(200);
+	
+	while(1)
+	{
+		if(shoot_control.shoot_rc->rc.ch[3] < (int16_t)(-330))
+		{
+			//开启蜂鸣器
+			buzzer_on(1, 500);  //buzzer_on(50, 19999); //头文件声明最前面
+			//摇杆向下拨
+			L_barrel_fric1_on(2199);
+			L_barrel_fric2_on(2199);
+			R_barrel_fric3_on(2199);
+			R_barrel_fric4_on(2199); //17999
+		}
+		else if(shoot_control.shoot_rc->rc.ch[3] > (int16_t)(330))
+		{
+			//开启蜂鸣器
+			buzzer_on(10, 500); //buzzer_on(70, 19999); //头文件声明最前面
+			
+			//摇杆向上拨
+			L_barrel_fric1_on(1000); //1999
+			L_barrel_fric2_on(1000);
+			R_barrel_fric3_on(1000);
+			R_barrel_fric4_on(1000);
+		}
+		
+		//检测左侧开关不为最下的情况退出循环
+		if(!( switch_is_down(shoot_control.shoot_rc->rc.s[1]) ))
+		{
+			break;
+		}
+	}
+	
+//	//resume 之前挂起的任务
+	osThreadResume(gimbalTaskHandle);
+	osThreadResume(chassisTaskHandle);
 }

@@ -364,8 +364,8 @@ void embed_all_info_update_from_sensor()
 	embed_msg_to_pc.s_vy_m = embed_msg_to_pc.chassis_move_ptr->vy;
 	embed_msg_to_pc.s_vw_m = embed_msg_to_pc.chassis_move_ptr->wz;
 	embed_msg_to_pc.energy_buff_pct = (uint8_t) get_current_cap_pct();
-	embed_msg_to_pc.yaw_relative_angle = embed_msg_to_pc.gimbal_control_ptr->gimbal_yaw_motor.relative_angle;
-	embed_msg_to_pc.pitch_relative_angle = embed_msg_to_pc.gimbal_control_ptr->gimbal_pitch_motor.relative_angle;
+	embed_msg_to_pc.yaw_relative_angle = embed_msg_to_pc.gimbal_control_ptr->gimbal_yaw_motor.absolute_angle; //6-22ÐÞ¸Ärelative_angle
+	embed_msg_to_pc.pitch_relative_angle = embed_msg_to_pc.gimbal_control_ptr->gimbal_pitch_motor.absolute_angle; //relative_angle
 	
 	embed_msg_to_pc.quat[0] = embed_msg_to_pc.quat_ptr[0];
 	embed_msg_to_pc.quat[1] = embed_msg_to_pc.quat_ptr[1];

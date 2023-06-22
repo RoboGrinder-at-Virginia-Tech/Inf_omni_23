@@ -9,7 +9,12 @@ extern shoot_control_t shoot_control;
 SZL 4-15-2023 添加 MD 炮塔的另外两个 摩擦轮
 fric1_on(..) 变为 L_barrel_fric1_on(..)
 fric2_on(..) 变为 L_barrel_fric2_on(..)
+__HAL_TIM_SetCompare(&htim1, TIM_CHANNEL_1, cmd)相关函数; cmd设置CCR比较值寄存器, CNT计数值单片机数数用的
+cmd数值最小值和最大值, 最小值为0 - 0%占空比, 最大值为19999(或20000) 100%占空比, AutoReload Regiter(ARR重载值) 配置=19999
 
+htim1所有channel 1 ~ 4 模式pwm mode 1 递增 CNT<CCR, 通道CH为有效, 否则为无效(即CNT>=CCR)
+
+19999 * 10% = 1999; 19999 * 90% = 17999
 */
 
 void L_barrel_fric_off(void)
