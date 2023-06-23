@@ -240,8 +240,8 @@ void cmd_process_pc_cmd_gimbal_ctrl_aid(void) //TODO添加数据合理性判断
 	first_order_filter_cali(&pc_info.yawMove_aid_filter, pc_cmd_gimbal_ctrl_aid.yaw);
 	first_order_filter_cali(&pc_info.pitchMove_aid_filter, pc_cmd_gimbal_ctrl_aid.pitch);
 	
-	pc_info.yawMove_aid = 0.0005f * (fp32)pc_cmd_gimbal_ctrl_aid.yaw / 10000.0f; //003f 008f 0015f
-	pc_info.pitchMove_aid = 0.0005f * (fp32)pc_cmd_gimbal_ctrl_aid.pitch / 10000.0f; //008f 004f 002f
+	pc_info.yawMove_aid = 0.0010f * (fp32)pc_cmd_gimbal_ctrl_aid.yaw / 10000.0f; //003f 008f 0015f - 0005f
+	pc_info.pitchMove_aid = 0.001f * (fp32)pc_cmd_gimbal_ctrl_aid.pitch / 10000.0f; //008f 004f 002f - 0005f
 //	pc_info.yawMove_aid = 0.003f * (fp32)pc_info.yawMove_aid_filter.out / 10000.0f; //003f 008f
 //	pc_info.pitchMove_aid = 0.008f * (fp32)pc_info.pitchMove_aid_filter.out / 10000.0f; //008f 010f
 	

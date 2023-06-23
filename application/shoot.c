@@ -290,10 +290,15 @@ uint16_t new_fric_allms_debug_R3 = 1630;//-3号对应: 看向前进方向, 右侧发射机构, 
 uint16_t new_fric_allms_debug_R4 = 1630; //-4号对应: 看向前进方向, 右侧发射机构, 下面那个枪管
 
 */
-uint16_t new_fric_allms_debug_L1 = 1340; //-1号对应: 看向前进方向, 左侧发射机构, 上面那个枪管
-uint16_t new_fric_allms_debug_L2 = 1340; //-2号对应: 看向前进方向, 左侧发射机构, 下面那个枪管
-uint16_t new_fric_allms_debug_R3 = 1558;//-3号对应: 看向前进方向, 右侧发射机构, 上面那个枪管
-uint16_t new_fric_allms_debug_R4 = 1558; //-4号对应: 看向前进方向, 右侧发射机构, 下面那个枪管
+uint16_t new_fric_allms_debug_L1_15ms = 1338; //-1号对应: 看向前进方向, 左侧发射机构, 上面那个枪管 1338
+uint16_t new_fric_allms_debug_L2_15ms = 1338; //-2号对应: 看向前进方向, 左侧发射机构, 下面那个枪管 1338
+uint16_t new_fric_allms_debug_R3_15ms = 1558;//-3号对应: 看向前进方向, 右侧发射机构, 上面那个枪管 1555
+uint16_t new_fric_allms_debug_R4_15ms = 1558; //-4号对应: 看向前进方向, 右侧发射机构, 下面那个枪管 1563
+
+uint16_t new_fric_allms_debug_L1_18ms = 1400; //-1号对应: 看向前进方向, 左侧发射机构, 上面那个枪管
+uint16_t new_fric_allms_debug_L2_18ms = 1400; //-2号对应: 看向前进方向, 左侧发射机构, 下面那个枪管
+uint16_t new_fric_allms_debug_R3_18ms = 1630;//-3号对应: 看向前进方向, 右侧发射机构, 上面那个枪管
+uint16_t new_fric_allms_debug_R4_18ms = 1630; //-4号对应: 看向前进方向, 右侧发射机构, 下面那个枪管
 /**
   * @brief          射击循环
   * @param[in]      void
@@ -342,32 +347,31 @@ int16_t shoot_control_loop(void)
 		  shoot_control.referee_current_shooter_17mm_speed_limit = 18;
 	  }
 		
-	  //17mm 的两档
-	  shoot_control.referee_current_shooter_17mm_speed_limit = 15;//强制使其=.. 用于调试-----------------------------------------------------------------------------------------------
+	  //17mm 的两档  15
+	  shoot_control.referee_current_shooter_17mm_speed_limit = 18;//强制使其=.. 用于调试-----------------------------------------------------------------------------------------------
 	  if(shoot_control.referee_current_shooter_17mm_speed_limit == 15)
 	  {
-		  shoot_control.currentLIM_shoot_speed_17mm = (fp32)(15 - 3.0);//待定----------------------------
-		  shoot_control.predict_shoot_speed = shoot_control.currentLIM_shoot_speed_17mm + 2;//待定
-		  /*1) 发给ZYZ那 15.5 测出来14.5
-		    2) 发给ZYZ那 14.0 测出来 14.0
+		  shoot_control.currentLIM_shoot_speed_17mm = (fp32)(15 - 3.0);//待定 没用
+		  shoot_control.predict_shoot_speed = 14.7f; //shoot_control.currentLIM_shoot_speed_17mm + 2;//待定
+		  /*1) 6-22-2023经过测试 14.7f
 		  */
-		  // snail 摩擦轮 预期速度 只作为目标数值参考
+		  // snail 摩擦轮 预期速度 只作为目标数值参考 没用
 		  shoot_control.L_barrel_fric1_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 		  shoot_control.L_barrel_fric2_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 		  shoot_control.R_barrel_fric3_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 		  shoot_control.R_barrel_fric4_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 		  
 		  // 更新MD snail 摩擦轮的PWM上限
-		  shoot_control.L_barrel_fric1_ramp.max_value_constant = new_fric_allms_debug_L1; //NEW_FRIC_15ms; //NEW_FRIC_15ms_higher
-		  shoot_control.L_barrel_fric2_ramp.max_value_constant = new_fric_allms_debug_L2; //NEW_FRIC_15ms;
-		  shoot_control.R_barrel_fric3_ramp.max_value_constant = new_fric_allms_debug_R3; //NEW_FRIC_15ms;
-		  shoot_control.R_barrel_fric4_ramp.max_value_constant = new_fric_allms_debug_R4; //NEW_FRIC_15ms;
+		  shoot_control.L_barrel_fric1_ramp.max_value_constant = new_fric_allms_debug_L1_15ms; //NEW_FRIC_15ms; //NEW_FRIC_15ms_higher
+		  shoot_control.L_barrel_fric2_ramp.max_value_constant = new_fric_allms_debug_L2_15ms; //NEW_FRIC_15ms;
+		  shoot_control.R_barrel_fric3_ramp.max_value_constant = new_fric_allms_debug_R3_15ms; //NEW_FRIC_15ms;
+		  shoot_control.R_barrel_fric4_ramp.max_value_constant = new_fric_allms_debug_R4_15ms; //NEW_FRIC_15ms;
 	  }
 	  else if(shoot_control.referee_current_shooter_17mm_speed_limit == 18)
-	  { //6-15之前的自瞄一直是按这个测试的
+		{ //TODO: 按照上面那档修改
 		  // 18- 4.5 为 RMUL 实际 16.7-17.1 - .3 m/s 单速标定 SZL
-		  shoot_control.currentLIM_shoot_speed_17mm = (fp32)(18 - 4.5);
-		  shoot_control.predict_shoot_speed = shoot_control.currentLIM_shoot_speed_17mm + 3;
+		  shoot_control.currentLIM_shoot_speed_17mm = (fp32)(18 - 4.5);// 没用
+		  shoot_control.predict_shoot_speed = 17.5f; //shoot_control.currentLIM_shoot_speed_17mm + 3;
 		  /*
 		  1) 发给ZYZ那 16.5 测出来 16.5
 		  */
@@ -378,27 +382,27 @@ int16_t shoot_control_loop(void)
 		  shoot_control.R_barrel_fric4_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 		  
 		  // 更新MD snail 摩擦轮的PWM上限
-		  shoot_control.L_barrel_fric1_ramp.max_value_constant = NEW_FRIC_18ms; //NEW_FRIC_15ms_higher
-		  shoot_control.L_barrel_fric2_ramp.max_value_constant = NEW_FRIC_18ms;
-		  shoot_control.R_barrel_fric3_ramp.max_value_constant = NEW_FRIC_18ms;
-		  shoot_control.R_barrel_fric4_ramp.max_value_constant = NEW_FRIC_18ms;
+		  shoot_control.L_barrel_fric1_ramp.max_value_constant = new_fric_allms_debug_L1_18ms; //NEW_FRIC_18ms; //NEW_FRIC_15ms_higher
+		  shoot_control.L_barrel_fric2_ramp.max_value_constant = new_fric_allms_debug_L2_18ms;
+		  shoot_control.R_barrel_fric3_ramp.max_value_constant = new_fric_allms_debug_R3_18ms;
+		  shoot_control.R_barrel_fric4_ramp.max_value_constant = new_fric_allms_debug_R4_18ms;
 	  }
 	  else
 	  {//默认射速15
-		  shoot_control.currentLIM_shoot_speed_17mm = (fp32)(15 - 3.0);//待定-----------------------------
-		  shoot_control.predict_shoot_speed = shoot_control.currentLIM_shoot_speed_17mm + 2;//待定
-		  
-		  // snail 摩擦轮 预期速度 只作为目标数值参考
+		  shoot_control.currentLIM_shoot_speed_17mm = (fp32)(15 - 3.0);//待定 没用
+		  shoot_control.predict_shoot_speed = 14.7f; //shoot_control.currentLIM_shoot_speed_17mm + 2;//待定
+
+		  // snail 摩擦轮 预期速度 只作为目标数值参考 没用
 		  shoot_control.L_barrel_fric1_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 		  shoot_control.L_barrel_fric2_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 		  shoot_control.R_barrel_fric3_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 		  shoot_control.R_barrel_fric4_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 		  
 		  // 更新MD snail 摩擦轮的PWM上限
-		  shoot_control.L_barrel_fric1_ramp.max_value_constant = NEW_FRIC_15ms; //NEW_FRIC_15ms_higher
-		  shoot_control.L_barrel_fric2_ramp.max_value_constant = NEW_FRIC_15ms;
-		  shoot_control.R_barrel_fric3_ramp.max_value_constant = NEW_FRIC_15ms;
-		  shoot_control.R_barrel_fric4_ramp.max_value_constant = NEW_FRIC_15ms;
+		  shoot_control.L_barrel_fric1_ramp.max_value_constant = new_fric_allms_debug_L1_15ms; //NEW_FRIC_15ms; //NEW_FRIC_15ms_higher
+		  shoot_control.L_barrel_fric2_ramp.max_value_constant = new_fric_allms_debug_L2_15ms; //NEW_FRIC_15ms;
+		  shoot_control.R_barrel_fric3_ramp.max_value_constant = new_fric_allms_debug_R3_15ms; //NEW_FRIC_15ms;
+		  shoot_control.R_barrel_fric4_ramp.max_value_constant = new_fric_allms_debug_R4_15ms; //NEW_FRIC_15ms;
 	  }
 		
 		// 先判断是 交替发射
