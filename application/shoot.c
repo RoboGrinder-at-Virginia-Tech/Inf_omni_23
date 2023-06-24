@@ -299,6 +299,11 @@ uint16_t new_fric_allms_debug_L1_18ms = 1400; //-1号对应: 看向前进方向, 左侧发射
 uint16_t new_fric_allms_debug_L2_18ms = 1400; //-2号对应: 看向前进方向, 左侧发射机构, 下面那个枪管
 uint16_t new_fric_allms_debug_R3_18ms = 1630;//-3号对应: 看向前进方向, 右侧发射机构, 上面那个枪管
 uint16_t new_fric_allms_debug_R4_18ms = 1630; //-4号对应: 看向前进方向, 右侧发射机构, 下面那个枪管
+
+uint16_t new_fric_allms_debug_L1_30ms = 1570; //-1号对应: 看向前进方向, 左侧发射机构, 上面那个枪管 1800 1580
+uint16_t new_fric_allms_debug_L2_30ms = 1570; //-2号对应: 看向前进方向, 左侧发射机构, 下面那个枪管 1580	
+uint16_t new_fric_allms_debug_R3_30ms = 1890;//-3号对应: 看向前进方向, 右侧发射机构, 上面那个枪管
+uint16_t new_fric_allms_debug_R4_30ms = 1890; //-4号对应: 看向前进方向, 右侧发射机构, 下面那个枪管
 /**
   * @brief          射击循环
   * @param[in]      void
@@ -342,13 +347,13 @@ int16_t shoot_control_loop(void)
 	  }
 	 
 	  /*TODO 数据超出最大合理数值时的操作*/
-	  if(shoot_control.referee_current_shooter_17mm_speed_limit > 18)
+	  if(shoot_control.referee_current_shooter_17mm_speed_limit > 35)
 	  {
-		  shoot_control.referee_current_shooter_17mm_speed_limit = 18;
+		  shoot_control.referee_current_shooter_17mm_speed_limit = 15;
 	  }
 		
 	  //17mm 的两档  15
-	  shoot_control.referee_current_shooter_17mm_speed_limit = 18;//强制使其=.. 用于调试-----------------------------------------------------------------------------------------------
+	  shoot_control.referee_current_shooter_17mm_speed_limit = 15;//强制使其=.. 用于调试-----------------------------------------------------------------------------------------------
 	  if(shoot_control.referee_current_shooter_17mm_speed_limit == 15)
 	  {
 		  shoot_control.currentLIM_shoot_speed_17mm = (fp32)(15 - 3.0);//待定 没用
@@ -369,13 +374,12 @@ int16_t shoot_control_loop(void)
 	  }
 	  else if(shoot_control.referee_current_shooter_17mm_speed_limit == 18)
 		{ //TODO: 按照上面那档修改
-		  // 18- 4.5 为 RMUL 实际 16.7-17.1 - .3 m/s 单速标定 SZL
 		  shoot_control.currentLIM_shoot_speed_17mm = (fp32)(18 - 4.5);// 没用
 		  shoot_control.predict_shoot_speed = 17.5f; //shoot_control.currentLIM_shoot_speed_17mm + 3;
 		  /*
-		  1) 发给ZYZ那 16.5 测出来 16.5
+		  1) 发给ZYZ那 17.5 测出来 17.5
 		  */
-		  // snail 摩擦轮 预期速度 只作为目标数值参考
+		  // snail 摩擦轮 预期速度 只作为目标数值参考 没用
 		  shoot_control.L_barrel_fric1_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 		  shoot_control.L_barrel_fric2_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
 		  shoot_control.R_barrel_fric3_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
@@ -387,6 +391,25 @@ int16_t shoot_control_loop(void)
 		  shoot_control.R_barrel_fric3_ramp.max_value_constant = new_fric_allms_debug_R3_18ms;
 		  shoot_control.R_barrel_fric4_ramp.max_value_constant = new_fric_allms_debug_R4_18ms;
 	  }
+		else if(shoot_control.referee_current_shooter_17mm_speed_limit == 30)
+		{
+			shoot_control.currentLIM_shoot_speed_17mm = (fp32)(18 - 4.5);// 没用
+		  shoot_control.predict_shoot_speed = 24.5f;
+		  /*
+		  1) 发给ZYZ那 16.5 测出来 16.5
+		  */
+		  // snail 摩擦轮 预期速度 只作为目标数值参考 没用
+		  shoot_control.L_barrel_fric1_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
+		  shoot_control.L_barrel_fric2_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
+		  shoot_control.R_barrel_fric3_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
+		  shoot_control.R_barrel_fric4_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
+		  
+		  // 更新MD snail 摩擦轮的PWM上限
+		  shoot_control.L_barrel_fric1_ramp.max_value_constant = new_fric_allms_debug_L1_30ms; //NEW_FRIC_18ms; //NEW_FRIC_15ms_higher
+		  shoot_control.L_barrel_fric2_ramp.max_value_constant = new_fric_allms_debug_L2_30ms;
+		  shoot_control.R_barrel_fric3_ramp.max_value_constant = new_fric_allms_debug_R3_30ms;
+		  shoot_control.R_barrel_fric4_ramp.max_value_constant = new_fric_allms_debug_R4_30ms;
+		}
 	  else
 	  {//默认射速15
 		  shoot_control.currentLIM_shoot_speed_17mm = (fp32)(15 - 3.0);//待定 没用
@@ -907,8 +930,8 @@ static void shoot_set_mode(void)
 			set_autoAimFlag(1); //miniPC_info.autoAimFlag = 1;
 		}
 		
-		if(shoot_control.press_r_time == PRESS_LONG_TIME_R || shoot_control.press_key_V_time == PRESS_LONG_TIME_V)
-		{
+		if( (shoot_control.press_r_time == PRESS_LONG_TIME_R && get_enemy_detected() ) || shoot_control.press_key_V_time == PRESS_LONG_TIME_V) //(shoot_control.press_r_time == PRESS_LONG_TIME_R || shoot_control.press_key_V_time == PRESS_LONG_TIME_V)
+		{// 按下鼠标左键 且 识别到目标才进入 绝对瞄准
 			set_autoAimFlag(2); //miniPC_info.autoAimFlag = 2;
 			//shoot_control.key_X_cnt = 2;
 		}

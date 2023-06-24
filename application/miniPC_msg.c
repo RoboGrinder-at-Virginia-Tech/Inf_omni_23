@@ -173,14 +173,14 @@ fp32 get_pitchMove_absolute()
 }
 
 //uint8_t enemy_detected;
-uint8_t get_enemy_detected()
+bool_t get_enemy_detected()
 {
 	if(toe_is_error(PC_TOE))
 	{
 		return 0;
 	}
 	
-	return pc_info.enemy_detected;
+	return (pc_info.enemy_detected == 0xff);
 }
 
 //uint8_t shootCommand;

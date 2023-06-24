@@ -257,7 +257,7 @@ fp32 get_yawMove_aid(uint8_t enable_not_detect_set_zero);
 fp32 get_pitchMove_aid(uint8_t enable_not_detect_set_zero);
 fp32 get_yawMove_absolute(void);
 fp32 get_pitchMove_absolute(void);
-uint8_t get_enemy_detected(void);
+bool_t get_enemy_detected(void);
 uint8_t get_shootCommand(void);
 uint8_t get_cv_gimbal_sts(void);
 fp32 get_aim_pos_dis(void);
