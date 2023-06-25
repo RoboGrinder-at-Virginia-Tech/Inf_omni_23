@@ -229,18 +229,8 @@ void shoot_init(void)
 //		PID_init(&shoot_control.left_fric_motor_pid, PID_POSITION, Left_friction_speed_pid, M3508_LEFT_FRICTION_PID_MAX_OUT, M3508_LEFT_FRICTION_PID_MAX_IOUT);
 //		PID_init(&shoot_control.right_fric_motor_pid, PID_POSITION, Right_friction_speed_pid, M3508_RIGHT_FRICTION_PID_MAX_OUT, M3508_RIGHT_FRICTION_PID_MAX_IOUT);
 		
-		//C615 电调行程校准
-//		L_barrel_fric_off();
-//		R_barrel_fric_off();
-//		vTaskDelay(1000);
-//		L_barrel_fric1_on(1300);
-//		L_barrel_fric2_on(1300);
-//		R_barrel_fric1_on(1300);
-//		R_barrel_fric2_on(1300);
-//		vTaskDelay(1000);
 		L_barrel_fric_off();
 		R_barrel_fric_off();
-		vTaskDelay(3000); //注意这个地方会影响 云台启动时间
 		
 		//设置油门 斜坡开启行程
 		shoot_control.L_barrel_fric1_ramp.max_value = FRIC_OFF; //重复-初始化max与min
@@ -930,7 +920,7 @@ static void shoot_set_mode(void)
 			set_autoAimFlag(1); //miniPC_info.autoAimFlag = 1;
 		}
 		
-		if( (shoot_control.press_r_time == PRESS_LONG_TIME_R && get_enemy_detected() ) || shoot_control.press_key_V_time == PRESS_LONG_TIME_V) //(shoot_control.press_r_time == PRESS_LONG_TIME_R || shoot_control.press_key_V_time == PRESS_LONG_TIME_V)
+		if( (shoot_control.press_r_time == PRESS_LONG_TIME_R && is_enemy_detected() ) || shoot_control.press_key_V_time == PRESS_LONG_TIME_V) //(shoot_control.press_r_time == PRESS_LONG_TIME_R || shoot_control.press_key_V_time == PRESS_LONG_TIME_V)
 		{// 按下鼠标左键 且 识别到目标才进入 绝对瞄准
 			set_autoAimFlag(2); //miniPC_info.autoAimFlag = 2;
 			//shoot_control.key_X_cnt = 2;

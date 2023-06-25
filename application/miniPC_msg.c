@@ -125,7 +125,7 @@ fp32 get_yawMove_aid(uint8_t enable_not_detect_set_zero)
 {
 	if(enable_not_detect_set_zero)
 	{
-		if(get_enemy_detected())
+		if(is_enemy_detected_with_pc_toe())
 		{
 			return pc_info.yawMove_aid;
 		}
@@ -145,7 +145,7 @@ fp32 get_pitchMove_aid(uint8_t enable_not_detect_set_zero)
 {
 	if(enable_not_detect_set_zero)
 	{
-		if(get_enemy_detected())
+		if(is_enemy_detected_with_pc_toe())
 		{
 			return pc_info.pitchMove_aid;
 		}
@@ -172,8 +172,9 @@ fp32 get_pitchMove_absolute()
 	return pc_info.pitchMove_absolute;
 }
 
-//uint8_t enemy_detected;
-bool_t get_enemy_detected()
+//uint8_t enemy_detected_with_pc_toe
+/*true - enemy detected; false - NOT detected*/
+bool_t is_enemy_detected_with_pc_toe()
 {
 	if(toe_is_error(PC_TOE))
 	{
@@ -181,6 +182,16 @@ bool_t get_enemy_detected()
 	}
 	
 	return (pc_info.enemy_detected == 0xff);
+}
+/*不考虑掉线的情况 - 直接判断enemy_detected*/
+bool_t is_enemy_detected()
+{
+	return (pc_info.enemy_detected == 0xff);
+}
+//原始数据 enemy_detected
+uint8_t get_enemy_detected()
+{
+	return pc_info.enemy_detected;
 }
 
 //uint8_t shootCommand;
@@ -374,9 +385,10 @@ void embed_all_info_update_from_sensor()
 	
 	// = (uint16_t)(shoot_control.predict_shoot_speed*10); //anticipated predicated bullet speed
 	embed_msg_to_pc.shoot_bullet_speed = embed_msg_to_pc.shoot_control_ptr->predict_shoot_speed;
-	embed_msg_to_pc.robot_id = RED_STANDARD_1; //TODO: whether get from ref or hardcode
+	embed_msg_to_pc.robot_id = get_robot_id(); //RED_STANDARD_1; //TODO: whether get from ref or hardcode - fail safe
 	
-	
+	//6-25-2023 新增云台角速度 原始数据单位为 rad/s
+	embed_msg_to_pc.gimbal_yaw_rate = embed_msg_to_pc.gimbal_control_ptr->gimbal_yaw_motor.motor_gyro;
 	
 }
 
@@ -416,8 +428,10 @@ void embed_gimbal_info_msg_data_update(embed_gimbal_info_t* embed_gimbal_info_pt
 			embed_gimbal_info_ptr->quat[i] = (uint16_t) ( (embed_msg_to_pc_ptr->quat[i]+1) * 10000.0f ); //(quat[i]+1)*10000; linear trans.
 	}
 	
-	embed_gimbal_info_ptr->robot_id = embed_msg_to_pc_ptr->robot_id;
 	embed_gimbal_info_ptr->shoot_bullet_speed = (uint16_t) (embed_msg_to_pc_ptr->shoot_bullet_speed * 10.0f);
+	embed_gimbal_info_ptr->robot_id = embed_msg_to_pc_ptr->robot_id;
+//	embed_gimbal_info_ptr->yaw_rate = (uint16_t) (embed_msg_to_pc_ptr->gimbal_control_ptr->gimbal_yaw_motor.motor_gyro * 10000.0f); //= rad/s * 10000
+	embed_gimbal_info_ptr->yaw_rate = embed_msg_to_pc_ptr->gimbal_control_ptr->gimbal_yaw_motor.motor_gyro;
 }
 
 /**

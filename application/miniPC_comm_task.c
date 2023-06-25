@@ -119,7 +119,7 @@ void embed_send_communication_task(void const *pvParameters)
 	embed_send.tx_dma_buf_size = sizeof(embed_send_usart1_buf);
 	embed_send.status = 0;
 	
-	vTaskDelay(300);  //wait here not above
+	vTaskDelay(1000);  //wait here not above - 300多等一会儿保证gimbal和其它task已经启动
 	
 	while(1)
 	{

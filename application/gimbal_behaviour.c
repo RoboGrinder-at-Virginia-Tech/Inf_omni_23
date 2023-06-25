@@ -534,7 +534,7 @@ static void gimbal_behavour_set(gimbal_control_t *gimbal_mode_set)
 				{
 					gimbal_behaviour = GIMBAL_ABSOLUTE_ANGLE;
 				}
-			  else if(get_autoAimFlag() == 2 && get_enemy_detected()) //(get_autoAimFlag() == 2 && get_cv_gimbal_sts() == 2 && get_enemy_detected()) //(get_autoAimFlag() == 2 && miniPC_info.cv_status == 2 && miniPC_info.enemy_detected == 1)
+			  else if(get_autoAimFlag() == 2 && is_enemy_detected_with_pc_toe()) //(get_autoAimFlag() == 2 && get_cv_gimbal_sts() == 2 && get_enemy_detected()) //(get_autoAimFlag() == 2 && miniPC_info.cv_status == 2 && miniPC_info.enemy_detected == 1)
 				{
 					gimbal_behaviour = GIMBAL_MINIPC_AUTOAIM_LOCK;
 				}

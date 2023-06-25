@@ -47,7 +47,7 @@
 #define PRESS_LONG_TIME_L						200 //999
 
 //鼠标右键 长按 
-#define PRESS_LONG_TIME_R						999 //50
+#define PRESS_LONG_TIME_R						100 //999 //50
 
 //键盘v键长按
 #define PRESS_LONG_TIME_V						50
