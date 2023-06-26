@@ -248,6 +248,10 @@ typedef struct
   fp32 chassis_relative_angle_set;  //the set relative angle.设置相对云台控制角度
   fp32 chassis_yaw_set;             
 
+	//6-25-2023: 新增云台朝向的速度x y - 注意云台旋转是yaw rate, 底盘wz只管底盘
+	fp32 vx_gimbal_orientation;
+	fp32 vy_gimbal_orientation;
+
   fp32 vx_max_speed;  //max forward speed, unit m/s.前进方向最大速度 单位m/s
   fp32 vx_min_speed;  //max backward speed, unit m/s.后退方向最大速度 单位m/s
   fp32 vy_max_speed;  //max letf speed, unit m/s.左方向最大速度 单位m/s

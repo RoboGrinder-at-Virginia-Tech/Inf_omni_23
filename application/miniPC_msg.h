@@ -60,10 +60,10 @@ typedef enum
 } pc_chassis_mode_e;
 typedef __packed struct
 {
-  int16_t vx_mm; // forward/back
+  int16_t vx_mm_wrt_gimbal; // forward/back
 //: m/s * 1000 <-->mm/s 
 
-  int16_t vy_mm; // left/right
+  int16_t vy_mm_wrt_gimbal; // left/right
   int16_t vw_mm; // ccw positive
 //vw_mm: radian/s * 1000
 
@@ -77,10 +77,10 @@ Embedded -> miniPC
 */
 typedef __packed struct
 {
-  int16_t vx_mm; // forward/back
+  int16_t vx_mm_wrt_gimbal; // forward/back
 //: m/s * 1000 <-->mm/s 
 
-  int16_t vy_mm; // left/right
+  int16_t vy_mm_wrt_gimbal; // left/right
   int16_t vw_mm; // ccw positive
 //vw_mm: radian/s * 1000
 
@@ -173,9 +173,9 @@ typedef struct
 	const fp32* quat_ptr; //const fp32 *get_INS_gimbal_quat(void)
 	const shoot_control_t* shoot_control_ptr;
 	
-	fp32 s_vx_m; // m/s
-	fp32 s_vy_m; // m/s
-	fp32 s_vw_m; // radian/s
+	fp32 vx_wrt_gimbal; // 云台朝向 vx m/s
+	fp32 vy_wrt_gimbal; // 云台朝向 vy m/s
+	fp32 vw_wrt_chassis; // 底盘 radian/s
 	
 	uint8_t energy_buff_pct; //get_superCap_charge_pwr
 	

@@ -222,8 +222,8 @@ uint8_t get_autoAimFlag()
 
 void cmd_process_pc_cmd_chassis_control(void)
 {
-	pc_info.vx_m = (fp32)pc_cmd_chassis_control.vx_mm / 1000.0f;
-	pc_info.vy_m = (fp32)pc_cmd_chassis_control.vy_mm / 1000.0f;
+	pc_info.vx_m = (fp32)pc_cmd_chassis_control.vx_mm_wrt_gimbal / 1000.0f;
+	pc_info.vy_m = (fp32)pc_cmd_chassis_control.vy_mm_wrt_gimbal / 1000.0f;
 	pc_info.vw_m = (fp32)pc_cmd_chassis_control.vw_mm / 1000.0f;
 	
 	if(pc_cmd_chassis_control.chassis_mode == 0)
@@ -371,9 +371,9 @@ void embed_all_info_update_from_sensor()
 
   uint8_t robot_id;
 	*/
-	embed_msg_to_pc.s_vx_m = embed_msg_to_pc.chassis_move_ptr->vx;
-	embed_msg_to_pc.s_vy_m = embed_msg_to_pc.chassis_move_ptr->vy;
-	embed_msg_to_pc.s_vw_m = embed_msg_to_pc.chassis_move_ptr->wz;
+	embed_msg_to_pc.vx_wrt_gimbal = embed_msg_to_pc.chassis_move_ptr->vx_gimbal_orientation; //embed_msg_to_pc.chassis_move_ptr->vx;
+	embed_msg_to_pc.vy_wrt_gimbal = embed_msg_to_pc.chassis_move_ptr->vy_gimbal_orientation; //embed_msg_to_pc.chassis_move_ptr->vy;
+	embed_msg_to_pc.vw_wrt_chassis = embed_msg_to_pc.chassis_move_ptr->wz;
 	embed_msg_to_pc.energy_buff_pct = (uint8_t) get_current_cap_pct();
 	embed_msg_to_pc.yaw_relative_angle = embed_msg_to_pc.gimbal_control_ptr->gimbal_yaw_motor.absolute_angle; //6-22ÐÞ¸Ärelative_angle
 	embed_msg_to_pc.pitch_relative_angle = embed_msg_to_pc.gimbal_control_ptr->gimbal_pitch_motor.absolute_angle; //relative_angle
@@ -395,9 +395,9 @@ void embed_all_info_update_from_sensor()
 void embed_chassis_info_msg_data_update(embed_chassis_info_t* embed_chassis_info_ptr, embed_msg_to_pc_t* embed_msg_to_pc_ptr)
 {	
 	//m/s * 1000 <-->mm/s 
-	embed_chassis_info_ptr->vx_mm = (int16_t) (embed_msg_to_pc_ptr->s_vx_m * 1000.0f);
-	embed_chassis_info_ptr->vy_mm = (int16_t) (embed_msg_to_pc_ptr->s_vy_m * 1000.0f);
-	embed_chassis_info_ptr->vw_mm = (int16_t) (embed_msg_to_pc_ptr->s_vw_m * 1000.0f);
+	embed_chassis_info_ptr->vx_mm_wrt_gimbal = (int16_t) (embed_msg_to_pc_ptr->vx_wrt_gimbal * 1000.0f);
+	embed_chassis_info_ptr->vy_mm_wrt_gimbal = (int16_t) (embed_msg_to_pc_ptr->vy_wrt_gimbal * 1000.0f);
+	embed_chassis_info_ptr->vw_mm = (int16_t) (embed_msg_to_pc_ptr->vw_wrt_chassis * 1000.0f);
 	
 	embed_chassis_info_ptr->energy_buff_pct = embed_msg_to_pc_ptr->energy_buff_pct;
 	

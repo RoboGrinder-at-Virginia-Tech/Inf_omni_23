@@ -399,7 +399,13 @@ static void chassis_feedback_update(chassis_move_t *chassis_move_update)
 		chassis_move_update->vx = (-chassis_move_update->motor_chassis[0].speed + chassis_move_update->motor_chassis[1].speed + chassis_move_update->motor_chassis[2].speed - chassis_move_update->motor_chassis[3].speed) * MOTOR_SPEED_TO_CHASSIS_SPEED_VX / OWHE_ANG_INVK_COEF;
     chassis_move_update->vy = (-chassis_move_update->motor_chassis[0].speed - chassis_move_update->motor_chassis[1].speed + chassis_move_update->motor_chassis[2].speed + chassis_move_update->motor_chassis[3].speed) * MOTOR_SPEED_TO_CHASSIS_SPEED_VY / OWHE_ANG_INVK_COEF;
     chassis_move_update->wz = (-chassis_move_update->motor_chassis[0].speed - chassis_move_update->motor_chassis[1].speed - chassis_move_update->motor_chassis[2].speed - chassis_move_update->motor_chassis[3].speed) * MOTOR_SPEED_TO_CHASSIS_SPEED_WZ / MOTOR_DISTANCE_TO_CENTER;
-		
+		// 6-25-2023: 计算云台朝向的 vx vy
+		fp32 sin_yaw = 0.0f, cos_yaw = 0.0f;
+		sin_yaw = arm_sin_f32(-chassis_move_update->chassis_yaw_motor->relative_angle);
+    cos_yaw = arm_cos_f32(-chassis_move_update->chassis_yaw_motor->relative_angle);
+		chassis_move_update->vx_gimbal_orientation = (cos_yaw * chassis_move_update->vx) - (sin_yaw * chassis_move_update->vy);
+		chassis_move_update->vy_gimbal_orientation = (sin_yaw * chassis_move_update->vx) + (cos_yaw * chassis_move_update->vy);
+
     //calculate chassis euler angle, if chassis add a new gyro sensor,please change this code
     //计算底盘姿态角度, 如果底盘上有陀螺仪请更改这部分代码
 		//SZL 2-3-2022更改
