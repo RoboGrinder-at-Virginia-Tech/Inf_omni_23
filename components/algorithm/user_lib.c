@@ -153,6 +153,17 @@ int16_t int16_constrain(int16_t Value, int16_t minValue, int16_t maxValue)
         return Value;
 }
 
+//限幅函数 - uint8_t使用, 注意符号和溢出
+uint8_t uint8_constrain(uint8_t Value, uint8_t minValue, uint8_t maxValue)
+{
+    if (Value < minValue)
+        return minValue;
+    else if (Value > maxValue)
+        return maxValue;
+    else
+        return Value;
+}
+
 //循环限幅函数
 fp32 loop_fp32_constrain(fp32 Input, fp32 minValue, fp32 maxValue)
 {

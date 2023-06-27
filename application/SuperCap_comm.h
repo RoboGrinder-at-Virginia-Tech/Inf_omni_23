@@ -11,15 +11,22 @@
 //#define ICRA_superCap_max_power 65//40
 //#define ICRA_superCap_fail_safe_power 65//40
 
+//发送给超级电容数据数值限制
+#define CMD_CHARGE_PWR_MAX 150
+#define CMD_CHARGE_PWR_MIN 45
+
 /*超级电容电容组数据*/
 //2023新超级电容
-#define CHARACTERISTIC_VOLTAGE_23_CAP 27.0f//26.5f //特征电压是充电电路输出电压，对于C620必须低一些，否则会触发保护
+#define CHARACTERISTIC_VOLTAGE_23_CAP 26.5f//26.5f //特征电压是充电电路输出电压，对于C620必须低一些，否则会触发保护
+#define MIN_VOLTAGE_23_CAP 13.0f
 #define CAPACITY_23_CAP 5.0f //6.0f //电容容量，单位法拉
 
 #define CHARACTERISTIC_VOLTAGE_WULIE_CAP 24.0f//26.5f //特征电压是充电电路输出电压，对于C620必须低一些，否则会触发保护
+#define MIN_VOLTAGE_WULIE_CAP 13.0f
 #define CAPACITY_WULIE_CAP 6.0f //电容容量，单位法拉
 
 #define CHARACTERISTIC_VOLTAGE_ZIDA_CAP 24.0f
+#define MIN_VOLTAGE_ZIDA_CAP 13.0f
 #define CAPACITY_ZIDA_CAP 6.0f
 
 extern uint8_t debug_max_pwr;
@@ -105,6 +112,8 @@ typedef struct
 	uint8_t b;
 	uint8_t c;
 	
+	fp32 relative_EBpct; // 相对于最低电压的百分比
+	
 }superCap_info_t;
 
 /*12-27-2022新增 易林 超级电容
@@ -124,7 +133,8 @@ typedef struct
 	fp32 Vin_f; //输入电压**
 	fp32 Vbank_f; //电容电压**
 	fp32 Ibank_f; //电容电流
-	fp32 Vchassis_f; //给底盘电压**
+	fp32 Vchassis_f; //给底盘电压** -6-14不用了 
+	fp32 Cap_fb_set_power; //-6-14超级电容返回的当前充电功率
 	fp32 Ichassis_f; //底盘电流**
 	fp32 Pbank_f; //
 	fp32 Energy; //
@@ -135,6 +145,8 @@ typedef struct
 	//这个是相对于0J 0%-100%
 	fp32 EBPct;
 	fp32 EBank;
+	
+	fp32 relative_EBpct; // 相对于最低电压的百分比
 	
 }sCap23_info_t;
 
@@ -156,6 +168,8 @@ typedef struct
 	//这个是相对于0J 0%-100%
 	fp32 EBPct;
 	fp32 EBank;
+	
+	fp32 relative_EBpct; // 相对于最低电压的百分比
 
 }wulieCap_info_t;
 
@@ -163,5 +177,9 @@ extern superCap_info_t superCap_info;
 extern uint8_t debug_a;
 extern uint8_t debug_b;
 extern uint8_t debug_c;
+
+extern fp32 cal_capE_relative_pct(fp32 curr_vol, fp32 min_vol, fp32 max_vol);
+extern fp32 get_current_capE_relative_pct(void);
+extern supercap_can_msg_id_e get_current_superCap(void);
 
 #endif /*__SUPERCAP_COMM_H___*/

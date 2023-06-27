@@ -8,6 +8,7 @@
 #include "user_lib.h"
 #include "detect_task.h"
 #include "chassis_power_control.h"
+#include "arm_math.h"
 
 extern CAN_HandleTypeDef hcan1;
 extern CAN_HandleTypeDef hcan2;
@@ -149,6 +150,8 @@ void superCap_control_loop()
 //				superCap_info.fail_safe_charge_pwr_command = 40;
 //			}
 			
+			//TODO: remove debug 并添加限制幅度
+			
 			//For Debug Only------------------------------------------------------------------------------------------------------------------------------------
 			superCap_info.max_charge_pwr_command = 10;//2.5f;// 40 档 offset 2.5f
 			superCap_info.fail_safe_charge_pwr_command = superCap_info.max_charge_pwr_command;
@@ -160,7 +163,7 @@ void superCap_control_loop()
 			//计算max_charge_pwr_from_ref
 			sCap23_info.max_charge_pwr_from_ref = get_chassis_power_limit() - 0.0f; //2.5f
 			
-			if(sCap23_info.max_charge_pwr_from_ref > MAX_REASONABLE_CHARGE_PWR)//101.0f)
+			if(sCap23_info.max_charge_pwr_from_ref > CMD_CHARGE_PWR_MAX)//101.0f)
 			{
 				sCap23_info.max_charge_pwr_from_ref = 40;
 			}
@@ -175,16 +178,22 @@ void superCap_control_loop()
 			sCap23_info.charge_pwr_command = sCap23_info.max_charge_pwr_from_ref;
 			sCap23_info.fail_safe_charge_pwr_command = sCap23_info.fail_safe_charge_pwr_ref;
 			
+			//限制幅度
+			sCap23_info.charge_pwr_command = uint8_constrain(sCap23_info.charge_pwr_command, CMD_CHARGE_PWR_MIN, CMD_CHARGE_PWR_MAX);
+			sCap23_info.fail_safe_charge_pwr_command = uint8_constrain(sCap23_info.fail_safe_charge_pwr_command, CMD_CHARGE_PWR_MIN, CMD_CHARGE_PWR_MAX);
+			
 			CAN_command_sCap23(sCap23_info.charge_pwr_command, sCap23_info.fail_safe_charge_pwr_command);
 		}
 		else //if(current_superCap == wulie_Cap_CAN_ID)
 		{//雾列控制板
 			wulie_Cap_info.max_charge_pwr_from_ref = get_chassis_power_limit() - 2.5f;
 				
-			if(wulie_Cap_info.max_charge_pwr_from_ref > MAX_REASONABLE_CHARGE_PWR)//101.0f)
+			if(wulie_Cap_info.max_charge_pwr_from_ref > CMD_CHARGE_PWR_MAX)//101.0f)
 			{
 				wulie_Cap_info.max_charge_pwr_from_ref = 40;
 			}
+			
+			//TODO: remove debug 并添加限制幅度
 			
 			//Only for Debug
 			wulie_Cap_info.max_charge_pwr_from_ref = 30;
@@ -203,7 +212,7 @@ void superCap_control_loop()
 根据目前使用的超级电容 返回电容组电压和剩余能量
 这里要做的就是返回合理的 传感器数据 不需要在这里考虑掉线
 */
-void get_superCap_vol_and_energy(fp32* cap_voltage, fp32* EBank)
+void get_superCap_vol_and_energy(fp32* cap_voltage, fp32* EBank) //仅功率控制使用
 {
 	fp32 temp_EBank=0, temp_cap_voltage=0;
 	if(current_superCap == SuperCap_ID)
@@ -247,27 +256,27 @@ void get_superCap_vol_and_energy(fp32* cap_voltage, fp32* EBank)
 /*
 返回超级电容充电功率
 */
-uint16_t get_superCap_charge_pwr()
+uint16_t get_superCap_charge_pwr() //仅功率控制使用
 {
 	fp32 temp_charge_pwr=0;
 	if(current_superCap == SuperCap_ID)
 	{
 		temp_charge_pwr = superCap_info.max_charge_pwr_command;
-		temp_charge_pwr = fp32_constrain(temp_charge_pwr, 0.0f, MAX_REASONABLE_CHARGE_PWR);//确保数据的正确和合理性
+		temp_charge_pwr = fp32_constrain(temp_charge_pwr, 0.0f, (fp32)CMD_CHARGE_PWR_MAX);//确保数据的正确和合理性
 		
 		return (uint16_t)temp_charge_pwr;
 	}
 	else if(current_superCap == sCap23_ID)
 	{
 		temp_charge_pwr = sCap23_info.charge_pwr_command;
-		temp_charge_pwr = fp32_constrain(temp_charge_pwr, 0.0f, MAX_REASONABLE_CHARGE_PWR);//确保数据的正确和合理性
+		temp_charge_pwr = fp32_constrain(temp_charge_pwr, 0.0f, (fp32)CMD_CHARGE_PWR_MAX);//确保数据的正确和合理性
 		
 		return (uint16_t)temp_charge_pwr;
 	}
 	else
 	{
 		temp_charge_pwr = wulie_Cap_info.max_charge_pwr_from_ref;
-		temp_charge_pwr = fp32_constrain(temp_charge_pwr, 0.0f, MAX_REASONABLE_CHARGE_PWR);//确保数据的正确和合理性
+		temp_charge_pwr = fp32_constrain(temp_charge_pwr, 0.0f, (fp32)CMD_CHARGE_PWR_MAX);//确保数据的正确和合理性
 		
 		return (uint16_t)temp_charge_pwr;
 	}
@@ -457,7 +466,7 @@ bool_t wulie_Cap_is_data_error_proc()
 //API for UI and other
 fp32 get_current_cap_voltage()
 {
-	//开始整数字相关的东西 即插即用的超级电容控制板 判断
+	//即插即用的超级电容控制板 判断
 	 if(current_superCap == SuperCap_ID)
 	 {
 		 if(toe_is_error(SUPERCAP_TOE))
@@ -502,7 +511,7 @@ fp32 get_current_cap_voltage()
 
 fp32 get_current_cap_pct()
 {
-	//开始整数字相关的东西 即插即用的超级电容控制板 判断
+	//即插即用的超级电容控制板 判断
 	 if(current_superCap == SuperCap_ID)
 	 {
 		 if(toe_is_error(SUPERCAP_TOE))
@@ -545,4 +554,62 @@ fp32 get_current_cap_pct()
 		   //ui_info.cap_volt = wulie_Cap_info.cap_voltage;
 		 }
 	 }
+}
+
+///* 获得 当前在线的超级电容, 电压百分比, 13v时为0%
+//*/
+//fp32 get_current_cap_voltage_pct()
+//{
+//}
+extern RC_ctrl_t rc_ctrl;
+/* 计算 获得 当前在线的超级电容, 能量(焦耳)百分比, 13v时为0%
+*/
+//call时 确保 参数的正确性
+fp32 cal_capE_relative_pct(fp32 curr_vol, fp32 min_vol, fp32 max_vol)
+{
+	return fp32_constrain( ( (curr_vol - min_vol) * (curr_vol - min_vol) ) / ( (max_vol - min_vol) * (max_vol - min_vol) ), 0.0f, 1.0f);
+}
+
+fp32 get_current_capE_relative_pct()
+{
+//		return fp32_constrain( fabs((fp32) rc_ctrl.rc.ch[3]) / 660.0f, 0.0f, 1.0f);
+		//即插即用的超级电容控制板 判断
+		if(current_superCap == SuperCap_ID)
+		{
+			 if(toe_is_error(SUPERCAP_TOE))
+			 {
+				 return 0.0f;
+			 }
+			 else
+			 {
+				 return superCap_info.relative_EBpct;
+			 }
+		 }
+		 else if(current_superCap == sCap23_ID)
+		 {
+			 if(toe_is_error(SCAP_23_TOR))
+			 {
+				 return 0.0f;
+			 }
+			 else
+			 {
+				 return sCap23_info.relative_EBpct;
+			 }
+		 }
+		 else
+		 {
+			 if(toe_is_error(WULIE_CAP_TOE))
+			 {
+				 return 0.0f;
+			 }
+			 else
+			 {
+				 return wulie_Cap_info.relative_EBpct;
+			 }
+		 }
+}
+
+supercap_can_msg_id_e get_current_superCap()
+{
+		return current_superCap;
 }
