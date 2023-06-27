@@ -206,7 +206,7 @@ void client_ui_task(void const *pvParameters)
 				Float_Draw(&fDis, "991", UI_Graph_Change, 4, UI_Color_Main, 20, 2, 3, 240, 680, ui_info.proj_speed_limit);
 				
 				//CV是否识别到目标
-				if(is_enemy_detected_with_pc_toe() == 1) //(miniPC_info.enemy_detected == 1)
+				if(is_enemy_detected_with_pc_toe()) //(miniPC_info.enemy_detected == 1)
 				{
 					Circle_Draw(&gEnemyDetected_circle, "990", UI_Graph_Change, 4, UI_Color_Green, 15, TopLeft_Cir_on_cv_DET_START_X, TopLeft_Cir_on_cv_DET_START_Y, TopLeft_Cir_on_cv_DET_radius);
 				}
@@ -491,7 +491,7 @@ void ui_dynamic_crt_send_fuc()
 		Float_Draw(&fDis, "991", UI_Graph_ADD, 4, UI_Color_Main, 20, 2, 3, 240, 680, ui_info.enemy_dis);
 	
 		//CV是否识别到目标
-		if(is_enemy_detected_with_pc_toe() == 1) //(miniPC_info.enemy_detected == 1)
+		if(is_enemy_detected_with_pc_toe()) //(miniPC_info.enemy_detected == 1)
 		{
 			Circle_Draw(&gEnemyDetected_circle, "990", UI_Graph_ADD, 4, UI_Color_Green, 15, TopLeft_Cir_on_cv_DET_START_X, TopLeft_Cir_on_cv_DET_START_Y, TopLeft_Cir_on_cv_DET_radius);
 		}
