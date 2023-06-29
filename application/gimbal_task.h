@@ -34,7 +34,7 @@
 
 //miniPC YAW绝对位置角度环 PID miniPC_absolute_angle_pid
 #define YAW_MINIPC_ABSOLUTE_ANGLE_PID_KP 8.0f //10.0f //10.0f //14.0f //20.0F //10.0f //14.0f //15.0f
-#define YAW_MINIPC_ABSOLUTE_ANGLE_PID_KI 0.05f //0.02f //0.001f //0.01f //0.02f
+#define YAW_MINIPC_ABSOLUTE_ANGLE_PID_KI 0.005f //0.01f //0.02f //0.001f //0.01f //0.02f
 #define YAW_MINIPC_ABSOLUTE_ANGLE_PID_KD  0.0f //1.5f //0.01f
 #define YAW_MINIPC_ABSOLUTE_ANGLE_PID_MAX_OUT 10.0f //20.0f //10.0f
 #define YAW_MINIPC_ABSOLUTE_ANGLE_PID_MAX_IOUT 1.0f
@@ -50,7 +50,7 @@
 
 //yaw speed close-loop PID params, max out and max iout
 //yaw 速度环 PID参数以及 PID最大输出，积分输出
-#define YAW_SPEED_PID_KP        8000.0f
+#define YAW_SPEED_PID_KP        8000.0f //6-29: 8500 9000
 #define YAW_SPEED_PID_KI        1.0f//
 #define YAW_SPEED_PID_KD        0.2f//
 #define YAW_SPEED_PID_MAX_OUT   30000.0f
