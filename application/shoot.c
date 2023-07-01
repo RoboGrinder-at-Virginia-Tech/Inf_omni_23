@@ -280,10 +280,10 @@ uint16_t new_fric_allms_debug_R3 = 1630;//-3号对应: 看向前进方向, 右侧发射机构, 
 uint16_t new_fric_allms_debug_R4 = 1630; //-4号对应: 看向前进方向, 右侧发射机构, 下面那个枪管
 
 */
-uint16_t new_fric_allms_debug_L1_15ms = 1338; //-1号对应: 看向前进方向, 左侧发射机构, 上面那个枪管 1338
-uint16_t new_fric_allms_debug_L2_15ms = 1338; //-2号对应: 看向前进方向, 左侧发射机构, 下面那个枪管 1338
-uint16_t new_fric_allms_debug_R3_15ms = 1558;//-3号对应: 看向前进方向, 右侧发射机构, 上面那个枪管 1555
-uint16_t new_fric_allms_debug_R4_15ms = 1558; //-4号对应: 看向前进方向, 右侧发射机构, 下面那个枪管 1563
+uint16_t new_fric_allms_debug_L1_15ms = 1230;//1338; //-1号对应: 看向前进方向, 左侧发射机构, 上面那个枪管 1338
+uint16_t new_fric_allms_debug_L2_15ms = 1230;//1338; //-2号对应: 看向前进方向, 左侧发射机构, 下面那个枪管 1338
+uint16_t new_fric_allms_debug_R3_15ms = 1230;//1558;//-3号对应: 看向前进方向, 右侧发射机构, 上面那个枪管 1555
+uint16_t new_fric_allms_debug_R4_15ms = 1230;//1558; //-4号对应: 看向前进方向, 右侧发射机构, 下面那个枪管 1563
 
 uint16_t new_fric_allms_debug_L1_18ms = 1400; //-1号对应: 看向前进方向, 左侧发射机构, 上面那个枪管
 uint16_t new_fric_allms_debug_L2_18ms = 1400; //-2号对应: 看向前进方向, 左侧发射机构, 下面那个枪管
