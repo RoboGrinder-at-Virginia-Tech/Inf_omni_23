@@ -6,7 +6,6 @@ RM自定义UI协议       基于RM2020学生串口通信协议V1.3
 
 **************************************************************/
 
-
 #include "client_ui_task.h"
 #include "main.h"
 #include "cmsis_os.h"
@@ -17,17 +16,20 @@ RM自定义UI协议       基于RM2020学生串口通信协议V1.3
 #include "referee.h"
 #include "referee_usart_task.h"
 #include "detect_task.h"
-
+#include "chassis_task.h"
+#include "chassis_behaviour.h"
 #include "miniPC_msg.h"
+#include "user_lib.h"
+#include <string.h>
 
 #if INCLUDE_uxTaskGetStackHighWaterMark
 uint32_t client_ui_task_high_water;
 #endif
 
-extern uint8_t turboMode;
-extern uint8_t swing_flag;
+//extern uint8_t turboMode;
+//extern uint8_t swing_flag;
 
-extern shoot_control_t shoot_control; 
+//extern shoot_control_t shoot_control; 
 //extern miniPC_info_t miniPC_info;
 extern supercap_can_msg_id_e current_superCap;
 extern wulieCap_info_t wulie_Cap_info;
@@ -45,6 +47,10 @@ Graph_Data gAimVertL, gAimHorizL1m, gAimHorizL2m, gAimHorizL4m, gAimHorizL5m, gA
 String_Data strChassisSts, strSPINSts;//右上角 deleted word strCapVolt, strCapPct,
 String_Data strCVSts, strGunSts, strABoxSts, strProjSLimSts, strDisSts;//左上角
 
+String_Data strChassis, strGimbal, strShoot, strSuperCap, strReferee; // offline msg
+String_Data strVarChassis, strVarGimbal, strVarShoot, strVarSuperCap, strVarReferee; //offline msg
+String_Data strSpin, strFric; //strRef;
+
 //动态的东西 电压
 Float_Data fCapVolt, fCapPct;
 Float_Data fProjSLim, fDis; //左上角
@@ -53,6 +59,19 @@ Float_Data fProjSLim, fDis; //左上角
 Graph_Data gChassisSts_box, gSPINSts_box;//右上角
 Graph_Data gCVSts_box, gGunSts_box, gABoxSts_box;//左上角
 Graph_Data gEnemyDetected_circle, gCVfb_sts_box;
+
+//超级电容能量框
+Graph_Data superCapFrame; //外框 长方形
+Graph_Data superCapLine; //里面填充
+
+//底盘角度指示器
+Graph_Data chassisLine, chassisLightBar;
+
+//炮塔和枪口
+Graph_Data turretCir, gunLine;
+
+//底盘对位线
+Graph_Data chassisPosAimLeftLine, chassisPosAimRightLine;
 
 //删除图层结构体
 UI_Data_Delete delLayer;
@@ -64,13 +83,236 @@ uint32_t client_ui_count_ref = 0;
 uint8_t client_ui_test_flag = 1;
 
 uint32_t ui_dynamic_crt_send_TimeStamp;
-const uint16_t ui_dynamic_crt_sendFreq = 1000;
+const uint16_t ui_dynamic_crt_sendFreq = 50; //1; //1000;
+//const uint16_t ui_dynamic_crt_sendFreq = 100;
+
+uint16_t ui_cv_circle_size_debug = TopLeft_Cir_on_cv_DET_Pen_Size;
+
+//初始化 准备使用arm矩阵库去计算底盘指示器角度
+static void chassis_frame_UI_sensor_and_graph_init()
+{
+	//初始化数据 底盘框
+	ui_info.gimbal_control_ptr = get_gimbal_pointer();
+	ui_info.frame_chassis_coord_start_raw[0] = Chassis_Frame_Start_X;
+	ui_info.frame_chassis_coord_start_raw[1] = Chassis_Frame_Start_Y;
+	ui_info.frame_chassis_coord_end_raw[0] = Chassis_Frame_End_X;
+	ui_info.frame_chassis_coord_end_raw[1] = Chassis_Frame_End_Y;
+	
+	//初始化数据 灯条
+	ui_info.bar_chassis_coord_start_raw[0] = Chassis_Frame_Light_Bar_Start_X;
+	ui_info.bar_chassis_coord_start_raw[1] = Chassis_Frame_Light_Bar_Start_Y;
+	ui_info.bar_chassis_coord_end_raw[0] = Chassis_Frame_Light_Bar_End_X;
+	ui_info.bar_chassis_coord_end_raw[1] = Chassis_Frame_Light_Bar_End_Y;
+	
+	//坐标轴变换 底盘框
+	ui_info.frame_chassis_coord_final[0] = ui_info.frame_chassis_coord_start_raw[0] + Chassis_Frame_Coord_Center_X;
+	ui_info.frame_chassis_coord_final[1] = ui_info.frame_chassis_coord_start_raw[1] + Chassis_Frame_Coord_Center_Y;
+	ui_info.frame_chassis_coord_final[2] = ui_info.frame_chassis_coord_end_raw[0] + Chassis_Frame_Coord_Center_X;
+	ui_info.frame_chassis_coord_final[3] = ui_info.frame_chassis_coord_end_raw[1] + Chassis_Frame_Coord_Center_Y;
+	
+	//坐标轴变换 灯条
+	ui_info.bar_chassis_coord_final[0] = ui_info.bar_chassis_coord_start_raw[0] + Chassis_Frame_Coord_Center_X;
+	ui_info.bar_chassis_coord_final[1] = ui_info.bar_chassis_coord_start_raw[1] + Chassis_Frame_Coord_Center_Y;
+	ui_info.bar_chassis_coord_final[2] = ui_info.bar_chassis_coord_end_raw[0] + Chassis_Frame_Coord_Center_X;
+	ui_info.bar_chassis_coord_final[3] = ui_info.bar_chassis_coord_end_raw[1] + Chassis_Frame_Coord_Center_Y;
+}
+
+static void chassis_frame_UI_sensor_update()
+{
+	//由于是转的地盘 云台夹需要取-
+	ui_info.yaw_relative_angle = -rad_format(ui_info.gimbal_control_ptr->gimbal_yaw_motor.relative_angle);
+}
+
+static void chassis_frame_UI_arm_init(fp32 angle)
+{
+	//底盘框
+	mat_init(&ui_info.frame_chassis_coord_start_vec, 2, 1, (fp32 *) ui_info.frame_chassis_coord_start_raw);
+	mat_init(&ui_info.frame_chassis_coord_end_vec, 2, 1, (fp32 *) ui_info.frame_chassis_coord_end_raw);
+	
+	mat_init(&ui_info.new_frame_chassis_coord_start_vec, 2, 1, (fp32 *) ui_info.new_frame_chassis_coord_start_raw);
+	mat_init(&ui_info.new_frame_chassis_coord_end_vec, 2, 1, (fp32 *) ui_info.new_frame_chassis_coord_end_raw);
+	
+	//灯条
+	mat_init(&ui_info.bar_chassis_coord_start_vec, 2, 1, (fp32 *) ui_info.bar_chassis_coord_start_raw);
+	mat_init(&ui_info.bar_chassis_coord_end_vec, 2, 1, (fp32 *) ui_info.bar_chassis_coord_end_raw);
+	
+	mat_init(&ui_info.new_bar_chassis_coord_start_vec, 2, 1, (fp32 *) ui_info.new_bar_chassis_coord_start_raw);
+	mat_init(&ui_info.new_bar_chassis_coord_end_vec, 2, 1, (fp32 *) ui_info.new_bar_chassis_coord_end_raw);
+	
+	/* matrix element (i, j) is stored at: pData[i*numCols + j] */
+	ui_info.frame_chassis_rotation_matrix_raw[0] = arm_cos_f32(angle);
+	ui_info.frame_chassis_rotation_matrix_raw[1] = -arm_sin_f32(angle);
+	ui_info.frame_chassis_rotation_matrix_raw[2] = arm_sin_f32(angle);
+	ui_info.frame_chassis_rotation_matrix_raw[3] = arm_cos_f32(angle);
+	
+	mat_init(&ui_info.chassis_rotation_matrix, 2, 2, (fp32 *) ui_info.frame_chassis_rotation_matrix_raw);
+}
+
+//计算底盘指示器角度
+static void chassis_frame_UI_arm_cal(fp32 angle)
+{
+	ui_info.chassis_rotation_matrix.pData[0] = arm_cos_f32(angle);
+	ui_info.chassis_rotation_matrix.pData[1] = -arm_sin_f32(angle);
+	ui_info.chassis_rotation_matrix.pData[2] = arm_sin_f32(angle);
+	ui_info.chassis_rotation_matrix.pData[3] = arm_cos_f32(angle);
+	
+	//计算旋转后坐标 底盘框
+	mat_mult(&ui_info.chassis_rotation_matrix, &ui_info.frame_chassis_coord_start_vec, &ui_info.new_frame_chassis_coord_start_vec);
+	mat_mult(&ui_info.chassis_rotation_matrix, &ui_info.frame_chassis_coord_end_vec, &ui_info.new_frame_chassis_coord_end_vec);
+	
+	//计算旋转后坐标 灯条
+	mat_mult(&ui_info.chassis_rotation_matrix, &ui_info.bar_chassis_coord_start_vec, &ui_info.new_bar_chassis_coord_start_vec);
+	mat_mult(&ui_info.chassis_rotation_matrix, &ui_info.bar_chassis_coord_end_vec, &ui_info.new_bar_chassis_coord_end_vec);
+	
+	//坐标轴变换 底盘框
+	ui_info.frame_chassis_coord_final[0] = ui_info.new_frame_chassis_coord_start_vec.pData[0] + Chassis_Frame_Coord_Center_X;
+	ui_info.frame_chassis_coord_final[1] = ui_info.new_frame_chassis_coord_start_vec.pData[1] + Chassis_Frame_Coord_Center_Y;
+	ui_info.frame_chassis_coord_final[2] = ui_info.new_frame_chassis_coord_end_vec.pData[0] + Chassis_Frame_Coord_Center_X;
+	ui_info.frame_chassis_coord_final[3] = ui_info.new_frame_chassis_coord_end_vec.pData[1] + Chassis_Frame_Coord_Center_Y;
+	
+	//坐标轴变换 灯条
+	ui_info.bar_chassis_coord_final[0] = ui_info.new_bar_chassis_coord_start_vec.pData[0] + Chassis_Frame_Coord_Center_X;
+	ui_info.bar_chassis_coord_final[1] = ui_info.new_bar_chassis_coord_start_vec.pData[1] + Chassis_Frame_Coord_Center_Y;
+	ui_info.bar_chassis_coord_final[2] = ui_info.new_bar_chassis_coord_end_vec.pData[0] + Chassis_Frame_Coord_Center_X;
+	ui_info.bar_chassis_coord_final[3] = ui_info.new_bar_chassis_coord_end_vec.pData[1] + Chassis_Frame_Coord_Center_Y;
+}
+
+static void ui_error_flag_clear()
+{
+	ui_info.chassis_error_flag = devOK; //初始化为删除
+	ui_info.gimbal_error_flag = devOK; //初始化为删除
+	ui_info.shoot_error_flag = devOK; //初始化为删除
+	ui_info.superCap_error_flag = devOK; //初始化为删除
+}
+
+static void ui_error_code_str_clear()
+{	
+	strcpy(ui_info.chassis_error_code, "\0");
+	strcpy(ui_info.gimbal_error_code, "\0");
+	strcpy(ui_info.shoot_error_code, "\0");
+	strcpy(ui_info.superCap_error_code, "\0");
+	strcpy(ui_info.referee_error_code, "\0");	
+}
+
+//uint8_t
+//static const char ui_robot_general_status[2][8] = {"OK\0", "ERROR!\0"};
+//机器人各个设备的error code
+static void ui_error_code_update()
+{
+	ui_error_code_str_clear();
+	
+	//check chassis 不显示数字
+	ui_info.chassis_error_flag = devOK;
+	if(toe_is_error(CHASSIS_MOTOR1_TOE))
+	{
+		strcat(ui_info.chassis_error_code, "1\0");
+		ui_info.chassis_error_flag = devError;
+	}
+	if(toe_is_error(CHASSIS_MOTOR2_TOE))
+	{
+		strcat(ui_info.chassis_error_code, "2\0");
+		ui_info.chassis_error_flag = devError;
+	}
+	if(toe_is_error(CHASSIS_MOTOR3_TOE))
+	{
+		strcat(ui_info.chassis_error_code, "3\0");
+		ui_info.chassis_error_flag = devError;
+	}
+	if(toe_is_error(CHASSIS_MOTOR4_TOE))
+	{
+		strcat(ui_info.chassis_error_code, "4\0");
+		ui_info.chassis_error_flag = devError;
+	}
+	if(ui_info.chassis_error_flag == devOK)
+	{
+		strcpy(ui_info.chassis_error_code, "OK  \0");
+	}
+	else
+	{
+		strcpy(ui_info.chassis_error_code, "ERR!\0");
+	}
+	
+	//check gimbal 要单独显示
+	ui_info.gimbal_error_flag = devOK;
+	if(toe_is_error(YAW_GIMBAL_MOTOR_TOE))
+	{
+		strcpy(ui_info.gimbal_error_code, "Y     \0"); //strcat
+		ui_info.gimbal_error_flag = devError;
+	}
+	if(toe_is_error(PITCH_GIMBAL_MOTOR_TOE))
+	{
+		strcpy(ui_info.gimbal_error_code, "P     \0");
+		if(toe_is_error(YAW_GIMBAL_MOTOR_TOE))
+		{strcpy(ui_info.gimbal_error_code, "YP-ERR\0");}
+		
+		ui_info.gimbal_error_flag = devError;
+	}
+	if(ui_info.gimbal_error_flag == devOK)
+	{
+		strcpy(ui_info.gimbal_error_code, "OK    \0");
+	}
+	
+	//check feed or shoot 不详细显示
+	ui_info.shoot_error_flag = devOK;
+	if(toe_is_error(SHOOT_FRIC_L_TOE))
+	{
+		strcat(ui_info.shoot_error_code, "L\0");
+		ui_info.shoot_error_flag = devError;
+	}
+	if(toe_is_error(SHOOT_FRIC_R_TOE))
+	{
+		strcat(ui_info.shoot_error_code, "R\0");
+		ui_info.shoot_error_flag = devError;
+	}
+	if(toe_is_error(TRIGGER_MOTOR_TOE))
+	{
+		strcat(ui_info.shoot_error_code, "T\0");
+		ui_info.shoot_error_flag = devError;
+	}
+	if(ui_info.shoot_error_flag == devOK)
+	{
+		strcat(ui_info.shoot_error_code, "OK  \0");
+	}
+	else
+	{
+		strcpy(ui_info.shoot_error_code, "ERR!\0");
+	}
+	
+	//check for superCap
+	if(current_superCap_is_offline())
+	{
+		strcpy(ui_info.superCap_error_code, "ERR!\0"); //strcat
+		ui_info.superCap_error_flag = devError;
+	}
+	else
+	{
+		strcpy(ui_info.superCap_error_code, "OK  \0");
+		ui_info.superCap_error_flag = devOK;
+	}
+	
+	//check for referee
+	if(toe_is_error(REFEREE_TOE))
+	{
+		strcpy(ui_info.referee_error_code, "ERR!\0"); //strcat
+//		Char_Draw(&strRef, "978", UI_Graph_ADD, 5, UI_Color_Purplish_red, Robot_Warning_Msg_Font_Size, strlen("REF!"), 3, Robot_Warning_REF_X, Robot_Warning_REF_Y, "REF!");
+		ui_info.referee_error_flag = devError;
+	}
+	else
+	{
+		strcpy(ui_info.referee_error_code, "OK  \0");
+//		Char_Draw(&strRef, "978", UI_Graph_Del, 5, UI_Color_Purplish_red, Robot_Warning_Msg_Font_Size, strlen("REF!"), 3, Robot_Warning_REF_X, Robot_Warning_REF_Y, "REF!");
+		ui_info.referee_error_flag = devOK;
+	}
+	
+	
+}
 
 void client_ui_task(void const *pvParameters)
 {
 		//等待referee_usart_task中完成对MCU UART6的初始化
 		vTaskDelay(200);
-	
+		ui_info.error_list_UI_local = get_error_list_point(); //list pointer init
+
 //		memset(&G1,0,sizeof(G1));
 //		memset(&G2,0,sizeof(G2));
 //		memset(&G3,0,sizeof(G3));
@@ -79,17 +321,33 @@ void client_ui_task(void const *pvParameters)
 
 		//初速绘制"创建"一次动态UI
 		//动态图层 占用图层 4,5,6,7
-				
-		//右上角 超级电容电压
+	
+		ui_error_code_str_clear(); 
+	  ui_error_flag_clear();
+	
+		/*右上角 各种设备的error code*/
+//		// 5-26-2023 不显示那么详细
+//		Char_Draw(&strVarChassis, "985", ui_info.chassis_error_flag, 5, UI_Color_Purplish_red, 20, strlen(ui_info.chassis_error_code), 3, CHASSIS_ERROR_CODE_X+ERROR_CODE_STR_X_OFFSET_FROM_FIX_STR, CHASSIS_ERROR_CODE_Y, ui_info.chassis_error_code);
+//		Char_Draw(&strVarGimbal, "984", ui_info.gimbal_error_flag, 5, UI_Color_Purplish_red, 20, strlen(ui_info.gimbal_error_code), 3, GIMBAL_ERROR_CODE_X+ERROR_CODE_STR_X_OFFSET_FROM_FIX_STR, GIMBAL_ERROR_CODE_Y, ui_info.gimbal_error_code);
+//		Char_Draw(&strVarShoot, "983", ui_info.shoot_error_flag, 5, UI_Color_Purplish_red, 20, strlen(ui_info.shoot_error_code), 3, SHOOT_ERROR_CODE_X+ERROR_CODE_STR_X_OFFSET_FROM_FIX_STR, SHOOT_ERROR_CODE_Y, ui_info.shoot_error_code);
+//		Char_Draw(&strVarSuperCap, "982", ui_info.superCap_error_flag, 5, UI_Color_Purplish_red, 20, strlen(ui_info.superCap_error_code), 3, SUPERCAP_ERROR_CODE_X+ERROR_CODE_STR_X_OFFSET_FROM_FIX_STR, SUPERCAP_ERROR_CODE_Y, ui_info.superCap_error_code);
+//		Char_Draw(&strVarReferee, "981", ui_info.referee_error_flag, 5, UI_Color_Purplish_red, 20, strlen(ui_info.referee_error_code), 3, REFEREE_ERROR_CODE_X+ERROR_CODE_STR_X_OFFSET_FROM_FIX_STR, REFEREE_ERROR_CODE_Y, ui_info.referee_error_code);
+		
+		//中间靠上 各种字符 Warning 需要时才显示所以不需要只有 add 和 delete 没有change
+		Char_Draw(&strSpin, "980", UI_Graph_ADD, 5, UI_Color_Purplish_red, Robot_Warning_Msg_Font_Size, strlen("SPIN!"), 3, Robot_Warning_Spin_X, Robot_Warning_Spin_Y, "SPIN!");
+		Char_Draw(&strFric, "979", UI_Graph_ADD, 5, UI_Color_Purplish_red, Robot_Warning_Msg_Font_Size, strlen("FRIC!"), 3, Robot_Warning_Fric_X, Robot_Warning_Fric_Y, "FRIC!");
+//		Char_Draw(&strRef, "978", UI_Graph_ADD, 5, UI_Color_Purplish_red, Robot_Warning_Msg_Font_Size, strlen("REF!"), 3, Robot_Warning_REF_X, Robot_Warning_REF_Y, "REF!");
+		
+		//中间 NOT右上角 超级电容电压
 		//离线时superCap_info.VBKelvin_fromCap修改为 0
 		//Float_Draw(&fCapVolt, "999", UI_Graph_ADD, 4, UI_Color_Yellow, 20, 2, 3, 1620, 810, 00.00);//superCap_info.VBKelvin_fromCap);
 	//new position of voltage of sup_cap
-		Float_Draw(&fCapVolt, "999", UI_Graph_ADD, 4, UI_Color_Yellow, 20, 2, 3, 960-20, 200, 00.00);//superCap_info.VBKelvin_fromCap);
-		//右上角 超级电容百分比
+		Float_Draw(&fCapVolt, "999", UI_Graph_ADD, 4, UI_Color_Yellow, Center_Bottom_SuperCap_VOLT_Font_Size, 2, 3, Center_Bottom_SuperCap_VOLT_NUM_X_COORD, Center_Bottom_SuperCap_VOLT_NUM_Y_COORD, 00.00);//superCap_info.VBKelvin_fromCap);
+		//中间 NOT右上角 超级电容百分比
 		//离线时superCap_info.EBPct_fromCap修改为 0
 		//Float_Draw(&fCapPct, "998", UI_Graph_ADD, 4, UI_Color_Yellow, 20, 2, 3, 1620, 840, 00.00);//superCap_info.EBPct_fromCap);
 		//new display position with number size = 40
-		Float_Draw(&fCapPct, "998", UI_Graph_ADD, 4, UI_Color_Yellow, 40, 2, 3, 960-20, 250, 00.00);//superCap_info.EBPct_fromCap);
+		Float_Draw(&fCapPct, "998", UI_Graph_ADD, 4, UI_Color_Yellow, Center_Bottom_SuperCap_PCT_Font_Size, 2, 3, Center_Bottom_SuperCap_PCT_NUM_X_COORD, Center_Bottom_SuperCap_PCT_NUM_Y_COORD, 00.00);//superCap_info.EBPct_fromCap);
 		//new position of rectangle 右上角方框
 		Rectangle_Draw(&gChassisSts_box, "997", UI_Graph_ADD, 4, UI_Color_Cyan, 3, TopRight_REC_on_NORM_START_X-80, TopRight_REC_on_NORM_START_Y-95, TopRight_REC_on_NORM_END_X-80, TopRight_REC_on_NORM_END_Y-95);
 		Rectangle_Draw(&gSPINSts_box, "996", UI_Graph_ADD, 4, UI_Color_Cyan, 3, TopRight_REC_on_FOLL_START_X-80, TopRight_REC_on_FOLL_START_Y-95, TopRight_REC_on_FOLL_END_X-80, TopRight_REC_on_FOLL_END_Y-95);
@@ -103,17 +361,58 @@ void client_ui_task(void const *pvParameters)
 		Rectangle_Draw(&gCVfb_sts_box, "989", UI_Graph_ADD, 4, UI_Color_White, 3, TopLeft_CV_FEEDBACK_STATUS_on_OFF_START_X, TopLeft_CV_FEEDBACK_STATUS_on_OFF_START_Y, TopLeft_CV_FEEDBACK_STATUS_on_OFF_END_X, TopLeft_CV_FEEDBACK_STATUS_on_OFF_END_Y);
 		
 		//CV自瞄 是否瞄准到目标 圈
-		Circle_Draw(&gEnemyDetected_circle, "990", UI_Graph_ADD, 4, UI_Color_Cyan, 15, TopLeft_Cir_on_cv_DET_START_X, TopLeft_Cir_on_cv_DET_START_Y, TopLeft_Cir_on_cv_DET_radius);
+		Circle_Draw(&gEnemyDetected_circle, "990", UI_Graph_ADD, 4, UI_Color_Cyan, ui_cv_circle_size_debug, TopLeft_Cir_on_cv_DET_START_X, TopLeft_Cir_on_cv_DET_START_Y, TopLeft_Cir_on_cv_DET_radius);
 		
     Float_Draw(&fProjSLim, "992", UI_Graph_ADD, 4, UI_Color_Main, 20, 2, 3, 240, 720, 15.00);
 		Float_Draw(&fDis, "991", UI_Graph_ADD, 4, UI_Color_Main, 20, 2, 3, 240, 680, 1.00);
 		
-  	UI_ReFresh(2, fCapVolt, fCapPct);
+		//5-18-23 超级电容 移动能量条 初始化为满能量状态
+		Line_Draw(&superCapLine, "988", UI_Graph_ADD, 4, UI_Color_Main, Center_Bottom_SuperCap_Line_Width, Center_Bottom_SuperCap_Line_Start_X, Center_Bottom_SuperCap_Line_Start_Y, Center_Bottom_SuperCap_Line_Start_X, Center_Bottom_SuperCap_Line_Start_Y);
+		
+		chassis_frame_UI_sensor_and_graph_init();
+		chassis_frame_UI_sensor_update();
+		chassis_frame_UI_arm_init(ui_info.yaw_relative_angle);
+		
+		//初始创建 底盘角度指示框
+		Line_Draw(&chassisLine, "987", UI_Graph_ADD, 0, UI_Color_Main, Chassis_Frame_Height_Pen, ui_info.frame_chassis_coord_final[0], ui_info.frame_chassis_coord_final[1], ui_info.frame_chassis_coord_final[2], ui_info.frame_chassis_coord_final[3]);
+		Line_Draw(&chassisLightBar, "986", UI_Graph_ADD, 7, UI_Color_Yellow, Chassis_Frame_Light_Bar_Height_Pen, ui_info.bar_chassis_coord_final[0], ui_info.bar_chassis_coord_final[1], ui_info.bar_chassis_coord_final[2], ui_info.bar_chassis_coord_final[3]);
+		//炮塔 球 和 枪 线 捆绑动态图像
+		Circle_Draw(&turretCir, "026", UI_Graph_ADD, 8, UI_Color_White, Turret_Cir_Pen, Turret_Cir_Start_X, Turret_Cir_Start_Y, Turret_Cir_Radius);
+		Line_Draw(&gunLine, "027", UI_Graph_ADD, 8, UI_Color_Black, Gun_Line_Pen, Gun_Line_Start_X, Gun_Line_Start_Y, Gun_Line_End_X, Gun_Line_End_Y);
+				
+		UI_ReFresh(5, chassisLine, turretCir, gunLine, fCapVolt, chassisLightBar); //chassisLine, turretCir, gunLine需捆绑发送
+		UI_ReFresh(2, fCapPct, superCapLine);
+//		UI_ReFresh(1, superCapLine);
+//		UI_ReFresh(2, superCapLine, chassisLine);
+//  	UI_ReFresh(2, fCapVolt, fCapPct);
+//		UI_ReFresh(1, chassisLightBar);
+//		UI_ReFresh(5, chassisLightBar, superCapLine, chassisLine, fCapVolt, fCapPct);
 		UI_ReFresh(2, fProjSLim, fDis);
 		UI_ReFresh(2, gEnemyDetected_circle, gCVfb_sts_box);
 		//UI_ReFresh(5, fCapVolt, fCapPct, fProjSLim, fDis, gEnemyDetected_circle);
 		UI_ReFresh(5, gChassisSts_box, gSPINSts_box, gCVSts_box, gGunSts_box, gABoxSts_box);
+//		Char_ReFresh(strVarChassis); // 5-26-2023 不显示那么详细
+//		Char_ReFresh(strVarGimbal); 
+//		Char_ReFresh(strVarShoot); 
+//		Char_ReFresh(strVarSuperCap); 
+//		Char_ReFresh(strVarReferee);
+		
+		Char_ReFresh(strSpin);
+		Char_ReFresh(strFric);
+//		Char_ReFresh(strRef);
 	  //UI 初始创建 + 发送结束
+		
+		//底盘 对位线计算 初始化 左
+		ui_info.chassis_drive_pos_line_left_slope_var = Chassis_Drive_Pos_Line_Left_Slope;
+		ui_info.chassis_drive_pos_line_left_var_startX = Chassis_Drive_Pos_Line_Left_Start_X;
+		ui_info.chassis_drive_pos_line_left_var_startY = Chassis_Drive_Pos_Line_Left_Start_Y;
+		ui_info.chassis_drive_pos_line_left_var_endX = Chassis_Drive_Pos_Line_Left_End_X;
+		
+		//底盘 对位线计算 初始化 右
+		ui_info.chassis_drive_pos_line_right_slope_var = Chassis_Drive_Pos_Line_Right_Slope;
+		ui_info.chassis_drive_pos_line_right_var_startX = Chassis_Drive_Pos_Line_Right_Start_X;
+		ui_info.chassis_drive_pos_line_right_var_startY = Chassis_Drive_Pos_Line_Right_Start_Y;
+		ui_info.chassis_drive_pos_line_right_var_endX = Chassis_Drive_Pos_Line_Right_End_X;
 		
 	
 		/*	大装甲板宽 230mm 
@@ -128,6 +427,15 @@ void client_ui_task(void const *pvParameters)
 			
 				//先画静态图像; 占用图层 0, 1, 2, 3
 				//右上角
+				ui_error_code_str_clear(); 
+				/*右上角 各种设备的error code*/
+			  // 5-26-2023 不显示那么详细 错误时才显示
+				Char_Draw(&strChassis, "030", ui_info.chassis_error_flag, 2, UI_Color_Yellow, 20, strlen("CH:"), 3, CHASSIS_ERROR_CODE_X, CHASSIS_ERROR_CODE_Y, "CH:");
+				Char_Draw(&strGimbal, "031", ui_info.gimbal_error_flag, 2, UI_Color_Yellow, 20, strlen("GY:"), 3, GIMBAL_ERROR_CODE_X, GIMBAL_ERROR_CODE_Y, "GY:");
+				Char_Draw(&strShoot, "032", ui_info.shoot_error_flag, 2, UI_Color_Yellow, 20, strlen("FD:"), 3, SHOOT_ERROR_CODE_X, SHOOT_ERROR_CODE_Y, "FD:");
+				Char_Draw(&strSuperCap, "033", ui_info.superCap_error_flag, 2, UI_Color_Yellow, 20, strlen("SC:"), 3, SUPERCAP_ERROR_CODE_X, SUPERCAP_ERROR_CODE_Y, "SC:");
+//				Char_Draw(&strReferee, "034", ui_info.referee_error_flag, 2, UI_Color_Yellow, 20, strlen("RF:"), 3, REFEREE_ERROR_CODE_X, REFEREE_ERROR_CODE_Y, "RF:");
+				
 				//Cap Pct:字样 封装字号20 和 图形线宽 3
 				//Char_Draw(&strCapPct, "008", UI_Graph_ADD, 2, UI_Color_Yellow, 20, 17, 3, CAP_PCT_X, CAP_PCT_Y,   "Cap Pct:        %");
 			  //Cap Volt:字样 封装字号20 和 图形线宽 3
@@ -137,8 +445,8 @@ void client_ui_task(void const *pvParameters)
 				//Char_Draw(&strChassisSts, "010", UI_Graph_ADD, 2, UI_Color_Yellow, 20, 10, 3, CHASSIS_STS_X, CHASSIS_STS_Y, "NORM BOOST");
 				//Char_Draw(&strSPINSts, "011", UI_Graph_ADD, 2, UI_Color_Yellow, 20, 9, 3, SPIN_STS_X, SPIN_STS_Y,           "FOLL SPIN");
 				//New position 底盘状态
-				Char_Draw(&strChassisSts, "010", UI_Graph_ADD, 2, UI_Color_Yellow, 20, 10, 3, CHASSIS_STS_X-80, CHASSIS_STS_Y-95, "NORM BOOST");
-				Char_Draw(&strSPINSts, "011", UI_Graph_ADD, 2, UI_Color_Yellow, 20, 9, 3, SPIN_STS_X-80, SPIN_STS_Y-95,           "FOLL SPIN");
+				Char_Draw(&strChassisSts, "010", UI_Graph_ADD, 2, UI_Color_Yellow, 20, 10, 3, CHASSIS_STS_X, CHASSIS_STS_Y, "NORM BOOST");
+				Char_Draw(&strSPINSts, "011", UI_Graph_ADD, 2, UI_Color_Yellow, 20, 9, 3, SPIN_STS_X, SPIN_STS_Y,           "FOLL SPIN");
 			
 				//中间
 				//Aim 竖线
@@ -178,23 +486,41 @@ void client_ui_task(void const *pvParameters)
 				Char_Draw(&strProjSLimSts, "015", UI_Graph_ADD, 2, UI_Color_Yellow, 20, 8, 3, Enemy_dis_STS_X, Enemy_dis_STS_Y, 									 "DS:    m");
 				Char_Draw(&strDisSts, "016", UI_Graph_ADD, 2, UI_Color_Yellow, 20, 10, 3, Projectile_speed_lim_STS_X, Projectile_speed_lim_STS_Y,  "PL:    m/s");
 				
-
+				//超级电容 容量静态外框
+				Rectangle_Draw(&superCapFrame, "025", UI_Graph_ADD, 3, UI_Color_Main, 3, Center_Bottom_SuperCap_Frame_Start_X, Center_Bottom_SuperCap_Frame_Start_Y, Center_Bottom_SuperCap_Frame_End_X, Center_Bottom_SuperCap_Frame_End_Y);
+				//026 027
+				//底盘对位线
+				ui_info.chassis_drive_pos_line_left_var_endY = ((fp32) (ui_info.chassis_drive_pos_line_left_var_endX - ui_info.chassis_drive_pos_line_left_var_startX) ) * ui_info.chassis_drive_pos_line_left_slope_var + ui_info.chassis_drive_pos_line_left_var_startY;
+				ui_info.chassis_drive_pos_line_right_var_endY = ((fp32) (ui_info.chassis_drive_pos_line_right_var_endX - ui_info.chassis_drive_pos_line_right_var_startX) ) * ui_info.chassis_drive_pos_line_right_slope_var + ui_info.chassis_drive_pos_line_right_var_startY;
+//				Line_Draw(&chassisPosAimLeftLine, "028", UI_Graph_ADD, 3, UI_Color_Main, 5, Chassis_Drive_Pos_Line_Left_Start_X, Chassis_Drive_Pos_Line_Left_Start_Y, Chassis_Drive_Pos_Line_Left_End_X, Chassis_Drive_Pos_Line_Left_End_Y);
+				Line_Draw(&chassisPosAimLeftLine, "028", UI_Graph_ADD, 3, UI_Color_Main, 5, ui_info.chassis_drive_pos_line_left_var_startX, ui_info.chassis_drive_pos_line_left_var_startY, ui_info.chassis_drive_pos_line_left_var_endX, ui_info.chassis_drive_pos_line_left_var_endY);
+				Line_Draw(&chassisPosAimRightLine, "029", UI_Graph_ADD, 3, UI_Color_Main, 5, ui_info.chassis_drive_pos_line_right_var_startX, ui_info.chassis_drive_pos_line_right_var_startY, ui_info.chassis_drive_pos_line_right_var_endX, ui_info.chassis_drive_pos_line_right_var_endY);
+				
 				//更新 同态图标的坐标数据------------
 				ui_coord_update();
 				//动态图层 占用图层 4,5,6,7 ****在这里加/改了东西之后记得要在ui_dynamic_crt_send_fuc() 里也加/改****
+				
+				/*右上角 各种设备的error code*/
+//				// 5-26-2023 不显示那么详细
+//				Char_Draw(&strVarChassis, "985", UI_Graph_Change, 5, UI_Color_Purplish_red, 20, strlen(ui_info.chassis_error_code), 3, CHASSIS_ERROR_CODE_X+ERROR_CODE_STR_X_OFFSET_FROM_FIX_STR, CHASSIS_ERROR_CODE_Y, ui_info.chassis_error_code);
+//				Char_Draw(&strVarGimbal, "984", UI_Graph_Change, 5, UI_Color_Purplish_red, 20, strlen(ui_info.gimbal_error_code), 3, GIMBAL_ERROR_CODE_X+ERROR_CODE_STR_X_OFFSET_FROM_FIX_STR, GIMBAL_ERROR_CODE_Y, ui_info.gimbal_error_code);
+//				Char_Draw(&strVarShoot, "983", UI_Graph_Change, 5, UI_Color_Purplish_red, 20, strlen(ui_info.shoot_error_code), 3, SHOOT_ERROR_CODE_X+ERROR_CODE_STR_X_OFFSET_FROM_FIX_STR, SHOOT_ERROR_CODE_Y, ui_info.shoot_error_code);
+//				Char_Draw(&strVarSuperCap, "982", UI_Graph_Change, 5, UI_Color_Purplish_red, 20, strlen(ui_info.superCap_error_code), 3, SUPERCAP_ERROR_CODE_X+ERROR_CODE_STR_X_OFFSET_FROM_FIX_STR, SUPERCAP_ERROR_CODE_Y, ui_info.superCap_error_code);
+//				Char_Draw(&strVarReferee, "981", UI_Graph_Change, 5, UI_Color_Purplish_red, 20, strlen(ui_info.referee_error_code), 3, REFEREE_ERROR_CODE_X+ERROR_CODE_STR_X_OFFSET_FROM_FIX_STR, REFEREE_ERROR_CODE_Y, ui_info.referee_error_code);
+				
 				//右上角 超级电容电压
 				//离线时superCap_info.VBKelvin_fromCap修改为 0
 			  //Float_Draw(&fCapVolt, "999", UI_Graph_Change, 4, UI_Color_Main, 20, 2, 3, 1620, 810, ui_info.cap_volt);
 				//new position
-				Float_Draw(&fCapVolt, "999", UI_Graph_Change, 4, UI_Color_Main, 20, 2, 3, 960-20, 200, ui_info.cap_volt);
+				Float_Draw(&fCapVolt, "999", UI_Graph_Change, 4, UI_Color_Main, Center_Bottom_SuperCap_VOLT_Font_Size, 2, 3, Center_Bottom_SuperCap_VOLT_NUM_X_COORD, Center_Bottom_SuperCap_VOLT_NUM_Y_COORD, ui_info.cap_volt);
 				//右上角 超级电容百分比
 				//离线时superCap_info.EBPct_fromCap修改为 0
 				//Float_Draw(&fCapPct, "998", UI_Graph_Change, 4, UI_Color_Main, 20, 2, 3, 1620, 840, ui_info.cap_pct);
 				//new position with number size = 40
-				Float_Draw(&fCapPct, "998", UI_Graph_Change, 4, UI_Color_Main, 40, 2, 3, 960-20, 250, ui_info.cap_pct);
+				Float_Draw(&fCapPct, "998", UI_Graph_Change, 4, UI_Color_Main, Center_Bottom_SuperCap_PCT_Font_Size, 2, 3, Center_Bottom_SuperCap_PCT_NUM_X_COORD, Center_Bottom_SuperCap_PCT_NUM_Y_COORD, ui_info.cap_pct);
 				//new position of rectangle 右上角方框
-				Rectangle_Draw(&gChassisSts_box, "997", UI_Graph_Change, 4, UI_Color_Cyan, 3, ui_info.box_chassis_sts_coord[0]-80, ui_info.box_chassis_sts_coord[1]-95, ui_info.box_chassis_sts_coord[2]-80, ui_info.box_chassis_sts_coord[3]-95);
-				Rectangle_Draw(&gSPINSts_box, "996", UI_Graph_Change, 4, UI_Color_Cyan, 3, ui_info.box_spin_sts_coord[0]-80, ui_info.box_spin_sts_coord[1]-95, ui_info.box_spin_sts_coord[2]-80, ui_info.box_spin_sts_coord[3]-95);
+				Rectangle_Draw(&gChassisSts_box, "997", UI_Graph_Change, 4, UI_Color_Cyan, 3, ui_info.box_chassis_sts_coord[0], ui_info.box_chassis_sts_coord[1], ui_info.box_chassis_sts_coord[2], ui_info.box_chassis_sts_coord[3]);
+				Rectangle_Draw(&gSPINSts_box, "996", UI_Graph_Change, 4, UI_Color_Cyan, 3, ui_info.box_spin_sts_coord[0], ui_info.box_spin_sts_coord[1], ui_info.box_spin_sts_coord[2], ui_info.box_spin_sts_coord[3]);
 				
 				//左上角---还未改
 				Rectangle_Draw(&gCVSts_box, "995", UI_Graph_Change, 4, UI_Color_Cyan, 3, ui_info.box_cv_sts_coord[0], ui_info.box_cv_sts_coord[1], ui_info.box_cv_sts_coord[2], ui_info.box_cv_sts_coord[3]);
@@ -205,14 +531,25 @@ void client_ui_task(void const *pvParameters)
 				Float_Draw(&fProjSLim, "992", UI_Graph_Change, 4, UI_Color_Main, 20, 2, 3, 240, 720, ui_info.enemy_dis);
 				Float_Draw(&fDis, "991", UI_Graph_Change, 4, UI_Color_Main, 20, 2, 3, 240, 680, ui_info.proj_speed_limit);
 				
+				//5-18-23 超级电容 移动能量条
+				Line_Draw(&superCapLine, "988", UI_Graph_Change, 4, UI_Color_Main, Center_Bottom_SuperCap_Line_Width, Center_Bottom_SuperCap_Line_Start_X, Center_Bottom_SuperCap_Line_Start_Y, Center_Bottom_SuperCap_Line_Start_X + ui_info.superCap_line_var_length, Center_Bottom_SuperCap_Line_End_Y);
+				
+				chassis_frame_UI_arm_cal(ui_info.yaw_relative_angle);
+				//底盘角度指示框
+				Line_Draw(&chassisLine, "987", UI_Graph_Change, 0, UI_Color_Main, Chassis_Frame_Height_Pen, ui_info.frame_chassis_coord_final[0], ui_info.frame_chassis_coord_final[1], ui_info.frame_chassis_coord_final[2], ui_info.frame_chassis_coord_final[3]);
+				Line_Draw(&chassisLightBar, "986", UI_Graph_Change, 7, UI_Color_Yellow, Chassis_Frame_Light_Bar_Height_Pen, ui_info.bar_chassis_coord_final[0], ui_info.bar_chassis_coord_final[1], ui_info.bar_chassis_coord_final[2], ui_info.bar_chassis_coord_final[3]);
+				//炮塔 球 和 枪 线 捆绑动态图像
+				Circle_Draw(&turretCir, "026", UI_Graph_Change, 8, UI_Color_White, Turret_Cir_Pen, Turret_Cir_Start_X, Turret_Cir_Start_Y, Turret_Cir_Radius);
+				Line_Draw(&gunLine, "027", UI_Graph_Change, 8, UI_Color_Black, Gun_Line_Pen, Gun_Line_Start_X, Gun_Line_Start_Y, Gun_Line_End_X, Gun_Line_End_Y);
+				
 				//CV是否识别到目标
 				if(is_enemy_detected_with_pc_toe()) //(miniPC_info.enemy_detected == 1)
 				{
-					Circle_Draw(&gEnemyDetected_circle, "990", UI_Graph_Change, 4, UI_Color_Green, 15, TopLeft_Cir_on_cv_DET_START_X, TopLeft_Cir_on_cv_DET_START_Y, TopLeft_Cir_on_cv_DET_radius);
+					Circle_Draw(&gEnemyDetected_circle, "990", UI_Graph_Change, 4, UI_Color_Green, ui_cv_circle_size_debug, TopLeft_Cir_on_cv_DET_START_X, TopLeft_Cir_on_cv_DET_START_Y, TopLeft_Cir_on_cv_DET_radius);
 				}
 				else
 				{
-					Circle_Draw(&gEnemyDetected_circle, "990", UI_Graph_Change, 4, UI_Color_Cyan, 15, TopLeft_Cir_on_cv_DET_START_X, TopLeft_Cir_on_cv_DET_START_Y, TopLeft_Cir_on_cv_DET_radius);
+					Circle_Draw(&gEnemyDetected_circle, "990", UI_Graph_Change, 4, UI_Color_Cyan, ui_cv_circle_size_debug, TopLeft_Cir_on_cv_DET_START_X, TopLeft_Cir_on_cv_DET_START_Y, TopLeft_Cir_on_cv_DET_radius);
 				}
 				
 				Rectangle_Draw(&gCVfb_sts_box, "989", UI_Graph_Change, 4, UI_Color_White, 3, ui_info.box_cv_feedback_sts[0], ui_info.box_cv_feedback_sts[1], ui_info.box_cv_feedback_sts[2], ui_info.box_cv_feedback_sts[3]);
@@ -221,7 +558,15 @@ void client_ui_task(void const *pvParameters)
 				
 				//完成绘制 开始发送 先发静态
 				//refresh UI and String(Char)
-				UI_ReFresh(1,gAimVertL);
+//				UI_ReFresh(2, turretCir, gunLine);
+				Char_ReFresh(strChassis);
+				Char_ReFresh(strGimbal); 
+				Char_ReFresh(strShoot); 
+				Char_ReFresh(strSuperCap); 
+//				Char_ReFresh(strReferee);
+				
+				UI_ReFresh(2, chassisPosAimLeftLine, chassisPosAimRightLine);
+				UI_ReFresh(2, gAimVertL, superCapFrame);
 				UI_ReFresh(5, gAimHorizL2m, gAimHorizL4m, gAimHorizL5m, gAimHorizL7m, gAimHorizL8m);
 				UI_ReFresh(5, left8to7, left7to5,left5to4,left4to2, right8to7);
 				UI_ReFresh(5,right5to4,right4to2 );
@@ -239,11 +584,33 @@ void client_ui_task(void const *pvParameters)
 				Char_ReFresh(strDisSts);
 				
 				//动态的修改 发送
-				UI_ReFresh(2, fCapVolt, fCapPct);
+				UI_ReFresh(5, chassisLine, turretCir, gunLine, fCapVolt, chassisLightBar); //chassisLine, turretCir, gunLine需捆绑发送
+				UI_ReFresh(2, fCapPct, superCapLine);
+//				UI_ReFresh(1, superCapLine);
+//				UI_ReFresh(2, superCapLine, chassisLine);
+//				UI_ReFresh(2, fCapVolt, fCapPct);
+//				UI_ReFresh(1, chassisLightBar);
+//				UI_ReFresh(5, chassisLightBar, superCapLine, chassisLine, fCapVolt, fCapPct);
 				UI_ReFresh(2, fProjSLim, fDis);
 				UI_ReFresh(2, gEnemyDetected_circle, gCVfb_sts_box);
 				//UI_ReFresh(5, fCapVolt, fCapPct, fProjSLim, fDis, gEnemyDetected_circle);
 				UI_ReFresh(5, gChassisSts_box, gSPINSts_box, gCVSts_box, gGunSts_box, gABoxSts_box);
+//				// 5-26-2023 不显示那么详细
+//				Char_ReFresh(strVarChassis);
+//				Char_ReFresh(strVarGimbal); 
+//				Char_ReFresh(strVarShoot); 
+//				Char_ReFresh(strVarSuperCap); 
+//				Char_ReFresh(strVarReferee);
+				
+				Char_ReFresh(strSpin); //中间靠上 各种字符 Warning 需要时才显示所以不需要只有 add 和 delete 没有change
+				Char_ReFresh(strFric);
+//				Char_ReFresh(strRef);
+				
+//				//测试 2023 服务器问题
+//				//炮塔 球 和 枪 线
+//				Circle_Draw(&turretCir, "026", UI_Graph_Change, 8, UI_Color_White, Turret_Cir_Pen, Turret_Cir_Start_X, Turret_Cir_Start_Y, Turret_Cir_Radius);
+//				Line_Draw(&gunLine, "027", UI_Graph_Change, 8, UI_Color_Black, Gun_Line_Pen, Gun_Line_Start_X, Gun_Line_Start_Y, Gun_Line_End_X, Gun_Line_End_Y);
+//				UI_ReFresh(2, turretCir, gunLine);
 				
 				//定时创建一次动态的--------------
 				if(xTaskGetTickCount() - ui_dynamic_crt_sendFreq > ui_dynamic_crt_send_TimeStamp)
@@ -254,8 +621,24 @@ void client_ui_task(void const *pvParameters)
 //				temp_time_check_RTOS = xTaskGetTickCount();
 //			 temp_time_check_HAL = HAL_GetTick();
 //			 _temp_a++;
-			 
-				vTaskDelay(100);
+				
+//				delLayer.Delete_Operate = UI_Data_Del_Layer;
+//				delLayer.Layer = 6;
+//				Delete_ReFresh(delLayer);
+//				//测试 2023 服务器问题
+//				//炮塔 球 和 枪 线
+//				Circle_Draw(&turretCir, "026", UI_Graph_ADD, 8, UI_Color_White, Turret_Cir_Pen, Turret_Cir_Start_X, Turret_Cir_Start_Y, Turret_Cir_Radius);
+//				Line_Draw(&gunLine, "027", UI_Graph_ADD, 8, UI_Color_Black, Gun_Line_Pen, Gun_Line_Start_X, Gun_Line_Start_Y, Gun_Line_End_X, Gun_Line_End_Y);
+//				UI_ReFresh(2, turretCir, gunLine);
+				
+//				//测试 2023 服务器问题
+//				//炮塔 球 和 枪 线
+//				Circle_Draw(&turretCir, "026", UI_Graph_ADD, 8, UI_Color_White, Turret_Cir_Pen, Turret_Cir_Start_X, Turret_Cir_Start_Y, Turret_Cir_Radius); //UI_Graph_ADD
+//				Line_Draw(&gunLine, "027", UI_Graph_ADD, 8, UI_Color_Black, Gun_Line_Pen, Gun_Line_Start_X, Gun_Line_Start_Y, Gun_Line_End_X, Gun_Line_End_Y);
+//				UI_ReFresh(2, turretCir, gunLine);
+				
+//				vTaskDelay(100); //100
+				vTaskDelay(10); //100
 				//
 				client_ui_count_ref++;
 				
@@ -273,7 +656,7 @@ void client_ui_task(void const *pvParameters)
 void ui_coord_update()
 {
 	 //底盘 turbo 模式的判断
-	 if(turboMode == 0)
+	 if(get_turboMode() == 0)
 	 {
 		 ui_info.ui_chassis_sts = NORM;
 		 ui_info.box_chassis_sts_coord[0] = TopRight_REC_on_NORM_START_X;
@@ -295,13 +678,15 @@ void ui_coord_update()
 		swing_flag = 0 无小陀螺
 		swing_flag = 1 有小陀螺
 		*/
-	 if(swing_flag == 0)
+	 if(get_swing_flag() == 0)
 	 {
 		 ui_info.ui_spin_sts = spinFOLL;
 		 ui_info.box_spin_sts_coord[0] = TopRight_REC_on_FOLL_START_X;
 		 ui_info.box_spin_sts_coord[1] = TopRight_REC_on_FOLL_START_Y;
 		 ui_info.box_spin_sts_coord[2] = TopRight_REC_on_FOLL_END_X;
 		 ui_info.box_spin_sts_coord[3] = TopRight_REC_on_FOLL_END_Y;
+		 
+		Char_Draw(&strSpin, "980", UI_Graph_ADD, 5, UI_Color_Purplish_red, Robot_Warning_Msg_Font_Size, strlen("SPIN!"), 3, Robot_Warning_Spin_X, Robot_Warning_Spin_Y, "SPIN!");
 	 }
 	 else
 	 {
@@ -310,8 +695,10 @@ void ui_coord_update()
 		 ui_info.box_spin_sts_coord[1] = TopRight_REC_on_SPIN_START_Y;
 		 ui_info.box_spin_sts_coord[2] = TopRight_REC_on_SPIN_END_X;
 		 ui_info.box_spin_sts_coord[3] = TopRight_REC_on_SPIN_END_Y;
+		 
+		 Char_Draw(&strSpin, "980", UI_Graph_Del, 5, UI_Color_Purplish_red, Robot_Warning_Msg_Font_Size, strlen("SPIN!"), 3, Robot_Warning_Spin_X, Robot_Warning_Spin_Y, "SPIN!");
 	 }
-	 
+	 	 
 	 //CV 状态机 状态 //自动瞄准开关状态 0关 1自动瞄准
 	 if(get_autoAimFlag() == 0) //(miniPC_info.autoAimFlag == 0)
 	 {
@@ -338,7 +725,7 @@ void ui_coord_update()
 		 ui_info.box_cv_sts_coord[3] = TopLeft_REC_on_cv_LOCK_END_Y;
 	 }
 	 
-	 //CV feedback 状态机
+	 //CV feedback 状态机 - 7-4-2023修改为: cv_gimbal_st只有0-cvOFF或其它-cvNORMAL
 	 if(get_cv_gimbal_sts() == 0) //(miniPC_info.cv_status == 0)
 	 {
 		 ui_info.ui_cv_feedback_sts = cvOFF;
@@ -347,22 +734,30 @@ void ui_coord_update()
 		 ui_info.box_cv_feedback_sts[2] = TopLeft_CV_FEEDBACK_STATUS_on_OFF_END_X;
 		 ui_info.box_cv_feedback_sts[3] = TopLeft_CV_FEEDBACK_STATUS_on_OFF_END_Y;
 	 }
-	 else if(get_cv_gimbal_sts() == 1) //(miniPC_info.cv_status == 1)
+	 else
 	 {
-		 ui_info.ui_cv_feedback_sts = cvAID;
+		 ui_info.ui_cv_feedback_sts = cvNORMAL; //对应的框也将会是一个大框
 		 ui_info.box_cv_feedback_sts[0] = TopLeft_CV_FEEDBACK_STATUS_on_AID_START_X;
 		 ui_info.box_cv_feedback_sts[1] = TopLeft_CV_FEEDBACK_STATUS_on_AID_START_Y;
-		 ui_info.box_cv_feedback_sts[2] = TopLeft_CV_FEEDBACK_STATUS_on_AID_END_X;
-		 ui_info.box_cv_feedback_sts[3] = TopLeft_CV_FEEDBACK_STATUS_on_AID_END_Y;
-	 }
-	 else if(get_cv_gimbal_sts() == 2) //(miniPC_info.cv_status == 2)
-	 {
-		 ui_info.ui_cv_feedback_sts = cvLOCK;
-		 ui_info.box_cv_feedback_sts[0] = TopLeft_CV_FEEDBACK_STATUS_on_LOCK_START_X;
-		 ui_info.box_cv_feedback_sts[1] = TopLeft_CV_FEEDBACK_STATUS_on_LOCK_START_Y;
 		 ui_info.box_cv_feedback_sts[2] = TopLeft_CV_FEEDBACK_STATUS_on_LOCK_END_X;
 		 ui_info.box_cv_feedback_sts[3] = TopLeft_CV_FEEDBACK_STATUS_on_LOCK_END_Y;
 	 }
+//	 else if(get_cv_gimbal_sts() == 1) //(miniPC_info.cv_status == 1)
+//	 {
+//		 ui_info.ui_cv_feedback_sts = cvAID;
+//		 ui_info.box_cv_feedback_sts[0] = TopLeft_CV_FEEDBACK_STATUS_on_AID_START_X;
+//		 ui_info.box_cv_feedback_sts[1] = TopLeft_CV_FEEDBACK_STATUS_on_AID_START_Y;
+//		 ui_info.box_cv_feedback_sts[2] = TopLeft_CV_FEEDBACK_STATUS_on_AID_END_X;
+//		 ui_info.box_cv_feedback_sts[3] = TopLeft_CV_FEEDBACK_STATUS_on_AID_END_Y;
+//	 }
+//	 else if(get_cv_gimbal_sts() == 2) //(miniPC_info.cv_status == 2)
+//	 {
+//		 ui_info.ui_cv_feedback_sts = cvLOCK;
+//		 ui_info.box_cv_feedback_sts[0] = TopLeft_CV_FEEDBACK_STATUS_on_LOCK_START_X;
+//		 ui_info.box_cv_feedback_sts[1] = TopLeft_CV_FEEDBACK_STATUS_on_LOCK_START_Y;
+//		 ui_info.box_cv_feedback_sts[2] = TopLeft_CV_FEEDBACK_STATUS_on_LOCK_END_X;
+//		 ui_info.box_cv_feedback_sts[3] = TopLeft_CV_FEEDBACK_STATUS_on_LOCK_END_Y;
+//	 }
 	 
 	 //CV状态机掉线提示
 	 if(toe_is_error(PC_TOE))
@@ -375,33 +770,39 @@ void ui_coord_update()
 	 }
 	 
 	 //GUN 状态机 状态
-	 if(shoot_control.shoot_mode_L == SHOOT_STOP) //shoot_mode
+	 if(get_shoot_mode() == SHOOT_STOP)
 	 {
 		 ui_info.ui_gun_sts = gunOFF;
 		 ui_info.box_gun_sts_coord[0] = TopLeft_REC_on_gun_OFF_START_X;
 		 ui_info.box_gun_sts_coord[1] = TopLeft_REC_on_gun_OFF_START_Y;
 		 ui_info.box_gun_sts_coord[2] = TopLeft_REC_on_gun_OFF_END_X;
 		 ui_info.box_gun_sts_coord[3] = TopLeft_REC_on_gun_OFF_END_Y;
+		 
+		 Char_Draw(&strFric, "979", UI_Graph_ADD, 5, UI_Color_Purplish_red, Robot_Warning_Msg_Font_Size, strlen("FRIC!"), 3, Robot_Warning_Fric_X, Robot_Warning_Fric_Y, "FRIC!");
 	 }
-	 else if(shoot_control.user_fire_ctrl == user_SHOOT_AUTO)
+	 else if(get_user_fire_ctrl() == user_SHOOT_AUTO)
 	 {
 		 ui_info.ui_gun_sts = gunAUTO;
 		 ui_info.box_gun_sts_coord[0] = TopLeft_REC_on_gun_AUTO_START_X;
 		 ui_info.box_gun_sts_coord[1] = TopLeft_REC_on_gun_AUTO_START_Y;
 		 ui_info.box_gun_sts_coord[2] = TopLeft_REC_on_gun_AUTO_END_X;
 		 ui_info.box_gun_sts_coord[3] = TopLeft_REC_on_gun_AUTO_END_Y;
+		 
+		 Char_Draw(&strFric, "979", UI_Graph_Del, 5, UI_Color_Purplish_red, Robot_Warning_Msg_Font_Size, strlen("FRIC!"), 3, Robot_Warning_Fric_X, Robot_Warning_Fric_Y, "FRIC!");
 	 }
-	 else if(shoot_control.user_fire_ctrl > user_SHOOT_AUTO)// == user_SHOOT_SEMI)
+	 else if(get_user_fire_ctrl() == user_SHOOT_BOTH) //7-4-2023对于双枪步兵来说 semi就是同时开火
 	 {
 		 ui_info.ui_gun_sts = gunSEMI;
 		 ui_info.box_gun_sts_coord[0] = TopLeft_REC_on_gun_SEMI_START_X;
 		 ui_info.box_gun_sts_coord[1] = TopLeft_REC_on_gun_SEMI_START_Y;
 		 ui_info.box_gun_sts_coord[2] = TopLeft_REC_on_gun_SEMI_END_X;
 		 ui_info.box_gun_sts_coord[3] = TopLeft_REC_on_gun_SEMI_END_Y;
+		 
+		 Char_Draw(&strFric, "979", UI_Graph_Del, 5, UI_Color_Purplish_red, Robot_Warning_Msg_Font_Size, strlen("FRIC!"), 3, Robot_Warning_Fric_X, Robot_Warning_Fric_Y, "FRIC!");
 	 }
 	 
 	 //Ammo Box 状态机 状态
-	 if(shoot_control.ammoBox_sts == ammoOFF)
+	 if(get_ammoBox_sts() == ammoOFF)
 	 {
 		 ui_info.ui_ammoBox_sts = ammoOFF;
 		 //ui_info.box_ammoBox_sts_coord
@@ -410,7 +811,7 @@ void ui_coord_update()
 		 ui_info.box_ammoBox_sts_coord[2] = TopLeft_REC_on_ammo_OFF_END_X;
 		 ui_info.box_ammoBox_sts_coord[3] = TopLeft_REC_on_ammo_OFF_END_Y;
 	 }
-	 else if(shoot_control.ammoBox_sts == ammoOPEN)
+	 else if(get_ammoBox_sts() == ammoOPEN)
 	 {
 		 ui_info.ui_ammoBox_sts = ammoOPEN;
 		 //ui_info.box_ammoBox_sts_coord
@@ -421,63 +822,82 @@ void ui_coord_update()
 	 }
 
 	 //开始整数字相关的东西 即插即用的超级电容控制板 判断
-	 if(current_superCap == SuperCap_ID)
-	 {
-		 if(toe_is_error(SUPERCAP_TOE))
-		 {
-			 ui_info.cap_pct = 0.0f;
-			 ui_info.cap_volt = 0.0f;
-		 }
-		 else
-		 {
-			 ui_info.cap_pct = superCap_info.EBPct_fromCap;
-			 ui_info.cap_volt = superCap_info.VBKelvin_fromCap;
-		 }
-	 }
-	 else if(current_superCap == sCap23_ID)
-	 {
-		 if(toe_is_error(SCAP_23_TOR))
-		 {
-			 ui_info.cap_pct = 0.0f;
-			 ui_info.cap_volt = 0.0f;
-		 }
-		 else
-		 {
-			 ui_info.cap_pct = sCap23_info.EBPct;
-		   ui_info.cap_volt = sCap23_info.Vbank_f;
-		 }
-	 }
-	 else
-	 {
-		 if(toe_is_error(WULIE_CAP_TOE))
-		 {
-			 ui_info.cap_pct = 0.0f;
-			 ui_info.cap_volt = 0.0f;
-		 }
-		 else
-		 {
-			 ui_info.cap_pct = wulie_Cap_info.EBPct;
-		   ui_info.cap_volt = wulie_Cap_info.cap_voltage;
-		 }
-	 }
+//	 ui_info.cap_pct = get_current_cap_voltage();
+	 ui_info.cap_volt = get_current_cap_voltage();
+	 ui_info.cap_relative_pct = get_current_capE_relative_pct();
+	 ui_info.cap_pct = ui_info.cap_relative_pct;
+	 
+//	 if(current_superCap == SuperCap_ID)
+//	 {
+//		 if(toe_is_error(SUPERCAP_TOE))
+//		 {
+//			 ui_info.cap_pct = 0.0f;
+//			 ui_info.cap_volt = 0.0f;
+//		 }
+//		 else
+//		 {
+//			 ui_info.cap_pct = superCap_info.EBPct_fromCap;
+//			 ui_info.cap_volt = superCap_info.VBKelvin_fromCap;
+//		 }
+//	 }
+//	 else if(current_superCap == sCap23_ID)
+//	 {
+//		 if(toe_is_error(SCAP_23_TOR))
+//		 {
+//			 ui_info.cap_pct = 0.0f;
+//			 ui_info.cap_volt = 0.0f;
+//		 }
+//		 else
+//		 {
+//			 ui_info.cap_pct = sCap23_info.EBPct;
+//		   ui_info.cap_volt = sCap23_info.Vbank_f;
+//		 }
+//	 }
+//	 else
+//	 {
+//		 if(toe_is_error(WULIE_CAP_TOE))
+//		 {
+//			 ui_info.cap_pct = 0.0f;
+//			 ui_info.cap_volt = 0.0f;
+//		 }
+//		 else
+//		 {
+//			 ui_info.cap_pct = wulie_Cap_info.EBPct;
+//		   ui_info.cap_volt = wulie_Cap_info.cap_voltage;
+//		 }
+//	 }
 	 
 	 //ui_info.enemy_dis = miniPC_info.dis; //和张哥商量 3-26: ui包的发送于必要性
 	 ui_info.enemy_dis = get_aim_pos_dis(); 
 	 ui_info.proj_speed_limit = get_shooter_id1_17mm_speed_limit();
+	 
+	 //超级电容相关
+	 ui_info.superCap_line_var_length = (uint16_t) Center_Bottom_SuperCap_Line_Length_Max * fp32_constrain( get_current_capE_relative_pct(), 0.0f, 1.0f);
+	 
+	 chassis_frame_UI_sensor_update(); //update gimbal yaw angle
+	 ui_error_code_update();
 }
 
 void ui_dynamic_crt_send_fuc()
 {
+		/*右上角 各种设备的error code*/
+	  // 5-26-2023 不显示那么详细	
+//		Char_Draw(&strVarChassis, "985", ui_info.chassis_error_flag, 5, UI_Color_Purplish_red, 20, strlen(ui_info.chassis_error_code), 3, CHASSIS_ERROR_CODE_X+ERROR_CODE_STR_X_OFFSET_FROM_FIX_STR, CHASSIS_ERROR_CODE_Y, ui_info.chassis_error_code);
+//		Char_Draw(&strVarGimbal, "984", ui_info.gimbal_error_flag, 5, UI_Color_Purplish_red, 20, strlen(ui_info.gimbal_error_code), 3, GIMBAL_ERROR_CODE_X+ERROR_CODE_STR_X_OFFSET_FROM_FIX_STR, GIMBAL_ERROR_CODE_Y, ui_info.gimbal_error_code);
+//		Char_Draw(&strVarShoot, "983", ui_info.shoot_error_flag, 5, UI_Color_Purplish_red, 20, strlen(ui_info.shoot_error_code), 3, SHOOT_ERROR_CODE_X+ERROR_CODE_STR_X_OFFSET_FROM_FIX_STR, SHOOT_ERROR_CODE_Y, ui_info.shoot_error_code);
+//		Char_Draw(&strVarSuperCap, "982", ui_info.superCap_error_flag, 5, UI_Color_Purplish_red, 20, strlen(ui_info.superCap_error_code), 3, SUPERCAP_ERROR_CODE_X+ERROR_CODE_STR_X_OFFSET_FROM_FIX_STR, SUPERCAP_ERROR_CODE_Y, ui_info.superCap_error_code);
+//		Char_Draw(&strVarReferee, "981", ui_info.referee_error_flag, 5, UI_Color_Purplish_red, 20, strlen(ui_info.referee_error_code), 3, REFEREE_ERROR_CODE_X+ERROR_CODE_STR_X_OFFSET_FROM_FIX_STR, REFEREE_ERROR_CODE_Y, ui_info.referee_error_code);
+	
 		//右上角 超级电容电压
 		//离线时superCap_info.VBKelvin_fromCap修改为 0
 		//Float_Draw(&fCapVolt, "999", UI_Graph_ADD, 4, UI_Color_Main, 20, 2, 3, 1620, 810, ui_info.cap_volt);
 	//new postiion of voltage of super-cap
-			Float_Draw(&fCapVolt, "999", UI_Graph_ADD, 4, UI_Color_Main, 20, 2, 3, 960-20, 200, ui_info.cap_volt);
+			Float_Draw(&fCapVolt, "999", UI_Graph_ADD, 4, UI_Color_Main, Center_Bottom_SuperCap_VOLT_Font_Size, 2, 3, Center_Bottom_SuperCap_VOLT_NUM_X_COORD, Center_Bottom_SuperCap_VOLT_NUM_Y_COORD, ui_info.cap_volt);
 		//右上角 超级电容百分比
 		//离线时superCap_info.EBPct_fromCap修改为 0
 		//Float_Draw(&fCapPct, "998", UI_Graph_ADD, 4, UI_Color_Main, 20, 2, 3, 1620, 840, ui_info.cap_pct);
 	//new position with larger size of number size = 40
-		Float_Draw(&fCapPct, "998", UI_Graph_ADD, 4, UI_Color_Main, 40, 2, 3, 960-20, 250, ui_info.cap_pct);
+		Float_Draw(&fCapPct, "998", UI_Graph_ADD, 4, UI_Color_Main, Center_Bottom_SuperCap_PCT_Font_Size, 2, 3, Center_Bottom_SuperCap_PCT_NUM_X_COORD, Center_Bottom_SuperCap_PCT_NUM_Y_COORD, ui_info.cap_pct);
 		//右上角方框
 		Rectangle_Draw(&gChassisSts_box, "997", UI_Graph_ADD, 4, UI_Color_Cyan, 3, ui_info.box_chassis_sts_coord[0], ui_info.box_chassis_sts_coord[1], ui_info.box_chassis_sts_coord[2], ui_info.box_chassis_sts_coord[3]);
 		Rectangle_Draw(&gSPINSts_box, "996", UI_Graph_ADD, 4, UI_Color_Cyan, 3, ui_info.box_spin_sts_coord[0], ui_info.box_spin_sts_coord[1], ui_info.box_spin_sts_coord[2], ui_info.box_spin_sts_coord[3]);
@@ -489,15 +909,26 @@ void ui_dynamic_crt_send_fuc()
 		
 		Float_Draw(&fProjSLim, "992", UI_Graph_ADD, 4, UI_Color_Main, 20, 2, 3, 240, 720, ui_info.proj_speed_limit);
 		Float_Draw(&fDis, "991", UI_Graph_ADD, 4, UI_Color_Main, 20, 2, 3, 240, 680, ui_info.enemy_dis);
-	
+		
+		//5-18-23 超级电容 移动能量条
+		Line_Draw(&superCapLine, "988", UI_Graph_ADD, 4, UI_Color_Main, 10, Center_Bottom_SuperCap_Line_Start_X, Center_Bottom_SuperCap_Line_Start_Y, Center_Bottom_SuperCap_Line_Start_X + ui_info.superCap_line_var_length, Center_Bottom_SuperCap_Line_End_Y);
+		
+		chassis_frame_UI_arm_cal(ui_info.yaw_relative_angle);
+		//底盘角度指示框
+		Line_Draw(&chassisLine, "987", UI_Graph_ADD, 0, UI_Color_Main, Chassis_Frame_Height_Pen, ui_info.frame_chassis_coord_final[0], ui_info.frame_chassis_coord_final[1], ui_info.frame_chassis_coord_final[2], ui_info.frame_chassis_coord_final[3]);
+		Line_Draw(&chassisLightBar, "986", UI_Graph_ADD, 7, UI_Color_Yellow, Chassis_Frame_Light_Bar_Height_Pen, ui_info.bar_chassis_coord_final[0], ui_info.bar_chassis_coord_final[1], ui_info.bar_chassis_coord_final[2], ui_info.bar_chassis_coord_final[3]);
+		//炮塔 球 和 枪 线 捆绑动态图像
+		Circle_Draw(&turretCir, "026", UI_Graph_ADD, 8, UI_Color_White, Turret_Cir_Pen, Turret_Cir_Start_X, Turret_Cir_Start_Y, Turret_Cir_Radius);
+		Line_Draw(&gunLine, "027", UI_Graph_ADD, 8, UI_Color_Black, Gun_Line_Pen, Gun_Line_Start_X, Gun_Line_Start_Y, Gun_Line_End_X, Gun_Line_End_Y);
+				
 		//CV是否识别到目标
 		if(is_enemy_detected_with_pc_toe()) //(miniPC_info.enemy_detected == 1)
 		{
-			Circle_Draw(&gEnemyDetected_circle, "990", UI_Graph_ADD, 4, UI_Color_Green, 15, TopLeft_Cir_on_cv_DET_START_X, TopLeft_Cir_on_cv_DET_START_Y, TopLeft_Cir_on_cv_DET_radius);
+			Circle_Draw(&gEnemyDetected_circle, "990", UI_Graph_ADD, 4, UI_Color_Green, ui_cv_circle_size_debug, TopLeft_Cir_on_cv_DET_START_X, TopLeft_Cir_on_cv_DET_START_Y, TopLeft_Cir_on_cv_DET_radius);
 		}
 		else
 		{
-			Circle_Draw(&gEnemyDetected_circle, "990", UI_Graph_ADD, 4, UI_Color_Cyan, 15, TopLeft_Cir_on_cv_DET_START_X, TopLeft_Cir_on_cv_DET_START_Y, TopLeft_Cir_on_cv_DET_radius);
+			Circle_Draw(&gEnemyDetected_circle, "990", UI_Graph_ADD, 4, UI_Color_Cyan, ui_cv_circle_size_debug, TopLeft_Cir_on_cv_DET_START_X, TopLeft_Cir_on_cv_DET_START_Y, TopLeft_Cir_on_cv_DET_radius);
 		}
 		
 		Rectangle_Draw(&gCVfb_sts_box, "989", UI_Graph_ADD, 4, UI_Color_White, 3, ui_info.box_cv_feedback_sts[0], ui_info.box_cv_feedback_sts[1], ui_info.box_cv_feedback_sts[2], ui_info.box_cv_feedback_sts[3]);
@@ -505,10 +936,22 @@ void ui_dynamic_crt_send_fuc()
 		//新增绘制结束		
 				
 		//动态的修改 发送
-		UI_ReFresh(2, fCapVolt, fCapPct);
+		UI_ReFresh(5, chassisLine, turretCir, gunLine, fCapVolt, chassisLightBar); //chassisLine, turretCir, gunLine需捆绑发送
+		UI_ReFresh(2, fCapPct, superCapLine);
+//		UI_ReFresh(1, superCapLine);
+//		UI_ReFresh(2, superCapLine, chassisLine);
+//		UI_ReFresh(2, fCapVolt, fCapPct);
+//		UI_ReFresh(1, chassisLightBar);
+//		UI_ReFresh(5, chassisLightBar, superCapLine, chassisLine, fCapVolt, fCapPct);
 		UI_ReFresh(2, fProjSLim, fDis);
 		UI_ReFresh(2, gEnemyDetected_circle, gCVfb_sts_box);
 		UI_ReFresh(5, gChassisSts_box, gSPINSts_box, gCVSts_box, gGunSts_box, gABoxSts_box);
+//		// 5-26-2023 不显示那么详细
+//		Char_ReFresh(strVarChassis);
+//	  Char_ReFresh(strVarGimbal); 
+//		Char_ReFresh(strVarShoot); 
+//		Char_ReFresh(strVarSuperCap); 
+//		Char_ReFresh(strVarReferee);
 }
 
 ////先开始删除 图层4 5 6 7
@@ -531,7 +974,7 @@ void UI_SendByte(unsigned char ch)
 {
 //   USART_SendData(USART3,ch);
 //   while (USART_GetFlagStatus(USART3, USART_FLAG_TXE) == RESET);	
-	HAL_UART_Transmit(&huart6, (uint8_t*)&ch, 1,999);
+	HAL_UART_Transmit(&huart6, (uint8_t*)&ch, 1,99999);
 //	while(HAL_UART_GetState(&huart6) == HAL_UART_STATE_BUSY_TX)
 //	{
 //		vTaskDelay(1);

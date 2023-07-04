@@ -295,4 +295,5 @@ extern void chassis_rc_to_control_vector(fp32 *vx_set, fp32 *vy_set, chassis_mov
 /*SZL 1-25 add get chassis_move pointer*/
 extern const chassis_move_t *get_chassis_pointer(void);
 
+extern uint8_t get_turboMode(void);
 #endif

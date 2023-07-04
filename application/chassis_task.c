@@ -760,3 +760,12 @@ const chassis_move_t *get_chassis_pointer(void)
 {
 	return &chassis_move;
 }
+
+/* ---------- getter method 获取最终解包到 chassis_task/chassis_move 中的数据 ---------- */
+uint8_t get_turboMode()
+{
+	return turboMode;
+}
+
+
+/* ---------- getter method end ---------- */

@@ -635,3 +635,12 @@ static void chassis_open_set_control(fp32 *vx_set, fp32 *vy_set, fp32 *wz_set, c
     *wz_set = -chassis_move_rc_to_vector->chassis_RC->rc.ch[CHASSIS_WZ_CHANNEL] * CHASSIS_OPEN_RC_SCALE;
     return;
 }
+
+/* ---------- getter method 获取最终解包到 chassis_behaviour/chassis_move 中的数据 ---------- */
+uint8_t get_swing_flag()
+{
+	return swing_flag;
+}
+
+
+/* ---------- getter method end ---------- */
