@@ -169,7 +169,7 @@ typedef struct
 } String_Data;                  //´òÓ¡×Ö·û´®Êý¾Ý
 
 #pragma pack()
-//UI_ReFresh(5, gChassisSts_box, gSPINSts_box, gCVSts_box, gGunSts_box, gABoxSts_box);
+
 typedef enum
 {
 		NORM,

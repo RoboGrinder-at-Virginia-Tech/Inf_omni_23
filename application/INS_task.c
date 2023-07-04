@@ -42,6 +42,8 @@
 
 #include "user_lib.h"
 
+#include "odometer_task.h"
+
 
 #define IMU_temp_PWM(pwm)  imu_pwm_set(pwm)                    //pwm给定
 
@@ -330,6 +332,7 @@ void INS_task(void const *pvParameters)
 		//bcmd pitch rate 使用低通滤波
 		first_order_filter_init(&bcmd_pitch_rate_low_pass_filter, INS_TASK_CONTROL_TIME, bcmd_pitch_rate_1order_filter);
 		
+		odometer_init(); //里程计初始化
 		while (1)
     {
         //wait spi DMA tansmit done
@@ -400,6 +403,8 @@ void INS_task(void const *pvParameters)
 				first_order_filter_cali(&bcmd_pitch_rate_low_pass_filter, INS_gyro[INS_GYRO_PITCH_ADDRESS_OFFSET]);
 				INS_gyro_pitch_low_pass_filtered_val = bcmd_pitch_rate_low_pass_filter.out;
 
+				odometer_loop(); //里程计 函数
+				
         //because no use ist8310 and save time, no use
         if(mag_update_flag &= 1 << IMU_DR_SHFITS)
         {
