@@ -975,17 +975,20 @@ void UI_SendByte(unsigned char ch)
 {
 //   USART_SendData(USART3,ch);
 //   while (USART_GetFlagStatus(USART3, USART_FLAG_TXE) == RESET);	
-//	HAL_UART_Transmit(&huart6, (uint8_t*)&ch, 1,99999); //-----
+	HAL_UART_Transmit(&huart6, (uint8_t*)&ch, 1,99999); //-----
 //	while(HAL_UART_GetState(&huart6) == HAL_UART_STATE_BUSY_TX)
 //	{
 //		vTaskDelay(1);
 //	}
-	HAL_UART_Transmit_IT(&huart6, (uint8_t*)&ch, 1);
-	//while(!(huart6.Instance->SR))
-	while(!(__HAL_UART_GET_FLAG(&huart6, UART_FLAG_TC) == 1))
-	{
-		vTaskDelay(1);
-	}
+	
+//	// ---------------------------------------------------
+//	HAL_UART_Transmit_IT(&huart6, (uint8_t*)&ch, 1);
+//	//while(!(huart6.Instance->SR))
+//	while(!(__HAL_UART_GET_FLAG(&huart6, UART_FLAG_TC) == 1))
+//	{
+//		vTaskDelay(1);
+//	}
+//	// ---------------------------------------------------
 }
 
 /********************************************É¾³ý²Ù×÷*************************************
