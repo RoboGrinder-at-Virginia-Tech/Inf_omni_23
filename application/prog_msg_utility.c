@@ -101,7 +101,7 @@ uint32_t get_util_1s_time_cnt(void)
 const char* util_1s_time_cnt_toString(void)
 {
 	static char temp_toString[20];
-	sprintf(temp_toString, "%d", util_1s_time_cnt);
+	sprintf(temp_toString, "%d", (util_1s_time_cnt%1000));
 	return temp_toString;
 }
 

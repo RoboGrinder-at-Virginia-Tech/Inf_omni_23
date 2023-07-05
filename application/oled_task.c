@@ -26,7 +26,7 @@
 #include "prog_msg_utility.h"
 #include "stdio.h"
 
-#define OLED_CONTROL_TIME 10
+#define OLED_CONTROL_TIME 10 //100 //10
 #define REFRESH_RATE    10
 
 const error_t *error_list_local;
@@ -94,10 +94,10 @@ void oled_task(void const * argument)
         {
             refresh_tick++;
             //10Hz refresh
-            if(refresh_tick > configTICK_RATE_HZ / (OLED_CONTROL_TIME * REFRESH_RATE))
-            {
-//					  if(xTaskGetTickCount() - 100 > oled_refresh_TimeStamp)//100
-//						{
+//            if(refresh_tick > configTICK_RATE_HZ / (OLED_CONTROL_TIME * REFRESH_RATE))
+//            {
+					  if(xTaskGetTickCount() - oled_refresh_TimeStamp >= 100)//100
+						{
 							  oled_refresh_TimeStamp = xTaskGetTickCount();
                 refresh_tick = 0;
                 OLED_operate_gram(PEN_CLEAR);
@@ -184,7 +184,7 @@ void oled_task(void const * argument)
 //				
 
         last_oled_error = now_oled_errror;
-        osDelay(OLED_CONTROL_TIME);
+        vTaskDelay(OLED_CONTROL_TIME); //osDelay(OLED_CONTROL_TIME);
     }
 }
 

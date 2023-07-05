@@ -181,7 +181,7 @@ Original PID parameter
 //------------------------------------------------------------------------------
 
 /*直接 - 裁判系统 原始值是#define SHOOT_HEAT_REMAIN_VALUE     30*/
-#define SHOOT_HEAT_REMAIN_VALUE     40//60//5-24之前:40//30
+#define SHOOT_HEAT_REMAIN_VALUE     20 //30 //405-24之前:40//30
 
 /* 其它热量相关宏定义 - 本地计算热量 - 不分左右枪管; 左右枪管共用这些值*/
 #define ONE17mm_BULLET_HEAT_AMOUNT 10

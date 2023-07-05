@@ -280,7 +280,8 @@ static void gimbal_motionless_control(fp32 *yaw, fp32 *pitch, gimbal_control_t *
 static void gimbal_miniPC_autoaim_lock_absolute_angle_control(fp32 *yaw, fp32 *pitch, gimbal_control_t *gimbal_control_set);
 
 //云台行为状态机
-static gimbal_behaviour_e gimbal_behaviour = GIMBAL_ZERO_FORCE;
+gimbal_behaviour_e gimbal_behaviour = GIMBAL_ZERO_FORCE; //去掉sttic
+gimbal_behaviour_e last_gimbal_behaviour = GIMBAL_ZERO_FORCE;
 
 /**
   * @brief          the function is called by gimbal_set_mode function in gimbal_task.c
@@ -552,7 +553,7 @@ static void gimbal_behavour_set(gimbal_control_t *gimbal_mode_set)
     //enter init mode
     //判断进入init状态机
     {
-        static gimbal_behaviour_e last_gimbal_behaviour = GIMBAL_ZERO_FORCE;
+//        static gimbal_behaviour_e last_gimbal_behaviour = GIMBAL_ZERO_FORCE;
         if (last_gimbal_behaviour == GIMBAL_ZERO_FORCE && gimbal_behaviour != GIMBAL_ZERO_FORCE)
         {
             gimbal_behaviour = GIMBAL_INIT;

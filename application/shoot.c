@@ -280,10 +280,10 @@ uint16_t new_fric_allms_debug_R3 = 1630;//-3号对应: 看向前进方向, 右侧发射机构, 
 uint16_t new_fric_allms_debug_R4 = 1630; //-4号对应: 看向前进方向, 右侧发射机构, 下面那个枪管
 
 */
-uint16_t new_fric_allms_debug_L1_15ms = 1230;//1338; //-1号对应: 看向前进方向, 左侧发射机构, 上面那个枪管 1338
-uint16_t new_fric_allms_debug_L2_15ms = 1230;//1338; //-2号对应: 看向前进方向, 左侧发射机构, 下面那个枪管 1338
-uint16_t new_fric_allms_debug_R3_15ms = 1230;//1558;//-3号对应: 看向前进方向, 右侧发射机构, 上面那个枪管 1555
-uint16_t new_fric_allms_debug_R4_15ms = 1230;//1558; //-4号对应: 看向前进方向, 右侧发射机构, 下面那个枪管 1563
+uint16_t new_fric_allms_debug_L1_15ms = 1210; //1220; //1230;//1338; //-1号对应: 看向前进方向, 左侧发射机构, 上面那个枪管 1338
+uint16_t new_fric_allms_debug_L2_15ms = 1210; //1220; //1230;//1338; //-2号对应: 看向前进方向, 左侧发射机构, 下面那个枪管 1338
+uint16_t new_fric_allms_debug_R3_15ms = 1210; //1220; //1230;//1558;//-3号对应: 看向前进方向, 右侧发射机构, 上面那个枪管 1555
+uint16_t new_fric_allms_debug_R4_15ms = 1210; //1220; //1230;//1558; //-4号对应: 看向前进方向, 右侧发射机构, 下面那个枪管 1563
 
 uint16_t new_fric_allms_debug_L1_18ms = 1400; //-1号对应: 看向前进方向, 左侧发射机构, 上面那个枪管
 uint16_t new_fric_allms_debug_L2_18ms = 1400; //-2号对应: 看向前进方向, 左侧发射机构, 下面那个枪管
@@ -423,7 +423,8 @@ int16_t shoot_control_loop(void)
 		{
 				/* 6-16-2023注释: 射频4使用(4, 100); 射频8使用(8, 50)
 				*/
-			  L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(8, 50); //100); //4, 100); //8, 100);
+//			  L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(8, 50); //4, 100); //8, 100);
+				L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(6, 50); //4, 100); //8, 100);
 		}
 		
 		// 先处理 left barrel的 FSM
@@ -1003,16 +1004,25 @@ static void shoot_set_mode(void)
 		//以下开始热量环 --------------------------------------------------------------
 		shoot_heat_update_calculate(&shoot_control); //就这里执行一次 -------------------------------------------------
 		
-    //左枪管 ID1 ref热量限制
-//    get_shooter_id1_17mm_heat_limit_and_heat(&shoot_control.L_barrel_heat_limit, &shoot_control.L_barrel_heat); //.heat_limit .heat
-//    if(!toe_is_error(REFEREE_TOE) && (shoot_control.L_barrel_heat + SHOOT_HEAT_REMAIN_VALUE > shoot_control.L_barrel_heat_limit))
-//    {
-//        if(shoot_control.shoot_mode_L == SHOOT_BULLET || shoot_control.shoot_mode_L == SHOOT_CONTINUE_BULLET || shoot_control.shoot_mode_L == SHOOT_ALTERNATE_CONTINUE_BULLET) //--------注意这里的
-//        {
-//            shoot_control.shoot_mode_L =SHOOT_READY_BULLET;
-//        }
-//    }//调试: 难道referee uart掉线后 就没有热量保护了?
+    //左枪管 ID1 ref热量限制 --------------------------------------------------------------------------------------------------
+    get_shooter_id1_17mm_heat_limit_and_heat(&shoot_control.L_barrel_heat_limit, &shoot_control.L_barrel_heat); //.heat_limit .heat
+    if(!toe_is_error(REFEREE_TOE) && (shoot_control.L_barrel_heat + SHOOT_HEAT_REMAIN_VALUE > shoot_control.L_barrel_heat_limit))
+    {
+        if(shoot_control.shoot_mode_L == SHOOT_BULLET || shoot_control.shoot_mode_L == SHOOT_CONTINUE_BULLET || shoot_control.shoot_mode_L == SHOOT_ALTERNATE_CONTINUE_BULLET) //--------注意这里的
+        {
+            shoot_control.shoot_mode_L =SHOOT_READY_BULLET;
+        }
+    }//调试: 难道referee uart掉线后 就没有热量保护了?
 		
+		//使用实时里程计的超热量保护
+		if(shoot_control.L_barrel_rt_odom_local_heat[0] + LOCAL_SHOOT_HEAT_REMAIN_VALUE >= (fp32)shoot_control.L_barrel_local_heat_limit)
+    {
+        if(shoot_control.shoot_mode_L == SHOOT_BULLET || shoot_control.shoot_mode_L == SHOOT_CONTINUE_BULLET)
+        {
+            shoot_control.shoot_mode_L =SHOOT_READY_BULLET;
+        }
+    }
+		// --------------------------------------------------------------------------------------------------------------------------
 		
 		//right barrel 连续发弹判断; 发射机构断电时, shoot_mode状态机不会被置为发射相关状态
     if(shoot_control.shoot_mode_R > SHOOT_READY_FRIC && shoot_control.trigger_motor17mm_R_is_online)
@@ -1074,14 +1084,23 @@ static void shoot_set_mode(void)
     }
 
 		//右枪管 ID2 ref热量限制
-//    get_shooter_id2_17mm_heat_limit_and_heat(&shoot_control.R_barrel_heat_limit, &shoot_control.R_barrel_heat);
-//    if(!toe_is_error(REFEREE_TOE) && (shoot_control.R_barrel_heat + SHOOT_HEAT_REMAIN_VALUE > shoot_control.R_barrel_heat_limit))
-//    {
-//        if(shoot_control.shoot_mode_R == SHOOT_BULLET || shoot_control.shoot_mode_R == SHOOT_CONTINUE_BULLET || shoot_control.shoot_mode_R == SHOOT_ALTERNATE_CONTINUE_BULLET) //--------注意这里的>
-//        {
-//            shoot_control.shoot_mode_R =SHOOT_READY_BULLET;
-//        }
-//    }//调试: 难道referee uart掉线后 就没有热量保护了?
+    get_shooter_id2_17mm_heat_limit_and_heat(&shoot_control.R_barrel_heat_limit, &shoot_control.R_barrel_heat);
+    if(!toe_is_error(REFEREE_TOE) && (shoot_control.R_barrel_heat + SHOOT_HEAT_REMAIN_VALUE > shoot_control.R_barrel_heat_limit))
+    {
+        if(shoot_control.shoot_mode_R == SHOOT_BULLET || shoot_control.shoot_mode_R == SHOOT_CONTINUE_BULLET || shoot_control.shoot_mode_R == SHOOT_ALTERNATE_CONTINUE_BULLET) //--------注意这里的>
+        {
+            shoot_control.shoot_mode_R =SHOOT_READY_BULLET;
+        }
+    }//调试: 难道referee uart掉线后 就没有热量保护了?
+		
+				//使用实时里程计的超热量保护
+		if(shoot_control.R_barrel_rt_odom_local_heat[0] + LOCAL_SHOOT_HEAT_REMAIN_VALUE >= (fp32)shoot_control.R_barrel_local_heat_limit)
+    {
+        if(shoot_control.shoot_mode_R == SHOOT_BULLET || shoot_control.shoot_mode_R == SHOOT_CONTINUE_BULLET)
+        {
+            shoot_control.shoot_mode_R =SHOOT_READY_BULLET;
+        }
+    }
 		
 //    //如果云台状态是 无力状态，就关闭射击
 //    if (gimbal_cmd_to_shoot_stop())
