@@ -45,7 +45,7 @@ unsigned char UI_Seq;     //包序号
 Graph_Data gAimVertL, gAimHorizL1m, gAimHorizL2m, gAimHorizL4m, gAimHorizL5m, gAimHorizL7m, gAimHorizL8m, left8to7, left7to5,left5to4,left4to2, right8to7, right7to5,right5to4,right4to2;
 
 String_Data strChassisSts, strSPINSts;//右上角 deleted word strCapVolt, strCapPct,
-String_Data strCVSts, strGunSts, strABoxSts, strProjSLimSts, strDisSts;//左上角
+String_Data strCVSts, strGunSts, strProjSLimSts, strDisSts;//左上角 strABoxSts, 
 
 String_Data strChassis, strGimbal, strShoot, strSuperCap, strReferee; // offline msg
 String_Data strVarChassis, strVarGimbal, strVarShoot, strVarSuperCap, strVarReferee; //offline msg
@@ -254,16 +254,16 @@ static void ui_error_code_update()
 	
 	//check feed or shoot 不详细显示
 	ui_info.shoot_error_flag = devOK;
-	if(toe_is_error(SHOOT_FRIC_L_TOE))
-	{
-		strcat(ui_info.shoot_error_code, "L\0");
-		ui_info.shoot_error_flag = devError;
-	}
-	if(toe_is_error(SHOOT_FRIC_R_TOE))
-	{
-		strcat(ui_info.shoot_error_code, "R\0");
-		ui_info.shoot_error_flag = devError;
-	}
+//	if(toe_is_error(SHOOT_FRIC_L_TOE))
+//	{ //MD步兵没有此设备
+//		strcat(ui_info.shoot_error_code, "L\0");
+//		ui_info.shoot_error_flag = devError;
+//	}
+//	if(toe_is_error(SHOOT_FRIC_R_TOE))
+//	{ //MD步兵没有此设备
+//		strcat(ui_info.shoot_error_code, "R\0");
+//		ui_info.shoot_error_flag = devError;
+//	}
 	if(toe_is_error(TRIGGER_MOTOR17mm_L_TOE) || toe_is_error(TRIGGER_MOTOR17mm_R_TOE)) // 当任意一个出问题时
 	{
 		strcat(ui_info.shoot_error_code, "T\0");
@@ -483,7 +483,7 @@ void client_ui_task(void const *pvParameters)
 				//左边火控相关信息
 				Char_Draw(&strCVSts, "012", UI_Graph_ADD, 2, UI_Color_Yellow, 20, 19, 3, CV_STS_X, CV_STS_Y,                              			   "CV:  OFF  AID  LOCK");  
 				Char_Draw(&strGunSts, "013", UI_Graph_ADD, 2, UI_Color_Yellow, 20, 19, 3, GUN_STS_X, GUN_STS_Y,                           			   "GUN: OFF  SEMI AUTO");  
-				Char_Draw(&strABoxSts, "014", UI_Graph_ADD, 2, UI_Color_Yellow, 20, 14, 3, AmmoBox_cover_STS_X, AmmoBox_cover_STS_Y,      			   "ABC: OFF  OPEN");
+//				Char_Draw(&strABoxSts, "014", UI_Graph_ADD, 2, UI_Color_Yellow, 20, 14, 3, AmmoBox_cover_STS_X, AmmoBox_cover_STS_Y,      			   "ABC: OFF  OPEN");
 				Char_Draw(&strProjSLimSts, "015", UI_Graph_ADD, 2, UI_Color_Yellow, 20, 8, 3, Enemy_dis_STS_X, Enemy_dis_STS_Y, 									 "DS:    m");
 				Char_Draw(&strDisSts, "016", UI_Graph_ADD, 2, UI_Color_Yellow, 20, 10, 3, Projectile_speed_lim_STS_X, Projectile_speed_lim_STS_Y,  "PL:    m/s");
 				
@@ -580,7 +580,7 @@ void client_ui_task(void const *pvParameters)
 				//Left
 				Char_ReFresh(strCVSts);
 				Char_ReFresh(strGunSts);
-				Char_ReFresh(strABoxSts);
+//				Char_ReFresh(strABoxSts);
 				Char_ReFresh(strProjSLimSts);
 				Char_ReFresh(strDisSts);
 				
