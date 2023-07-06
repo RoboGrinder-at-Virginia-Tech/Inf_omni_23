@@ -266,7 +266,7 @@ void shoot_init(void)
 		shoot_control.R_barrel_alternate_shoot_last_tick = xTaskGetTickCount(); //使用RTOS时间源
 }
 
-/*6-22-2023 12v稳压后 标定
+/*6-22-2023 12v稳压后 标定 - 没换同一套 snail
 15m/s:
 uint16_t new_fric_allms_debug_L1 = 1340; //1189; //NEW_FRIC_15ms;-1号对应: 看向前进方向, 左侧发射机构, 上面那个枪管
 uint16_t new_fric_allms_debug_L2 = 1340; //1189; //NEW_FRIC_15ms;-2号对应: 看向前进方向, 左侧发射机构, 下面那个枪管
@@ -279,21 +279,28 @@ uint16_t new_fric_allms_debug_L2 = 1400; //-2号对应: 看向前进方向, 左侧发射机构,
 uint16_t new_fric_allms_debug_R3 = 1630;//-3号对应: 看向前进方向, 右侧发射机构, 上面那个枪管
 uint16_t new_fric_allms_debug_R4 = 1630; //-4号对应: 看向前进方向, 右侧发射机构, 下面那个枪管
 
+7-6-2023 12v稳压后, 换成同一套 snail之后:
+15m/s:
+uint16_t new_fric_allms_debug_L1_15ms = 1210; //-1号对应: 看向前进方向, 左侧发射机构, 上面那个枪管 1338
+uint16_t new_fric_allms_debug_L2_15ms = 1210; //-2号对应: 看向前进方向, 左侧发射机构, 下面那个枪管 1338
+uint16_t new_fric_allms_debug_R3_15ms = 1210; //-3号对应: 看向前进方向, 右侧发射机构, 上面那个枪管 1555
+uint16_t new_fric_allms_debug_R4_15ms = 1210; //-4号对应: 看向前进方向, 右侧发射机构, 下面那个枪管 1563
+
 */
 uint16_t new_fric_allms_debug_L1_15ms = 1210; //1220; //1230;//1338; //-1号对应: 看向前进方向, 左侧发射机构, 上面那个枪管 1338
 uint16_t new_fric_allms_debug_L2_15ms = 1210; //1220; //1230;//1338; //-2号对应: 看向前进方向, 左侧发射机构, 下面那个枪管 1338
 uint16_t new_fric_allms_debug_R3_15ms = 1210; //1220; //1230;//1558;//-3号对应: 看向前进方向, 右侧发射机构, 上面那个枪管 1555
 uint16_t new_fric_allms_debug_R4_15ms = 1210; //1220; //1230;//1558; //-4号对应: 看向前进方向, 右侧发射机构, 下面那个枪管 1563
 
-uint16_t new_fric_allms_debug_L1_18ms = 1400; //-1号对应: 看向前进方向, 左侧发射机构, 上面那个枪管
-uint16_t new_fric_allms_debug_L2_18ms = 1400; //-2号对应: 看向前进方向, 左侧发射机构, 下面那个枪管
-uint16_t new_fric_allms_debug_R3_18ms = 1630;//-3号对应: 看向前进方向, 右侧发射机构, 上面那个枪管
-uint16_t new_fric_allms_debug_R4_18ms = 1630; //-4号对应: 看向前进方向, 右侧发射机构, 下面那个枪管
+uint16_t new_fric_allms_debug_L1_18ms = 1230; //-1号对应: 看向前进方向, 左侧发射机构, 上面那个枪管
+uint16_t new_fric_allms_debug_L2_18ms = 1230; //-2号对应: 看向前进方向, 左侧发射机构, 下面那个枪管
+uint16_t new_fric_allms_debug_R3_18ms = 1230;//-3号对应: 看向前进方向, 右侧发射机构, 上面那个枪管
+uint16_t new_fric_allms_debug_R4_18ms = 1230; //-4号对应: 看向前进方向, 右侧发射机构, 下面那个枪管
 
-uint16_t new_fric_allms_debug_L1_30ms = 1570; //-1号对应: 看向前进方向, 左侧发射机构, 上面那个枪管 1800 1580
-uint16_t new_fric_allms_debug_L2_30ms = 1570; //-2号对应: 看向前进方向, 左侧发射机构, 下面那个枪管 1580	
-uint16_t new_fric_allms_debug_R3_30ms = 1890;//-3号对应: 看向前进方向, 右侧发射机构, 上面那个枪管
-uint16_t new_fric_allms_debug_R4_30ms = 1890; //-4号对应: 看向前进方向, 右侧发射机构, 下面那个枪管
+uint16_t new_fric_allms_debug_L1_30ms = 1240; //-1号对应: 看向前进方向, 左侧发射机构, 上面那个枪管 1800 1580
+uint16_t new_fric_allms_debug_L2_30ms = 1240; //-2号对应: 看向前进方向, 左侧发射机构, 下面那个枪管 1580	
+uint16_t new_fric_allms_debug_R3_30ms = 1240;//-3号对应: 看向前进方向, 右侧发射机构, 上面那个枪管
+uint16_t new_fric_allms_debug_R4_30ms = 1240; //-4号对应: 看向前进方向, 右侧发射机构, 下面那个枪管
 /**
   * @brief          射击循环
   * @param[in]      void
@@ -344,11 +351,11 @@ int16_t shoot_control_loop(void)
 	  }
 		
 	  //17mm 的两档  15
-	  shoot_control.referee_current_shooter_17mm_speed_limit = 15;//强制使其=.. 用于调试-----------------------------------------------------------------------------------------------
+//	  shoot_control.referee_current_shooter_17mm_speed_limit = 15;//强制使其=.. 用于调试-----------------------------------------------------------------------------------------------
 	  if(shoot_control.referee_current_shooter_17mm_speed_limit == 15)
 	  {
 		  shoot_control.currentLIM_shoot_speed_17mm = (fp32)(15 - 3.0);//待定 没用
-		  shoot_control.predict_shoot_speed = 14.7f; //shoot_control.currentLIM_shoot_speed_17mm + 2;//待定
+		  shoot_control.predict_shoot_speed = 14.4f; //14.7 (7-1)shoot_control.currentLIM_shoot_speed_17mm + 2;//待定
 		  /*1) 6-22-2023经过测试 14.7f
 		  */
 		  // snail 摩擦轮 预期速度 只作为目标数值参考 没用
@@ -366,7 +373,7 @@ int16_t shoot_control_loop(void)
 	  else if(shoot_control.referee_current_shooter_17mm_speed_limit == 18)
 		{ //TODO: 按照上面那档修改
 		  shoot_control.currentLIM_shoot_speed_17mm = (fp32)(18 - 4.5);// 没用
-		  shoot_control.predict_shoot_speed = 17.5f; //shoot_control.currentLIM_shoot_speed_17mm + 3;
+		  shoot_control.predict_shoot_speed = 16.5f; //17.5f (7-6) //shoot_control.currentLIM_shoot_speed_17mm + 3;
 		  /*
 		  1) 发给ZYZ那 17.5 测出来 17.5
 		  */
@@ -404,7 +411,7 @@ int16_t shoot_control_loop(void)
 	  else
 	  {//默认射速15
 		  shoot_control.currentLIM_shoot_speed_17mm = (fp32)(15 - 3.0);//待定 没用
-		  shoot_control.predict_shoot_speed = 14.7f; //shoot_control.currentLIM_shoot_speed_17mm + 2;//待定
+		  shoot_control.predict_shoot_speed = 14.4f; //shoot_control.currentLIM_shoot_speed_17mm + 2;//待定
 
 		  // snail 摩擦轮 预期速度 只作为目标数值参考 没用
 		  shoot_control.L_barrel_fric1_speed_set = shoot_control.currentLIM_shoot_speed_17mm;
