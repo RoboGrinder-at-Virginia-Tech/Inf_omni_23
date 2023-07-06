@@ -198,3 +198,8 @@ fp32 theta_format(fp32 Ang)
 {
     return loop_fp32_constrain(Ang, -180.0f, 180.0f);
 }
+
+uint16_t min_uint16(uint16_t a, uint16_t b) 
+{
+    return (a < b) ? a : b;
+}

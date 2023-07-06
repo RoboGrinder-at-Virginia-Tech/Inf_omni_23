@@ -326,14 +326,15 @@ int16_t shoot_control_loop(void)
 //	 }
 //		//以上为老版本的------------------------------------	 
 
-//------------------修改等级判断 Texas A&M 比赛使用
+//	----------------- 动态适应 射速 Seattle 比赛使用
 	  if(toe_is_error(REFEREE_TOE))
     {
        shoot_control.referee_current_shooter_17mm_speed_limit = INITIAL_PROJECTILE_SPEED_LIMIT_17mm; 
     }
 	  else
  	  {
- 			 shoot_control.referee_current_shooter_17mm_speed_limit = get_shooter_id1_17mm_speed_limit();
+			//TODO: 添加比大小 选择射速最小的那一档 ------------------------------------
+ 			 shoot_control.referee_current_shooter_17mm_speed_limit = min_uint16(get_shooter_id1_17mm_speed_limit(), get_shooter_id2_17mm_speed_limit());
 	  }
 	 
 	  /*TODO 数据超出最大合理数值时的操作*/
@@ -417,14 +418,105 @@ int16_t shoot_control_loop(void)
 		  shoot_control.R_barrel_fric3_ramp.max_value_constant = new_fric_allms_debug_R3_15ms; //NEW_FRIC_15ms;
 		  shoot_control.R_barrel_fric4_ramp.max_value_constant = new_fric_allms_debug_R4_15ms; //NEW_FRIC_15ms;
 	  }
+//	----------------- 动态适应 射速 Seattle 比赛使用 -- end --
+		
+//  ---------- 动态适应 射频与交替开火相位差 Seattle 比赛使用
+	  if(toe_is_error(REFEREE_TOE))
+    {
+			 shoot_control.local_cd_rate_min = LOCAL_CD_RATE_SAFE_VAL; //get_shooter_id2_17mm_cd_rate(); get_shooter_id1_17mm_cd_rate();
+			 shoot_control.shoot_freq_set = 6; //默认射频6
+			 shoot_control.phase_diff_ms_set = 50; //默认50ms相位差
+			 shoot_control.local_shoot_heat_remain_value_var_set = LOCAL_SHOOT_HEAT_REMAIN_VALUE; //默认预留值
+    }
+	  else
+ 	  {
+			 shoot_control.local_cd_rate_min = min_uint16( get_shooter_id1_17mm_cd_rate(), get_shooter_id2_17mm_cd_rate() ); //最小的那个冷却值
+			 
+			 //PRE: referee_current_shooter_17mm_speed_limit确定是两根枪管的最小值
+			 //更具弹速 和 cd值来确定 射频和相位差 - 和上面判断分开, 没有耦合
+			 if(shoot_control.referee_current_shooter_17mm_speed_limit == 30)
+			 {//一定是弹速优先了
+				 if(shoot_control.local_cd_rate_min == 35)
+				 { //弹速优先 35cd 三级步兵
+						shoot_control.shoot_freq_set = 6; //射频
+						shoot_control.phase_diff_ms_set = 50; //相位差
+					  shoot_control.local_shoot_heat_remain_value_var_set = 20;
+				 }
+				 else if(shoot_control.local_cd_rate_min == 25)
+				 { //弹速优先 25cd 二级步兵
+					  shoot_control.shoot_freq_set = 6; //射频
+						shoot_control.phase_diff_ms_set = 50; //相位差
+					  shoot_control.local_shoot_heat_remain_value_var_set = 20;
+				 }
+				 else
+				 { //弹速优先 一级步兵
+					 // 默认 + 15cd
+					  shoot_control.shoot_freq_set = 6; //射频
+						shoot_control.phase_diff_ms_set = 50; //相位差
+					  shoot_control.local_shoot_heat_remain_value_var_set = 20;
+					 
+				 }
+			 }
+			 else if(shoot_control.referee_current_shooter_17mm_speed_limit == 18)
+			 {
+				 if(shoot_control.local_cd_rate_min == 80)
+				 { //冷却优先 80cd 三级步兵
+					 shoot_control.shoot_freq_set = 12; //射频 - 未来可以更高
+					 shoot_control.phase_diff_ms_set = 50; //相位差
+					 shoot_control.local_shoot_heat_remain_value_var_set = 35;
+				 }
+				 else
+				 { //冷却优先 60cd 二级步兵
+					 //默认 + 60cd
+					 shoot_control.shoot_freq_set = 12; //射频 - 刚好一边6cd
+					 shoot_control.phase_diff_ms_set = 50; //相位差
+					 shoot_control.local_shoot_heat_remain_value_var_set = 35;
+				 }
+				 
+			 }
+			 else
+			 {
+				 //默认 + 15m/s 这一档
+				 if(shoot_control.local_cd_rate_min == 40)
+				 { //冷却优先 40cd 一级步兵
+					 shoot_control.shoot_freq_set = 8; //射频 - 刚好一边4cd
+					 shoot_control.phase_diff_ms_set = 50; //相位差
+					 shoot_control.local_shoot_heat_remain_value_var_set = 25;
+				 }
+				 else if(shoot_control.local_cd_rate_min == 35)
+				 { //爆发优先 35cd 三级步兵
+					 shoot_control.shoot_freq_set = 12; //射频 - 可能调整
+					 shoot_control.phase_diff_ms_set = 20; //相位差
+					 shoot_control.local_shoot_heat_remain_value_var_set = 35;
+				 }
+				 else if(shoot_control.local_cd_rate_min == 25)
+				 { //爆发优先 25cd 二级步兵
+					 shoot_control.shoot_freq_set = 12; //射频 - 可能调整
+					 shoot_control.phase_diff_ms_set = 20; //相位差
+					 shoot_control.local_shoot_heat_remain_value_var_set = 35;
+				 }
+				 else
+				 { //爆发优先 15cd 一级步兵
+					 // 默认 + 15cd
+					 shoot_control.shoot_freq_set = 12; //射频
+					 shoot_control.phase_diff_ms_set = 20; //10; //相位差
+					 shoot_control.local_shoot_heat_remain_value_var_set = 35;
+				 }
+			 }
+	  }
+		/*射频 12 相位差 10 or 20 没问题 - 推测 10 相位差 50 没问题
+		local_shoot_heat_remain_value_var_set =35->12射频; =25->8射频; =20->6射频
+		*/
+//  ---------- 动态适应 射频与交替开火相位差 Seattle 比赛使用 -- end --
 		
 		// 先判断是 交替发射
 		if( (shoot_control.shoot_mode_L == SHOOT_ALTERNATE_CONTINUE_BULLET) && (shoot_control.shoot_mode_R == SHOOT_ALTERNATE_CONTINUE_BULLET) )
 		{
 				/* 6-16-2023注释: 射频4使用(4, 100); 射频8使用(8, 50)
+					 射频 根据选择的模式 自适应
 				*/
-//			  L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(8, 50); //4, 100); //8, 100);
-				L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(6, 50); //4, 100); //8, 100);
+//			  L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(8, 50); //6, 50
+				L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(shoot_control.shoot_freq_set, shoot_control.phase_diff_ms_set);
 		}
 		
 		// 先处理 left barrel的 FSM
@@ -1008,20 +1100,40 @@ static void shoot_set_mode(void)
     get_shooter_id1_17mm_heat_limit_and_heat(&shoot_control.L_barrel_heat_limit, &shoot_control.L_barrel_heat); //.heat_limit .heat
     if(!toe_is_error(REFEREE_TOE) && (shoot_control.L_barrel_heat + SHOOT_HEAT_REMAIN_VALUE > shoot_control.L_barrel_heat_limit))
     {
-        if(shoot_control.shoot_mode_L == SHOOT_BULLET || shoot_control.shoot_mode_L == SHOOT_CONTINUE_BULLET || shoot_control.shoot_mode_L == SHOOT_ALTERNATE_CONTINUE_BULLET) //--------注意这里的
-        {
-            shoot_control.shoot_mode_L =SHOOT_READY_BULLET;
-        }
-    }//调试: 难道referee uart掉线后 就没有热量保护了?
-		
-		//使用实时里程计的超热量保护
-		if(shoot_control.L_barrel_rt_odom_local_heat[0] + LOCAL_SHOOT_HEAT_REMAIN_VALUE >= (fp32)shoot_control.L_barrel_local_heat_limit)
-    {
+				// || shoot_control.shoot_mode_L == SHOOT_ALTERNATE_CONTINUE_BULLET) //--------注意这里的
         if(shoot_control.shoot_mode_L == SHOOT_BULLET || shoot_control.shoot_mode_L == SHOOT_CONTINUE_BULLET)
         {
             shoot_control.shoot_mode_L =SHOOT_READY_BULLET;
         }
+				
+				if(shoot_control.shoot_mode_L == SHOOT_ALTERNATE_CONTINUE_BULLET)
+				{
+					shoot_control.L_barrel_overheat_stop = 1;
+				}
+    }//调试: 难道referee uart掉线后 就没有热量保护了?
+		else
+		{
+			shoot_control.L_barrel_overheat_stop = 0;
+		}
+		
+		//使用实时里程计的超热量保护 - 按上面修改
+		if(shoot_control.L_barrel_rt_odom_local_heat[0] + shoot_control.local_shoot_heat_remain_value_var_set >= (fp32)shoot_control.L_barrel_local_heat_limit)
+    {
+				// || shoot_control.shoot_mode_L == SHOOT_ALTERNATE_CONTINUE_BULLET) //--------注意这里的
+        if(shoot_control.shoot_mode_L == SHOOT_BULLET || shoot_control.shoot_mode_L == SHOOT_CONTINUE_BULLET)
+        {
+            shoot_control.shoot_mode_L =SHOOT_READY_BULLET;
+        }
+				
+				if(shoot_control.shoot_mode_L == SHOOT_ALTERNATE_CONTINUE_BULLET)
+				{
+					shoot_control.L_barrel_overheat_stop = 1;
+				}
     }
+		else
+		{
+			shoot_control.L_barrel_overheat_stop = 0;
+		}
 		// --------------------------------------------------------------------------------------------------------------------------
 		
 		//right barrel 连续发弹判断; 发射机构断电时, shoot_mode状态机不会被置为发射相关状态
@@ -1087,20 +1199,40 @@ static void shoot_set_mode(void)
     get_shooter_id2_17mm_heat_limit_and_heat(&shoot_control.R_barrel_heat_limit, &shoot_control.R_barrel_heat);
     if(!toe_is_error(REFEREE_TOE) && (shoot_control.R_barrel_heat + SHOOT_HEAT_REMAIN_VALUE > shoot_control.R_barrel_heat_limit))
     {
-        if(shoot_control.shoot_mode_R == SHOOT_BULLET || shoot_control.shoot_mode_R == SHOOT_CONTINUE_BULLET || shoot_control.shoot_mode_R == SHOOT_ALTERNATE_CONTINUE_BULLET) //--------注意这里的>
-        {
-            shoot_control.shoot_mode_R =SHOOT_READY_BULLET;
-        }
-    }//调试: 难道referee uart掉线后 就没有热量保护了?
-		
-				//使用实时里程计的超热量保护
-		if(shoot_control.R_barrel_rt_odom_local_heat[0] + LOCAL_SHOOT_HEAT_REMAIN_VALUE >= (fp32)shoot_control.R_barrel_local_heat_limit)
-    {
+				// || shoot_control.shoot_mode_R == SHOOT_ALTERNATE_CONTINUE_BULLET) //--------注意这里的
         if(shoot_control.shoot_mode_R == SHOOT_BULLET || shoot_control.shoot_mode_R == SHOOT_CONTINUE_BULLET)
         {
             shoot_control.shoot_mode_R =SHOOT_READY_BULLET;
         }
+				
+				if(shoot_control.shoot_mode_R == SHOOT_ALTERNATE_CONTINUE_BULLET)
+				{
+					shoot_control.R_barrel_overheat_stop = 1;
+				}
+    }//调试: 难道referee uart掉线后 就没有热量保护了?
+		else
+		{
+			shoot_control.R_barrel_overheat_stop = 0;
+		}
+		
+		//使用实时里程计的超热量保护
+		if(shoot_control.R_barrel_rt_odom_local_heat[0] + shoot_control.local_shoot_heat_remain_value_var_set >= (fp32)shoot_control.R_barrel_local_heat_limit)
+    {
+				// || shoot_control.shoot_mode_R == SHOOT_ALTERNATE_CONTINUE_BULLET) //--------注意这里的
+        if(shoot_control.shoot_mode_R == SHOOT_BULLET || shoot_control.shoot_mode_R == SHOOT_CONTINUE_BULLET)
+        {
+            shoot_control.shoot_mode_R =SHOOT_READY_BULLET;
+        }
+				
+				if(shoot_control.shoot_mode_R == SHOOT_ALTERNATE_CONTINUE_BULLET)
+				{
+					shoot_control.R_barrel_overheat_stop = 1;
+				}
     }
+		else
+		{
+			shoot_control.R_barrel_overheat_stop = 0;
+		}
 		
 //    //如果云台状态是 无力状态，就关闭射击
 //    if (gimbal_cmd_to_shoot_stop())
@@ -1783,17 +1915,23 @@ static void L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(uint8_t sh
 			 
 //		if( get_time_based_freq_signal(xTaskGetTickCount(), &(shoot_control.R_barrel_alternate_shoot_last_tick), shoot_freq) ) //( xTaskGetTickCount() - shoot_control.R_barrel_alternate_shoot_last_tick >= phase_diff_ms)
 			if( generate_signal_pwm(shoot_control.L_barrel_alternate_shoot_last_tick, phase_diff_ms, 0.5f) )
-			{
-				//左枪管 发射控制
-				shoot_control.L_barrel_set_angle = (shoot_control.L_barrel_angle + PI_TEN_L);//rad_format(shoot_control.angle + PI_TEN); shooter_rad_format
-				shoot_control.L_barrel_move_flag = 1;
+			{ 
+				if(shoot_control.L_barrel_overheat_stop == 0) //超热量不发弹
+				{
+					//左枪管 发射控制
+					shoot_control.L_barrel_set_angle = (shoot_control.L_barrel_angle + PI_TEN_L);//rad_format(shoot_control.angle + PI_TEN); shooter_rad_format
+					shoot_control.L_barrel_move_flag = 1;
+				}
 			}
 			else
 			{
 	//			shoot_control.R_barrel_alternate_shoot_last_tick = xTaskGetTickCount();
-				//右枪管 发射控制
-				shoot_control.R_barrel_set_angle = (shoot_control.R_barrel_angle + PI_TEN_R);//rad_format(shoot_control.angle + PI_TEN); shooter_rad_format
-				shoot_control.R_barrel_move_flag = 1;
+				if(shoot_control.R_barrel_overheat_stop == 0) //超热量不发弹
+				{
+					//右枪管 发射控制
+					shoot_control.R_barrel_set_angle = (shoot_control.R_barrel_angle + PI_TEN_R);//rad_format(shoot_control.angle + PI_TEN); shooter_rad_format
+					shoot_control.R_barrel_move_flag = 1;
+				}
 			}
 		
 		}
@@ -1803,6 +1941,7 @@ static void L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(uint8_t sh
 		if(shoot_control.trigger_motor17mm_L_is_online == 0x00)
 		{
 				shoot_control.L_barrel_set_angle = shoot_control.L_barrel_angle;
+				shoot_control.L_barrel_move_flag = 0;
 				return;
 		}
 		
@@ -1829,6 +1968,7 @@ static void L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(uint8_t sh
 		if(shoot_control.trigger_motor17mm_R_is_online == 0x00)
 		{
 				shoot_control.R_barrel_set_angle = shoot_control.R_barrel_angle;
+			  shoot_control.R_barrel_move_flag = 0;
 				return;
 		}
 		

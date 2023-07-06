@@ -47,7 +47,7 @@
 #define PRESS_LONG_TIME_L						200 //999
 
 //鼠标右键 长按 
-#define PRESS_LONG_TIME_R						100 //999 //50
+#define PRESS_LONG_TIME_R						50 //100 //999 //50
 
 //键盘v键长按
 #define PRESS_LONG_TIME_V						50
@@ -180,14 +180,14 @@ Original PID parameter
 #define R_BARREL_TRIGGER_READY_PID_MAX_IOUT  5000.0f//7000.0f
 //------------------------------------------------------------------------------
 
-/*直接 - 裁判系统 原始值是#define SHOOT_HEAT_REMAIN_VALUE     30*/
-#define SHOOT_HEAT_REMAIN_VALUE     20 //30 //405-24之前:40//30
+/*直接 - 裁判系统: SHOOT_HEAT_REMAIN_VALUE 需要 <= LOCAL_SHOOT_HEAT_REMAIN_VALUE*/
+#define SHOOT_HEAT_REMAIN_VALUE     35 //20 //30 //405-24之前:40//30
 
 /* 其它热量相关宏定义 - 本地计算热量 - 不分左右枪管; 左右枪管共用这些值*/
 #define ONE17mm_BULLET_HEAT_AMOUNT 10
 #define MIN_LOCAL_HEAT 0
 #define MAX_LOCAL_HEAT 500
-#define LOCAL_SHOOT_HEAT_REMAIN_VALUE 20 //5
+#define LOCAL_SHOOT_HEAT_REMAIN_VALUE 20 //20 //5
 /*2023 dual barrel infantry; 拨盘有9个洞, 2pi/9 = 0.698131701f; 为了保证不过冲发弹set 0.67f*/
 #define RAD_ANGLE_FOR_EACH_HOLE_HEAT_CALC 0.698131701f
 //Local heat安全值, 裁判系统离线时的安全值 - 2022步兵 冷却模式一级
@@ -487,6 +487,17 @@ typedef struct
 		bool_t auto_rst_signal;
 		uint32_t rst_m_off_time; //拨弹电机离线时间
 		uint32_t rst_on_wait_time; //拨弹电机 -新上线时间
+		
+		//每个枪管的超热量停止功能
+		uint8_t L_barrel_overheat_stop; //0未发生超热量 1发生超热量,停
+		uint8_t R_barrel_overheat_stop; //0未发生超热量 1发生超热量,停
+		
+		
+		//动态适应射频 相位差
+		uint8_t shoot_freq_set; //目标射频
+		uint32_t phase_diff_ms_set; //目标相位差
+		uint16_t local_cd_rate_min; //两根枪管最小的冷却值
+		uint32_t local_shoot_heat_remain_value_var_set; //冷却预留值 - 动态改变
 		
 } shoot_control_t;
 
