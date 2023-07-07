@@ -194,6 +194,20 @@ uint8_t get_enemy_detected()
 	return pc_info.enemy_detected;
 }
 
+/*当裁判系统掉线时不开火*/
+uint8_t get_shootCommand_with_referee_toe()
+{
+	if(toe_is_error(REFEREE_TOE))
+	{
+		return 0x00; //不开火
+	}
+	else
+	{
+		return pc_info.shootCommand;
+	}
+	
+}
+
 //uint8_t shootCommand;
 uint8_t get_shootCommand()
 {
@@ -385,7 +399,16 @@ void embed_all_info_update_from_sensor()
 	
 	// = (uint16_t)(shoot_control.predict_shoot_speed*10); //anticipated predicated bullet speed
 	embed_msg_to_pc.shoot_bullet_speed = embed_msg_to_pc.shoot_control_ptr->predict_shoot_speed;
-	embed_msg_to_pc.robot_id = get_robot_id(); //RED_STANDARD_1; //TODO: whether get from ref or hardcode - fail safe
+	
+	// 7-7-2023 保证身份安全
+	if(toe_is_error(REFEREE_TOE))
+	{
+		embed_msg_to_pc.robot_id = 0x00;
+	}
+	else
+	{
+		embed_msg_to_pc.robot_id = get_robot_id(); //RED_STANDARD_1; //TODO: whether get from ref or hardcode - fail safe
+	}
 	
 	//6-25-2023 新增云台角速度 原始数据单位为 rad/s
 	embed_msg_to_pc.gimbal_yaw_rate = embed_msg_to_pc.gimbal_control_ptr->gimbal_yaw_motor.motor_gyro;

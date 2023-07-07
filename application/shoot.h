@@ -514,4 +514,5 @@ extern shoot_mode_e get_shoot_mode(void);
 extern user_fire_ctrl_e get_user_fire_ctrl(void);
 extern uint8_t get_ammoBox_sts(void);
 extern uint32_t shoot_heat_update_calculate(shoot_control_t* shoot_heat);
+
 #endif
