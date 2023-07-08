@@ -469,14 +469,14 @@ int16_t shoot_control_loop(void)
 				 if(shoot_control.local_cd_rate_min == 80)
 				 { //冷却优先 80cd 三级步兵
 					 shoot_control.shoot_freq_set = 12; //射频 - 未来可以更高
-					 shoot_control.phase_diff_ms_set = 50; //相位差
+					 shoot_control.phase_diff_ms_set = 20; //相位差
 					 shoot_control.local_shoot_heat_remain_value_var_set = 35;
 				 }
 				 else
 				 { //冷却优先 60cd 二级步兵
 					 //默认 + 60cd
 					 shoot_control.shoot_freq_set = 12; //射频 - 刚好一边6cd
-					 shoot_control.phase_diff_ms_set = 50; //相位差
+					 shoot_control.phase_diff_ms_set = 20; //相位差
 					 shoot_control.local_shoot_heat_remain_value_var_set = 35;
 				 }
 				 
@@ -522,8 +522,8 @@ int16_t shoot_control_loop(void)
 				/* 6-16-2023注释: 射频4使用(4, 100); 射频8使用(8, 50)
 					 射频 根据选择的模式 自适应
 				*/
-			  L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(8, 50); //6, 50
-//				L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(shoot_control.shoot_freq_set, shoot_control.phase_diff_ms_set);
+//			  L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(8, 50); //6, 50
+				L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(shoot_control.shoot_freq_set, shoot_control.phase_diff_ms_set);
 		}
 		
 		// 先处理 left barrel的 FSM
