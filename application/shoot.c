@@ -522,8 +522,8 @@ int16_t shoot_control_loop(void)
 				/* 6-16-2023注释: 射频4使用(4, 100); 射频8使用(8, 50)
 					 射频 根据选择的模式 自适应
 				*/
-//			  L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(8, 50); //6, 50
-				L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(shoot_control.shoot_freq_set, shoot_control.phase_diff_ms_set);
+			  L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(8, 50); //6, 50
+//				L_R_barrel_alternate_shoot_bullet_control_continuous_17mm(shoot_control.shoot_freq_set, shoot_control.phase_diff_ms_set);
 		}
 		
 		// 先处理 left barrel的 FSM
@@ -871,7 +871,7 @@ static void shoot_set_mode(void)
 			 shoot_control.last_key_Q_sts = 0;
 		}
 		
-		if(shoot_control.key_Q_cnt > 4)
+		if(shoot_control.key_Q_cnt > 1) //4
 		{
 			shoot_control.key_Q_cnt = 1;//实现 周期性
 		}
