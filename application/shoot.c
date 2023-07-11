@@ -1292,7 +1292,7 @@ static void shoot_set_mode(void)
 		}
 		
 		//电机上线 时间到 开启摩擦轮
-		if(shoot_control.rst_on_wait_time > 400)
+		if(shoot_control.rst_on_wait_time > 460)
 		{
 			shoot_control.shoot_mode_L = SHOOT_READY_FRIC; 
 			shoot_control.shoot_mode_R = SHOOT_READY_FRIC; 
