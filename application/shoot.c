@@ -511,6 +511,11 @@ int16_t shoot_control_loop(void)
 				 }
 			 }
 	  }
+		//9-30 1v1 event
+		shoot_control.shoot_freq_set = 8; //射频
+		shoot_control.phase_diff_ms_set = 50; //相位差
+		shoot_control.local_shoot_heat_remain_value_var_set = 30;
+		
 		/*射频 12 相位差 10 or 20 没问题 - 推测 10 相位差 50 没问题
 		local_shoot_heat_remain_value_var_set =35->12射频; =25->8射频; =20->6射频
 		*/
