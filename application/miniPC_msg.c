@@ -105,6 +105,7 @@ void init_embed_to_pc_comm_struct_data(void)
 	embed_msg_to_pc.gimbal_control_ptr = get_gimbal_pointer();
 	embed_msg_to_pc.quat_ptr = get_INS_quat(); //get_INS_gimbal_quat();
 	embed_msg_to_pc.shoot_control_ptr = get_robot_shoot_control();
+	embed_msg_to_pc.chassis_odom_ptr = get_chassis_odom_pointer();
 	
 	embed_send_protocol.p_header = &pc_send_header;
 	embed_send_protocol.chassis_info_embed_send_TimeStamp = xTaskGetTickCount();
@@ -389,8 +390,14 @@ void embed_all_info_update_from_sensor()
 	embed_msg_to_pc.vy_wrt_gimbal = embed_msg_to_pc.chassis_move_ptr->vy_gimbal_orientation; //embed_msg_to_pc.chassis_move_ptr->vy;
 	embed_msg_to_pc.vw_wrt_chassis = embed_msg_to_pc.chassis_move_ptr->wz;
 	embed_msg_to_pc.energy_buff_pct = (uint8_t) get_current_cap_pct();
-	embed_msg_to_pc.yaw_relative_angle = embed_msg_to_pc.gimbal_control_ptr->gimbal_yaw_motor.absolute_angle; //6-22修改relative_angle
-	embed_msg_to_pc.pitch_relative_angle = embed_msg_to_pc.gimbal_control_ptr->gimbal_pitch_motor.absolute_angle; //relative_angle
+	
+	//9-30新增里程计 or use embed_msg_to_pc.chassis_odom_ptr
+	embed_msg_to_pc.odom_dist_x = get_chassis_odom_distance_x();
+	embed_msg_to_pc.odom_dist_y = get_chassis_odom_distance_y();
+	embed_msg_to_pc.odom_dist_wz = get_chassis_odom_distance_wz();
+	
+	embed_msg_to_pc.yaw_absolute_angle = embed_msg_to_pc.gimbal_control_ptr->gimbal_yaw_motor.absolute_angle; //6-22修改relative_angle
+	embed_msg_to_pc.pitch_absolute_angle = embed_msg_to_pc.gimbal_control_ptr->gimbal_pitch_motor.absolute_angle; //relative_angle
 	
 	embed_msg_to_pc.quat[0] = embed_msg_to_pc.quat_ptr[0];
 	embed_msg_to_pc.quat[1] = embed_msg_to_pc.quat_ptr[1];
@@ -420,9 +427,14 @@ void embed_chassis_info_msg_data_update(embed_chassis_info_t* embed_chassis_info
 	//m/s * 1000 <-->mm/s 
 	embed_chassis_info_ptr->vx_mm_wrt_gimbal = (int16_t) (embed_msg_to_pc_ptr->vx_wrt_gimbal * 1000.0f);
 	embed_chassis_info_ptr->vy_mm_wrt_gimbal = (int16_t) (embed_msg_to_pc_ptr->vy_wrt_gimbal * 1000.0f);
-	embed_chassis_info_ptr->vw_mm = (int16_t) (embed_msg_to_pc_ptr->vw_wrt_chassis * 1000.0f);
+	embed_chassis_info_ptr->vw_krad = (int16_t) (embed_msg_to_pc_ptr->vw_wrt_chassis * 1000.0f);
 	
 	embed_chassis_info_ptr->energy_buff_pct = embed_msg_to_pc_ptr->energy_buff_pct;
+	
+	//9-30-23新增底盘里程计
+	embed_chassis_info_ptr->odom_dist_x_mm = (int16_t) (embed_msg_to_pc_ptr->odom_dist_x * 1000.0f);
+	embed_chassis_info_ptr->odom_dist_y_mm = (int16_t) (embed_msg_to_pc_ptr->odom_dist_y * 1000.0f);
+	embed_chassis_info_ptr->odom_dist_wz_krad = (int16_t) (embed_msg_to_pc_ptr->odom_dist_wz * 1000.0f);
 	
 //	//For debug only
 //	embed_chassis_info_ptr->vx_mm = 0x1234;
@@ -434,8 +446,8 @@ void embed_chassis_info_msg_data_update(embed_chassis_info_t* embed_chassis_info
 
 void embed_gimbal_info_msg_data_update(embed_gimbal_info_t* embed_gimbal_info_ptr, embed_msg_to_pc_t* embed_msg_to_pc_ptr)
 {
-	embed_gimbal_info_ptr->pitch_relative_angle = (int16_t) (embed_msg_to_pc_ptr->pitch_relative_angle * 10000.0f); //= rad * 10000
-	embed_gimbal_info_ptr->yaw_relative_angle = (int16_t) (embed_msg_to_pc_ptr->yaw_relative_angle * 10000.0f);
+	embed_gimbal_info_ptr->pitch_absolute_angle = (int16_t) (embed_msg_to_pc_ptr->pitch_absolute_angle * 10000.0f); //= rad * 10000
+	embed_gimbal_info_ptr->yaw_absolute_angle = (int16_t) (embed_msg_to_pc_ptr->yaw_absolute_angle * 10000.0f);
 	
 	for(uint8_t i = 0; i < 4; i++)
 	{

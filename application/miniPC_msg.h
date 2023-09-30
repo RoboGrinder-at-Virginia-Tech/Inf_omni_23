@@ -7,6 +7,7 @@
 #include "INS_task.h"
 #include "gimbal_task.h"
 #include "shoot.h"
+#include "odometer_task.h"
 
 /*---------------------------------------------------- Raw Data Msg ----------------------------------------------------*/
 //robot_id_t is defined in referee.h file
@@ -81,11 +82,20 @@ typedef __packed struct
 //: m/s * 1000 <-->mm/s 
 
   int16_t vy_mm_wrt_gimbal; // left/right
-  int16_t vw_mm; // ccw positive
-//vw_mm: radian/s * 1000
+  int16_t vw_krad; // ccw positive
+//or vw_mm: radian/s * 1000, thousand rad/s
 
  uint8_t energy_buff_pct; //zyz说要的底盘能量, 可能来自超级电容剩余能量或裁判系统缓冲能量
 //superCap or equivalent energy percentage
+	
+	//9-30新增底盘里程计 odometer 相关
+	int32_t odom_dist_x_mm; // forward/back x odom in mm
+//: m/s * 1000 <-->mm/s 
+	
+	int32_t odom_dist_y_mm; // left/right
+	int32_t odom_dist_wz_krad; // ccw positive
+//or wz_mm: radian * 1000, thousand rad
+	
 }embed_chassis_info_t; //CHASSIS_INFO_CMD_ID
 
 /*
@@ -106,8 +116,8 @@ Gimbal information - Embedded -> miniPC
 */
 typedef __packed struct
 {
-    int16_t yaw_relative_angle; //= rad * 10000
-    int16_t pitch_relative_angle;
+    int16_t yaw_absolute_angle; //= rad * 10000
+    int16_t pitch_absolute_angle;
 
     /*quaternion: uint16_t quat[i]: [0],[1],[2],[3]
        In embeded, quat has range:(-1, +1), 
@@ -172,6 +182,7 @@ typedef struct
 	const gimbal_control_t* gimbal_control_ptr;
 	const fp32* quat_ptr; //const fp32 *get_INS_gimbal_quat(void)
 	const shoot_control_t* shoot_control_ptr;
+	const chassis_odom_info_t* chassis_odom_ptr;
 	
 	fp32 vx_wrt_gimbal; // 云台朝向 vx m/s
 	fp32 vy_wrt_gimbal; // 云台朝向 vy m/s
@@ -179,8 +190,15 @@ typedef struct
 	
 	uint8_t energy_buff_pct; //get_superCap_charge_pwr
 	
-	fp32 yaw_relative_angle; //= rad
-  fp32 pitch_relative_angle;
+	//9-30新增底盘里程计 odometer 相关
+	fp32 odom_dist_x; // forward/back x odom in m
+	
+	fp32 odom_dist_y; // left/right
+	fp32 odom_dist_wz; // ccw positive rad unit
+	//
+	
+	fp32 yaw_absolute_angle; //= rad based on gyro
+  fp32 pitch_absolute_angle;
 
 	fp32 quat[4];
 

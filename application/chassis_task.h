@@ -137,7 +137,7 @@ SZL 5-21-2022 重新算
 
 //single chassis motor max speed
 //单个底盘电机最大速度
-#define MAX_WHEEL_SPEED 8.0f
+#define MAX_WHEEL_SPEED 3.0f //8.0f //-----9-30展示活动
 //chassis forward or back max speed
 //底盘运动过程最大前进速度
 #define NORMAL_MAX_CHASSIS_SPEED_X 5.0f //PR test 2.0
