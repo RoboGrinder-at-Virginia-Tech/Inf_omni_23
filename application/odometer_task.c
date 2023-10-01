@@ -29,6 +29,7 @@
 #include "string.h"
 
 #include "shoot.h"
+#include "INS_task.h"
 
 general_odom_info_t L_barrel_trig_M2006_odom; //左侧枪管 M2006拨弹电机里程计
 general_odom_info_t R_barrel_trig_M2006_odom; //右侧枪管 M2006拨弹电机里程计
@@ -50,6 +51,9 @@ void odometer_init(void)
 //	trig_M2006_odom.init_total_ecd = trig_M2006_odom.motor_ptr->total_ecd; //这样不对 会导致不准, 不知道为啥
 	//底盘里程计 初始化
 	chassis_odom.chassis_move_ptr = get_chassis_pointer();
+	chassis_odom.gimbal_ctrl_ptr = get_gimbal_pointer();
+	chassis_odom.INS_gimbal_angle_ptr = get_INS_angle_point();
+	
 	uint8_t i = 0;
 	for(i=0;i<4;i++)
 	{
@@ -64,6 +68,10 @@ void odometer_init(void)
 	chassis_odom.distance_x = 0.0f;
 	chassis_odom.distance_y = 0.0f;
 	chassis_odom.distance_wz = 0.0f;
+	
+	chassis_odom.coord_x = 0.0f;
+	chassis_odom.coord_y = 0.0f;
+	chassis_odom.coord_wz = 0.0f;
 }
 
 //void odometer_task(void const * argument) //注册为RTOS task
@@ -117,11 +125,26 @@ void odometer_loop(void)
 	
 	//修改的坐标变换 ----------- 6-27经过测试这个是对的
 	fp32 sin_yaw = 0.0f, cos_yaw = 0.0f;
-	sin_yaw = arm_sin_f32(-chassis_odom.chassis_move_ptr->chassis_yaw_motor->relative_angle);
+	sin_yaw = arm_sin_f32(-chassis_odom.chassis_move_ptr->chassis_yaw_motor->relative_angle);//里面 +*(chassis_odom.INS_gimbal_angle_ptr + INS_YAW_ADDRESS_OFFSET)
   cos_yaw = arm_cos_f32(-chassis_odom.chassis_move_ptr->chassis_yaw_motor->relative_angle);
 	chassis_odom.distance_x += (cos_yaw * chassis_odom.d_vx - sin_yaw *chassis_odom.d_vy) * 0.25f * 3.076035159e-6f;
 	chassis_odom.distance_y += (sin_yaw * chassis_odom.d_vx + cos_yaw *chassis_odom.d_vy) * 0.25f * 3.076035159e-6f; //3.067961576e-6f;
 	chassis_odom.distance_wz += chassis_odom.d_wz * 0.25f * 3.076035159e-6f / MOTOR_DISTANCE_TO_CENTER;
+	
+	//相对于场地0点坐标变换
+	fp32 chassis_yaw = 0.0f; //temp chassis yaw
+	fp32 sin_yaw_abs = 0.0f, cos_yaw_abs = 0.0f;
+	chassis_yaw = rad_format(*(chassis_odom.INS_gimbal_angle_ptr + INS_YAW_ADDRESS_OFFSET) - chassis_odom.chassis_move_ptr->chassis_yaw_motor->relative_angle );
+	sin_yaw_abs = arm_sin_f32(chassis_yaw);
+	cos_yaw_abs = arm_cos_f32(chassis_yaw);
+	
+	chassis_odom.coord_x += (cos_yaw_abs * chassis_odom.d_vx - sin_yaw_abs *chassis_odom.d_vy) * 0.25f * 3.076035159e-6f;
+	chassis_odom.coord_y += (sin_yaw_abs * chassis_odom.d_vx + cos_yaw_abs *chassis_odom.d_vy) * 0.25f * 3.076035159e-6f; //3.067961576e-6f;
+	chassis_odom.coord_wz += chassis_odom.d_wz * 0.25f * 3.076035159e-6f / MOTOR_DISTANCE_TO_CENTER;
+	
+//	chassis_odom.coord_x = (cos_yaw_abs * chassis_odom.distance_x - sin_yaw_abs * chassis_odom.distance_y);
+//	chassis_odom.coord_y = (sin_yaw_abs * chassis_odom.distance_x + cos_yaw_abs * chassis_odom.distance_y);
+//	chassis_odom.coord_wz = chassis_odom.distance_wz;
 	//修改的坐标变换 END -------
 }
 

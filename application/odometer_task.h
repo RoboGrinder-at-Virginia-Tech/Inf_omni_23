@@ -21,6 +21,8 @@ typedef struct
 {
 	// ÷∏’Î÷∏œÚ µ◊≈Ã chassis_move
 	const chassis_move_t* chassis_move_ptr;
+	const gimbal_control_t* gimbal_ctrl_ptr;
+	const fp32 * INS_gimbal_angle_ptr;
 	
 	int32_t motor_total_ecd[4];
 	int32_t motor_last_total_ecd[4];
@@ -29,6 +31,10 @@ typedef struct
 	fp32 distance_x;
 	fp32 distance_y;
 	fp32 distance_wz;
+	
+	fp32 coord_x;
+	fp32 coord_y;
+	fp32 coord_wz;
 }chassis_odom_info_t;
 
 extern void odometer_init(void);
