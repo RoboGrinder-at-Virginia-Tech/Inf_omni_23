@@ -78,6 +78,29 @@ Embedded -> miniPC
 */
 typedef __packed struct
 {
+	//10-14 new odom protocol
+	//Point: m/s * 1000 <-->mm/s 
+	int32_t odom_dist_x_mm; // forward/back x odom in mm
+	int32_t odom_dist_y_mm; // left/right
+	int32_t odom_dist_z_mm; // z axis height = 0 for RMUL
+	//Quaternion:
+	/*quaternion msg: uint16_t quat[i]: [0],[1],[2],[3]
+       In embeded, quat has range:(-1, +1), 
+       ->transform: +1->range:(0, +2)
+       ->transform: * 10000->quat[i] with 16 bits uint16_t 
+		Quat with respect to LIDAR, only yaw axis should have a changing number. Roll Pitch rotational axis fixed
+		quat[0] - x: direction points out of the barrel, roll axis
+		quat[1] - y: direction points toward left of turret, pitch axis
+		quat[2] - z: direction points up, yaw axis
+		quat[3] - w: direction points out of the barrel
+		*/
+   uint16_t quat[4];
+	
+	//Other: dist the base rotate - # of rotation rounds
+	int32_t odom_dist_wz_krad; // ccw positive
+//or wz_mm: radian * 1000, thousand rad
+
+//Other: velocity info
   int16_t vx_mm_wrt_gimbal; // forward/back
 //: m/s * 1000 <-->mm/s 
 
@@ -85,16 +108,8 @@ typedef __packed struct
   int16_t vw_krad; // ccw positive
 //or vw_mm: radian/s * 1000, thousand rad/s
 
- uint8_t energy_buff_pct; //zyz说要的底盘能量, 可能来自超级电容剩余能量或裁判系统缓冲能量
+ uint8_t energy_buff_pct; //chassis available energy left
 //superCap or equivalent energy percentage
-	
-	//9-30新增底盘里程计 odometer 相关
-	int32_t odom_dist_x_mm; // forward/back x odom in mm
-//: m/s * 1000 <-->mm/s 
-	
-	int32_t odom_dist_y_mm; // left/right
-	int32_t odom_dist_wz_krad; // ccw positive
-//or wz_mm: radian * 1000, thousand rad
 	
 }embed_chassis_info_t; //CHASSIS_INFO_CMD_ID
 
@@ -119,7 +134,7 @@ typedef __packed struct
     int16_t yaw_absolute_angle; //= rad * 10000
     int16_t pitch_absolute_angle;
 
-    /*quaternion: uint16_t quat[i]: [0],[1],[2],[3]
+    /*quaternion msg: uint16_t quat[i]: [0],[1],[2],[3]
        In embeded, quat has range:(-1, +1), 
        ->transform: +1->range:(0, +2)
        ->transform: * 10000->quat[i] with 16 bits uint16_t */
