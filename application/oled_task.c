@@ -94,10 +94,10 @@ void oled_task(void const * argument)
         {
             refresh_tick++;
             //10Hz refresh
-//            if(refresh_tick > configTICK_RATE_HZ / (OLED_CONTROL_TIME * REFRESH_RATE))
-//            {
-					  if(xTaskGetTickCount() - oled_refresh_TimeStamp >= 100)//100
-						{
+            if(refresh_tick > configTICK_RATE_HZ / (OLED_CONTROL_TIME * REFRESH_RATE))
+            {
+//					  if(xTaskGetTickCount() - oled_refresh_TimeStamp >= 100)//100
+//						{
 							  oled_refresh_TimeStamp = xTaskGetTickCount();
                 refresh_tick = 0;
                 OLED_operate_gram(PEN_CLEAR);

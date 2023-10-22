@@ -198,8 +198,8 @@ void MX_FREERTOS_Init(void) {
     led_RGB_flow_handle = osThreadCreate(osThread(led), NULL);
 
 
-    osThreadDef(OLED, oled_task, osPriorityNormal, 0, 256);//osPriorityLow   osPriorityNormal osPriorityHigh
-    oled_handle = osThreadCreate(osThread(OLED), NULL);
+    osThreadDef(OLED, oled_task, osPriorityNormal, 0, 512);//osPriorityLow osPriorityBelowNormal osPriorityNormal osPriorityHigh
+    oled_handle = osThreadCreate(osThread(OLED), NULL); //256
 
 
     osThreadDef(REFEREE, referee_usart_task, osPriorityNormal, 0, 128);
@@ -226,8 +226,8 @@ void MX_FREERTOS_Init(void) {
 
 //    osThreadDef(SERVO, servo_task, osPriorityNormal, 0, 128);
 //    servo_task_handle = osThreadCreate(osThread(SERVO), NULL);
-
-		osThreadDef(UI, client_ui_task, osPriorityBelowNormal, 0, 512); //osPriorityBelowNormal osPriorityNormal
+		//10-21֮ǰosPriorityBelowNormal
+		osThreadDef(UI, client_ui_task, osPriorityNormal, 0, 512); //osPriorityBelowNormal osPriorityNormal
 		client_ui_task_handle =  osThreadCreate(osThread(UI), NULL);
   /* USER CODE END RTOS_THREADS */
 

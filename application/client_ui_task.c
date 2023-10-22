@@ -83,8 +83,14 @@ uint32_t client_ui_count_ref = 0;
 uint8_t client_ui_test_flag = 1;
 
 uint32_t ui_dynamic_crt_send_TimeStamp;
-const uint16_t ui_dynamic_crt_sendFreq = 50; //1; //1000;
-//const uint16_t ui_dynamic_crt_sendFreq = 100;
+//const uint16_t ui_dynamic_crt_sendFreq = 50; //1; //1000;
+const uint16_t ui_dynamic_crt_sendPerd = 250; //500; //5000
+
+uint32_t ui_dynamic_chg_send_TimeStamp; //UI_Change sts send, ctrl freq
+const uint16_t ui_dynamic_chg_sendPerd = 0; //50; //100
+
+uint32_t ui_static_crt_send_TimeStamp; //UI_Add sts send, ctrl freq
+const uint16_t ui_static_crt_sendPerd = 500; //1000;
 
 uint16_t ui_cv_circle_size_debug = TopLeft_Cir_on_cv_DET_Pen_Size;
 
@@ -559,62 +565,63 @@ void client_ui_task(void const *pvParameters)
 				
 				//完成绘制 开始发送 先发静态
 				//refresh UI and String(Char)
-//				UI_ReFresh(2, turretCir, gunLine);
-				Char_ReFresh(strChassis);
-				Char_ReFresh(strGimbal); 
-				Char_ReFresh(strShoot); 
-				Char_ReFresh(strSuperCap); 
-//				Char_ReFresh(strReferee);
-				
-				UI_ReFresh(2, chassisPosAimLeftLine, chassisPosAimRightLine);
-				UI_ReFresh(2, gAimVertL, superCapFrame);
-				UI_ReFresh(5, gAimHorizL2m, gAimHorizL4m, gAimHorizL5m, gAimHorizL7m, gAimHorizL8m);
-				UI_ReFresh(5, left8to7, left7to5,left5to4,left4to2, right8to7);
-				UI_ReFresh(5,right5to4,right4to2 );
-				UI_ReFresh(5, right7to5);
-				//Right
-				//Char_ReFresh(strCapVolt);
-				//Char_ReFresh(strCapPct);	
-				Char_ReFresh(strChassisSts);
-				Char_ReFresh(strSPINSts);
-				//Left
-				Char_ReFresh(strCVSts);
-				Char_ReFresh(strGunSts);
-//				Char_ReFresh(strABoxSts);
-				Char_ReFresh(strProjSLimSts);
-				Char_ReFresh(strDisSts);
+				if(xTaskGetTickCount() - ui_static_crt_send_TimeStamp >= ui_static_crt_sendPerd) 
+				{
+					ui_static_crt_send_TimeStamp = xTaskGetTickCount();
+					Char_ReFresh(strChassis);
+					Char_ReFresh(strGimbal); 
+					Char_ReFresh(strShoot); 
+					Char_ReFresh(strSuperCap); 
+	//				Char_ReFresh(strReferee);
+					
+					UI_ReFresh(2, chassisPosAimLeftLine, chassisPosAimRightLine);
+					UI_ReFresh(2, gAimVertL, superCapFrame);
+					UI_ReFresh(5, gAimHorizL2m, gAimHorizL4m, gAimHorizL5m, gAimHorizL7m, gAimHorizL8m);
+					UI_ReFresh(5, left8to7, left7to5,left5to4,left4to2, right8to7);
+					UI_ReFresh(2,right5to4,right4to2 ); //before-5-wrong #
+					UI_ReFresh(1, right7to5); //before-5-wrong #
+					//Right
+					//Char_ReFresh(strCapVolt);
+					//Char_ReFresh(strCapPct);	
+					Char_ReFresh(strChassisSts);
+					Char_ReFresh(strSPINSts);
+					//Left
+					Char_ReFresh(strCVSts);
+					Char_ReFresh(strGunSts);
+	//				Char_ReFresh(strABoxSts);
+					Char_ReFresh(strProjSLimSts);
+					Char_ReFresh(strDisSts);
+				}
 				
 				//动态的修改 发送
-				UI_ReFresh(5, chassisLine, turretCir, gunLine, fCapVolt, chassisLightBar); //chassisLine, turretCir, gunLine需捆绑发送
-				UI_ReFresh(2, fCapPct, superCapLine);
-//				UI_ReFresh(1, superCapLine);
-//				UI_ReFresh(2, superCapLine, chassisLine);
-//				UI_ReFresh(2, fCapVolt, fCapPct);
-//				UI_ReFresh(1, chassisLightBar);
-//				UI_ReFresh(2, fProjSLim, fDis);
-				UI_ReFresh(1, fDis); // 7-4去掉弹舱
-//				UI_ReFresh(2, gEnemyDetected_circle, gCVfb_sts_box);
-//		UI_ReFresh(5, gChassisSts_box, gSPINSts_box, gCVSts_box, gGunSts_box, gABoxSts_box);
-				UI_ReFresh(7, gEnemyDetected_circle, gCVfb_sts_box, gChassisSts_box, gSPINSts_box, gCVSts_box, gGunSts_box, fProjSLim); // 7-4去掉弹舱
-//				// 5-26-2023 不显示那么详细
-//				Char_ReFresh(strVarChassis);
-//				Char_ReFresh(strVarGimbal); 
-//				Char_ReFresh(strVarShoot); 
-//				Char_ReFresh(strVarSuperCap); 
-//				Char_ReFresh(strVarReferee);
+				if(xTaskGetTickCount() - ui_dynamic_chg_send_TimeStamp >= ui_dynamic_chg_sendPerd) 
+				{
+					ui_dynamic_chg_send_TimeStamp = xTaskGetTickCount();
+					UI_ReFresh(5, chassisLine, turretCir, gunLine, fCapVolt, chassisLightBar); //chassisLine, turretCir, gunLine需捆绑发送
+					UI_ReFresh(2, fCapPct, superCapLine);
+	//				UI_ReFresh(1, superCapLine);
+	//				UI_ReFresh(2, superCapLine, chassisLine);
+	//				UI_ReFresh(2, fCapVolt, fCapPct);
+	//				UI_ReFresh(1, chassisLightBar);
+	//				UI_ReFresh(2, fProjSLim, fDis);
+					UI_ReFresh(1, fDis); // 7-4去掉弹舱
+	//				UI_ReFresh(2, gEnemyDetected_circle, gCVfb_sts_box);
+	//		UI_ReFresh(5, gChassisSts_box, gSPINSts_box, gCVSts_box, gGunSts_box, gABoxSts_box);
+					UI_ReFresh(7, gEnemyDetected_circle, gCVfb_sts_box, gChassisSts_box, gSPINSts_box, gCVSts_box, gGunSts_box, fProjSLim); // 7-4去掉弹舱
+	//				// 5-26-2023 不显示那么详细
+	//				Char_ReFresh(strVarChassis);
+	//				Char_ReFresh(strVarGimbal); 
+	//				Char_ReFresh(strVarShoot); 
+	//				Char_ReFresh(strVarSuperCap); 
+	//				Char_ReFresh(strVarReferee);
+					
+					Char_ReFresh(strSpin); //中间靠上 各种字符 Warning 需要时才显示所以不需要只有 add 和 delete 没有change
+					Char_ReFresh(strFric);
+	//				Char_ReFresh(strRef);
+				}
 				
-				Char_ReFresh(strSpin); //中间靠上 各种字符 Warning 需要时才显示所以不需要只有 add 和 delete 没有change
-				Char_ReFresh(strFric);
-//				Char_ReFresh(strRef);
-				
-//				//测试 2023 服务器问题
-//				//炮塔 球 和 枪 线
-//				Circle_Draw(&turretCir, "026", UI_Graph_Change, 8, UI_Color_White, Turret_Cir_Pen, Turret_Cir_Start_X, Turret_Cir_Start_Y, Turret_Cir_Radius);
-//				Line_Draw(&gunLine, "027", UI_Graph_Change, 8, UI_Color_Black, Gun_Line_Pen, Gun_Line_Start_X, Gun_Line_Start_Y, Gun_Line_End_X, Gun_Line_End_Y);
-//				UI_ReFresh(2, turretCir, gunLine);
-				
-				//定时创建一次动态的--------------
-				if(xTaskGetTickCount() - ui_dynamic_crt_sendFreq > ui_dynamic_crt_send_TimeStamp)
+				//定时创建一次动态的------之前是错误的: xTaskGetTickCount() - ui_dynamic_crt_sendFreq > ui_dynamic_crt_send_TimeStamp
+				if(xTaskGetTickCount() - ui_dynamic_crt_send_TimeStamp >= ui_dynamic_crt_sendPerd)
 				{
 						ui_dynamic_crt_send_TimeStamp = xTaskGetTickCount(); //更新时间戳 
 						ui_dynamic_crt_send_fuc(); //到时间了, 在客户端创建一次动态的图像
@@ -632,19 +639,13 @@ void client_ui_task(void const *pvParameters)
 //				Line_Draw(&gunLine, "027", UI_Graph_ADD, 8, UI_Color_Black, Gun_Line_Pen, Gun_Line_Start_X, Gun_Line_Start_Y, Gun_Line_End_X, Gun_Line_End_Y);
 //				UI_ReFresh(2, turretCir, gunLine);
 				
-//				//测试 2023 服务器问题
-//				//炮塔 球 和 枪 线
-//				Circle_Draw(&turretCir, "026", UI_Graph_ADD, 8, UI_Color_White, Turret_Cir_Pen, Turret_Cir_Start_X, Turret_Cir_Start_Y, Turret_Cir_Radius); //UI_Graph_ADD
-//				Line_Draw(&gunLine, "027", UI_Graph_ADD, 8, UI_Color_Black, Gun_Line_Pen, Gun_Line_Start_X, Gun_Line_Start_Y, Gun_Line_End_X, Gun_Line_End_Y);
-//				UI_ReFresh(2, turretCir, gunLine);
-				
 //				vTaskDelay(100); //100
-				vTaskDelay(10); //100
+				vTaskDelay(100); //100
 				//
 				client_ui_count_ref++;
 				
 				if(client_ui_count_ref % 10 == 0)
-					client_ui_test_flag = -1 * client_ui_test_flag;
+					client_ui_test_flag++; // use ++ to debug instead of -1 * client_ui_test_flag
 				
 			
 #if INCLUDE_uxTaskGetStackHighWaterMark
