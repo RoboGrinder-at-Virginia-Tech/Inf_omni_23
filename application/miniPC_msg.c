@@ -436,11 +436,20 @@ void embed_base_info_msg_data_update(embed_base_info_t* embed_base_info_ptr, emb
 	
 	embed_base_info_ptr->energy_buff_pct = embed_msg_to_pc_ptr->energy_buff_pct;
 	
-	//10-28新增底盘里程计 Pose and Quaternion https://docs.ros2.org/latest/api/geometry_msgs/msg/Pose.html
+	//10-28新增底盘里程计 Pose Message miniPC needs https://docs.ros2.org/latest/api/geometry_msgs/msg/Pose.html
+	
+	//Point Message
 	embed_base_info_ptr->odom_coord_x_mm = (int16_t) (embed_msg_to_pc_ptr->odom_coord_x * 1000.0f);
 	embed_base_info_ptr->odom_coord_y_mm = (int16_t) (embed_msg_to_pc_ptr->odom_coord_y * 1000.0f);
 	embed_base_info_ptr->odom_coord_z_mm = 0; //(int16_t) (embed_msg_to_pc_ptr->odom_coord_z * 1000.0f);
-	// quat sync with base information
+	
+	//Quaternion Message in x y z w order - quat sync with base information
+	embed_base_info_ptr->quat[3] = (uint16_t) ( (embed_msg_to_pc_ptr->quat[0]+1) * 10000.0f ); //(quat[i]+1)*10000; linear trans.
+	embed_base_info_ptr->quat[0] = (uint16_t) ( (embed_msg_to_pc_ptr->quat[1]+1) * 10000.0f );
+	embed_base_info_ptr->quat[1] = (uint16_t) ( (embed_msg_to_pc_ptr->quat[2]+1) * 10000.0f );
+	embed_base_info_ptr->quat[2] = (uint16_t) ( (embed_msg_to_pc_ptr->quat[3]+1) * 10000.0f );
+	
+	// check that quat is a valid nuumber
 	for(uint8_t i = 0; i < 4; i++)
 	{
 			if(fabs(embed_msg_to_pc_ptr->quat[i]) > 1.01f)
@@ -451,8 +460,6 @@ void embed_base_info_msg_data_update(embed_base_info_t* embed_base_info_ptr, emb
 				}
 				break;
 			}
-			
-			embed_base_info_ptr->quat[i] = (uint16_t) ( (embed_msg_to_pc_ptr->quat[i]+1) * 10000.0f ); //(quat[i]+1)*10000; linear trans.
 	}
 	
 //	//For debug only

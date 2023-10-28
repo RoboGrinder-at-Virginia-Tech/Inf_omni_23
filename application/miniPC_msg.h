@@ -134,7 +134,7 @@ typedef __packed struct
     int16_t yaw_absolute_angle; //= rad * 10000
     int16_t pitch_absolute_angle;
 
-    /*quaternion msg: uint16_t quat[i]: [0],[1],[2],[3]
+    /*quaternion msg: uint16_t quat[i]: [0],[1],[2],[3] same as embeded order
        In embeded, quat has range:(-1, +1), 
        ->transform: +1->range:(0, +2)
        ->transform: * 10000->quat[i] with 16 bits uint16_t */
