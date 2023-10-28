@@ -452,8 +452,7 @@ void embed_base_info_msg_data_update(embed_base_info_t* embed_base_info_ptr, emb
 				break;
 			}
 			
-//			embed_base_info_ptr->quat[i] = (uint16_t) ( (embed_msg_to_pc_ptr->quat[i]+1) * 10000.0f ); //(quat[i]+1)*10000; linear trans.
-			embed_base_info_ptr->quat[i] = 0;
+			embed_base_info_ptr->quat[i] = (uint16_t) ( (embed_msg_to_pc_ptr->quat[i]+1) * 10000.0f ); //(quat[i]+1)*10000; linear trans.
 	}
 	
 //	//For debug only

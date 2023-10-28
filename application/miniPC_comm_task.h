@@ -111,7 +111,7 @@ typedef struct
 //This is the DMA buff length
 #define MINIPC_COMM_UART_DMA_TX_BUF_LENGHT 128 //512
 
-#define MINIPC_COMM_FRAME_MAX_SIZE 40 //send temp ram buffer
+#define MINIPC_COMM_FRAME_MAX_SIZE 64 //send temp ram buffer -NOT 40 as before --- might cause outo of bound pointer
 
 typedef struct
 {
