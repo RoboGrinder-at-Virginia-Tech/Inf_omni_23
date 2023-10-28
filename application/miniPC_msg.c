@@ -52,7 +52,7 @@ pc_info_t pc_info; //msg info from pc
 embed_msg_to_pc_t embed_msg_to_pc;
 
 //Embedded -> miniPC
-embed_chassis_info_t embed_chassis_info;
+embed_base_info_t embed_base_info;
 embed_gimbal_info_t embed_gimbal_info;
 
 /*
@@ -94,7 +94,7 @@ void init_pc_to_embed_Main_comm_struct_data(void)
 //embed -> pc
 void init_embed_to_pc_comm_struct_data(void)
 {
-	memset(&embed_chassis_info, 0, sizeof(embed_chassis_info_t));
+	memset(&embed_base_info, 0, sizeof(embed_base_info_t));
 	memset(&embed_gimbal_info, 0, sizeof(embed_gimbal_info_t));
 	
 	memset(&embed_send_protocol, 0, sizeof(embed_send_protocol_t));
@@ -392,9 +392,14 @@ void embed_all_info_update_from_sensor()
 	embed_msg_to_pc.energy_buff_pct = (uint8_t) get_current_cap_pct();
 	
 	//9-30新增里程计 or use embed_msg_to_pc.chassis_odom_ptr
-	embed_msg_to_pc.odom_dist_x = get_chassis_odom_distance_x();
-	embed_msg_to_pc.odom_dist_y = get_chassis_odom_distance_y();
-	embed_msg_to_pc.odom_dist_wz = get_chassis_odom_distance_wz();
+	embed_msg_to_pc.odom_dist_x = get_chassis_gimbal_dir_distance_x(); //not used
+	embed_msg_to_pc.odom_dist_y = get_chassis_gimbal_dir_distance_y(); //not used
+	embed_msg_to_pc.odom_dist_wz = get_chassis_gimbal_dir_distance_wz(); //not used
+	
+	//10-28 全局坐标 相对于0点 里程计
+	embed_msg_to_pc.odom_coord_x = get_chassis_odom_coord_x();
+	embed_msg_to_pc.odom_coord_y = get_chassis_odom_coord_y();
+	embed_msg_to_pc.odom_coord_z = 0.0f; //no altitude for RMUL
 	
 	embed_msg_to_pc.yaw_absolute_angle = embed_msg_to_pc.gimbal_control_ptr->gimbal_yaw_motor.absolute_angle; //6-22修改relative_angle
 	embed_msg_to_pc.pitch_absolute_angle = embed_msg_to_pc.gimbal_control_ptr->gimbal_pitch_motor.absolute_angle; //relative_angle
@@ -422,26 +427,41 @@ void embed_all_info_update_from_sensor()
 	
 }
 
-void embed_chassis_info_msg_data_update(embed_chassis_info_t* embed_chassis_info_ptr, embed_msg_to_pc_t* embed_msg_to_pc_ptr)
+void embed_base_info_msg_data_update(embed_base_info_t* embed_base_info_ptr, embed_msg_to_pc_t* embed_msg_to_pc_ptr)
 {	
 	//m/s * 1000 <-->mm/s 
-	embed_chassis_info_ptr->vx_mm_wrt_gimbal = (int16_t) (embed_msg_to_pc_ptr->vx_wrt_gimbal * 1000.0f);
-	embed_chassis_info_ptr->vy_mm_wrt_gimbal = (int16_t) (embed_msg_to_pc_ptr->vy_wrt_gimbal * 1000.0f);
-	embed_chassis_info_ptr->vw_krad = (int16_t) (embed_msg_to_pc_ptr->vw_wrt_chassis * 1000.0f);
+	embed_base_info_ptr->vx_mm_wrt_gimbal = (int16_t) (embed_msg_to_pc_ptr->vx_wrt_gimbal * 1000.0f);
+	embed_base_info_ptr->vy_mm_wrt_gimbal = (int16_t) (embed_msg_to_pc_ptr->vy_wrt_gimbal * 1000.0f);
+	embed_base_info_ptr->vw_krad = (int16_t) (embed_msg_to_pc_ptr->vw_wrt_chassis * 1000.0f);
 	
-	embed_chassis_info_ptr->energy_buff_pct = embed_msg_to_pc_ptr->energy_buff_pct;
+	embed_base_info_ptr->energy_buff_pct = embed_msg_to_pc_ptr->energy_buff_pct;
 	
-	//9-30-23新增底盘里程计
-	embed_chassis_info_ptr->odom_dist_x_mm = (int16_t) (embed_msg_to_pc_ptr->odom_dist_x * 1000.0f);
-	embed_chassis_info_ptr->odom_dist_y_mm = (int16_t) (embed_msg_to_pc_ptr->odom_dist_y * 1000.0f);
-	embed_chassis_info_ptr->odom_dist_wz_krad = (int16_t) (embed_msg_to_pc_ptr->odom_dist_wz * 1000.0f);
+	//10-28新增底盘里程计 Pose and Quaternion https://docs.ros2.org/latest/api/geometry_msgs/msg/Pose.html
+	embed_base_info_ptr->odom_coord_x_mm = (int16_t) (embed_msg_to_pc_ptr->odom_coord_x * 1000.0f);
+	embed_base_info_ptr->odom_coord_y_mm = (int16_t) (embed_msg_to_pc_ptr->odom_coord_y * 1000.0f);
+	embed_base_info_ptr->odom_coord_z_mm = 0; //(int16_t) (embed_msg_to_pc_ptr->odom_coord_z * 1000.0f);
+	// quat sync with base information
+	for(uint8_t i = 0; i < 4; i++)
+	{
+			if(fabs(embed_msg_to_pc_ptr->quat[i]) > 1.01f)
+			{
+				for(uint8_t j = 0; j < 4; j++)
+				{
+					embed_base_info_ptr->quat[j] = 0;
+				}
+				break;
+			}
+			
+//			embed_base_info_ptr->quat[i] = (uint16_t) ( (embed_msg_to_pc_ptr->quat[i]+1) * 10000.0f ); //(quat[i]+1)*10000; linear trans.
+			embed_base_info_ptr->quat[i] = 0;
+	}
 	
 //	//For debug only
-//	embed_chassis_info_ptr->vx_mm = 0x1234;
-//	embed_chassis_info_ptr->vy_mm = 0x5678;
-//	embed_chassis_info_ptr->vw_mm = 0x9ABC;
+//	embed_base_info_ptr->vx_mm = 0x1234;
+//	embed_base_info_ptr->vy_mm = 0x5678;
+//	embed_base_info_ptr->vw_mm = 0x9ABC;
 //	
-//	embed_chassis_info_ptr->energy_buff_pct = 0xDE;
+//	embed_base_info_ptr->energy_buff_pct = 0xDE;
 }
 
 void embed_gimbal_info_msg_data_update(embed_gimbal_info_t* embed_gimbal_info_ptr, embed_msg_to_pc_t* embed_msg_to_pc_ptr)
@@ -449,7 +469,7 @@ void embed_gimbal_info_msg_data_update(embed_gimbal_info_t* embed_gimbal_info_pt
 	embed_gimbal_info_ptr->pitch_absolute_angle = (int16_t) (embed_msg_to_pc_ptr->pitch_absolute_angle * 10000.0f); //= rad * 10000
 	embed_gimbal_info_ptr->yaw_absolute_angle = (int16_t) (embed_msg_to_pc_ptr->yaw_absolute_angle * 10000.0f);
 	
-	for(uint8_t i = 0; i < 4; i++)
+	for(uint8_t i = 0; i < 4; i++) //quat sync with gimbal
 	{
 			if(fabs(embed_msg_to_pc_ptr->quat[i]) > 1.01f)
 			{
@@ -472,7 +492,7 @@ void embed_gimbal_info_msg_data_update(embed_gimbal_info_t* embed_gimbal_info_pt
 /**
  * @brief refresh data struct to ring buffer fifo or send directly
  * 
- * To use: uniform refresh function substitute: embed_chassis_info_refresh + embed_gimbal_info_refresh
+ * To use: uniform refresh function substitute: embed_base_info_refresh + embed_gimbal_info_refresh
  * The use of global variable pc_send_header for debug purpose
  * @param data section point; data_size: variable lengthed data; data section data size; cmdid
  */
@@ -561,16 +581,16 @@ void embed_send_data_to_pc_loop()
 		//its time to do 1 msg send
 		
 		//Copy value to send struct. simular to Float_Draw
-		embed_chassis_info_msg_data_update(&embed_chassis_info, &embed_msg_to_pc);
+		embed_base_info_msg_data_update(&embed_base_info, &embed_msg_to_pc);
 		embed_gimbal_info_msg_data_update(&embed_gimbal_info, &embed_msg_to_pc);
 		
 		//msg to fifo; this is like refresh
-//		embed_chassis_info_refresh(&embed_chassis_info, sizeof(embed_chassis_info_t));
+//		embed_base_info_refresh(&embed_chassis_info, sizeof(embed_chassis_info_t));
 //		uart1_poll_dma_tx();
 //		embed_gimbal_info_refresh(&embed_gimbal_info, sizeof(embed_gimbal_info_t)); // written later
 		
 		//try uniform function to refresh
-		embed_info_msg_refresh((uint8_t*) &embed_chassis_info, sizeof(embed_chassis_info_t), CHASSIS_INFO_CMD_ID);	
+		embed_info_msg_refresh((uint8_t*) &embed_base_info, sizeof(embed_base_info_t), BASE_INFO_CMD_ID);	
 		uart1_poll_dma_tx();
 		embed_info_msg_refresh((uint8_t*) &embed_gimbal_info, sizeof(embed_gimbal_info_t), GIMBAL_INFO_CMD_ID);
 		
@@ -718,7 +738,7 @@ void embed_send_data_to_pc_loop()
 // *
 // * @param data_size: variable lengthed data; data section data size
 // */
-//void embed_chassis_info_refresh(embed_chassis_info_t* embed_chassis_info_ptr, uint32_t data_size)
+//void embed_base_info_refresh(embed_chassis_info_t* embed_chassis_info_ptr, uint32_t data_size)
 //{
 //	unsigned char *framepoint;  //read write pointer
 //  uint16_t frametailCRC=0xFFFF;  //CRC16 check sum
@@ -730,7 +750,7 @@ void embed_send_data_to_pc_loop()
 //	embed_send_protocol.p_header->seq = 1; //TODO: add global for this
 //	embed_send_protocol.p_header->CRC8 = get_CRC8_check_sum(framepoint, PC_PROTOCOL_HEADER_SIZE-1, 0xFF);
 //	
-//	embed_send_protocol.p_header->cmd_id = CHASSIS_INFO_CMD_ID;
+//	embed_send_protocol.p_header->cmd_id = BASE_INFO_CMD_ID;
 //	
 //	
 //	//put header + cmdid to ram buffer
@@ -742,7 +762,7 @@ void embed_send_data_to_pc_loop()
 //	}
 //	
 //	//put data section to ram buffer
-//	framepoint = (unsigned char *)embed_chassis_info_ptr;
+//	framepoint = (unsigned char *)embed_base_info_ptr;
 //	for(; embed_send_protocol.index < PC_HEADER_CMDID_LEN + data_size; embed_send_protocol.index++ )
 //	{
 //		embed_send_protocol.send_ram_buff[embed_send_protocol.index] = *framepoint;

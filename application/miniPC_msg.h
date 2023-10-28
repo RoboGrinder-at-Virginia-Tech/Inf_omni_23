@@ -80,9 +80,9 @@ typedef __packed struct
 {
 	//10-14 new odom protocol
 	//Point: m/s * 1000 <-->mm/s 
-	int32_t odom_dist_x_mm; // forward/back x odom in mm
-	int32_t odom_dist_y_mm; // left/right
-	int32_t odom_dist_z_mm; // z axis height = 0 for RMUL
+	int32_t odom_coord_x_mm; // forward/back x odom in mm
+	int32_t odom_coord_y_mm; // left/right
+	int32_t odom_coord_z_mm; // z axis height = 0 for RMUL
 	//Quaternion:
 	/*quaternion msg: uint16_t quat[i]: [0],[1],[2],[3]
        In embeded, quat has range:(-1, +1), 
@@ -111,7 +111,7 @@ typedef __packed struct
  uint8_t energy_buff_pct; //chassis available energy left
 //superCap or equivalent energy percentage
 	
-}embed_chassis_info_t; //CHASSIS_INFO_CMD_ID
+}embed_base_info_t; //BASE_INFO_CMD_ID
 
 /*
 Gimbal related control - miniPC->Embedded
@@ -205,12 +205,16 @@ typedef struct
 	
 	uint8_t energy_buff_pct; //get_superCap_charge_pwr
 	
-	//9-30新增底盘里程计 odometer 相关
+	//9-30新增底盘 云台方向当前前进 里程计 odometer
 	fp32 odom_dist_x; // forward/back x odom in m
-	
 	fp32 odom_dist_y; // left/right
 	fp32 odom_dist_wz; // ccw positive rad unit
 	//
+	
+	//10-28 相对于0点 全局坐标 里程计
+	fp32 odom_coord_x;
+	fp32 odom_coord_y;
+	fp32 odom_coord_z; // = 0 for RMUL
 	
 	fp32 yaw_absolute_angle; //= rad based on gyro
   fp32 pitch_absolute_angle;

@@ -49,7 +49,7 @@ note 1-17-2023: current data size did not exceed 50 bytes
 typedef enum
 {
 		//Embeded-->PC
-    CHASSIS_INFO_CMD_ID = 0x0204,
+    BASE_INFO_CMD_ID = 0x0204,
     GIMBAL_INFO_CMD_ID = 0x0304,
 	
 		//PC-->Embeded

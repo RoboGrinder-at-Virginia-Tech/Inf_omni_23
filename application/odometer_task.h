@@ -42,9 +42,12 @@ extern void odometer_init(void);
 extern void odometer_loop(void);
 extern fp32 get_L_barrel_trig_modor_odom_count(void);
 extern fp32 get_R_barrel_trig_modor_odom_count(void);
-extern fp32 get_chassis_odom_distance_x(void);
-extern fp32 get_chassis_odom_distance_y(void);
-extern fp32 get_chassis_odom_distance_wz(void);
+extern fp32 get_chassis_gimbal_dir_distance_x(void);
+extern fp32 get_chassis_gimbal_dir_distance_y(void);
+extern fp32 get_chassis_gimbal_dir_distance_wz(void);
+extern fp32 get_chassis_odom_coord_x(void);
+extern fp32 get_chassis_odom_coord_y(void);
+extern fp32 get_chassis_odom_coord_wz(void);
 extern chassis_odom_info_t* get_chassis_odom_pointer(void);
 
 #endif

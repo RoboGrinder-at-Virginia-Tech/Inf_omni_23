@@ -123,7 +123,7 @@ void odometer_loop(void)
 //	chassis_odom.distance_wz += chassis_odom.d_wz * 0.25f * 3.076035159e-6f / MOTOR_DISTANCE_TO_CENTER;
 //	//原来的坐标转换 END -------
 	
-	//修改的坐标变换 ----------- 6-27经过测试这个是对的
+	//当前云台前进方向 - 修改的坐标变换 ----------- 6-27经过测试这个是对的
 	fp32 sin_yaw = 0.0f, cos_yaw = 0.0f;
 	sin_yaw = arm_sin_f32(-chassis_odom.chassis_move_ptr->chassis_yaw_motor->relative_angle);//里面 +*(chassis_odom.INS_gimbal_angle_ptr + INS_YAW_ADDRESS_OFFSET)
   cos_yaw = arm_cos_f32(-chassis_odom.chassis_move_ptr->chassis_yaw_motor->relative_angle);
@@ -131,7 +131,7 @@ void odometer_loop(void)
 	chassis_odom.distance_y += (sin_yaw * chassis_odom.d_vx + cos_yaw *chassis_odom.d_vy) * 0.25f * 3.076035159e-6f; //3.067961576e-6f;
 	chassis_odom.distance_wz += chassis_odom.d_wz * 0.25f * 3.076035159e-6f / MOTOR_DISTANCE_TO_CENTER;
 	
-	//相对于场地0点坐标变换
+	//相对于场地0点坐标变换 - 坐标里程计
 	fp32 chassis_yaw = 0.0f; //temp chassis yaw
 	fp32 sin_yaw_abs = 0.0f, cos_yaw_abs = 0.0f;
 	chassis_yaw = rad_format(*(chassis_odom.INS_gimbal_angle_ptr + INS_YAW_ADDRESS_OFFSET) - chassis_odom.chassis_move_ptr->chassis_yaw_motor->relative_angle );
@@ -140,7 +140,7 @@ void odometer_loop(void)
 	
 	chassis_odom.coord_x += (cos_yaw_abs * chassis_odom.d_vx - sin_yaw_abs *chassis_odom.d_vy) * 0.25f * 3.076035159e-6f;
 	chassis_odom.coord_y += (sin_yaw_abs * chassis_odom.d_vx + cos_yaw_abs *chassis_odom.d_vy) * 0.25f * 3.076035159e-6f; //3.067961576e-6f;
-	chassis_odom.coord_wz += chassis_odom.d_wz * 0.25f * 3.076035159e-6f / MOTOR_DISTANCE_TO_CENTER;
+	chassis_odom.coord_wz += chassis_odom.d_wz * 0.25f * 3.076035159e-6f / MOTOR_DISTANCE_TO_CENTER; //same as chassis_odom.distance_wz
 	
 //	chassis_odom.coord_x = (cos_yaw_abs * chassis_odom.distance_x - sin_yaw_abs * chassis_odom.distance_y);
 //	chassis_odom.coord_y = (sin_yaw_abs * chassis_odom.distance_x + cos_yaw_abs * chassis_odom.distance_y);
@@ -160,19 +160,35 @@ fp32 get_R_barrel_trig_modor_odom_count()
 	return R_barrel_trig_M2006_odom.total_ecd_count;
 }
 
-fp32 get_chassis_odom_distance_x()
+fp32 get_chassis_gimbal_dir_distance_x()
 {
 	return chassis_odom.distance_x;
 }
 
-fp32 get_chassis_odom_distance_y()
+fp32 get_chassis_gimbal_dir_distance_y()
 {
 	return chassis_odom.distance_y;
 }
 
-fp32 get_chassis_odom_distance_wz()
+fp32 get_chassis_gimbal_dir_distance_wz()
 {
 	return chassis_odom.distance_wz;
+}
+
+//
+fp32 get_chassis_odom_coord_x()
+{
+	return chassis_odom.coord_x;
+}
+
+fp32 get_chassis_odom_coord_y()
+{
+	return chassis_odom.coord_y;
+}
+
+fp32 get_chassis_odom_coord_wz()
+{
+	return chassis_odom.coord_wz;
 }
 
 chassis_odom_info_t* get_chassis_odom_pointer()
